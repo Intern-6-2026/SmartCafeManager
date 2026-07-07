@@ -32,7 +32,7 @@ public class OrderDetail {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "order_id", referencedColumnName = "order_id")
-    private Table_Order order_id;
+    private TableOrder order_id;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "item_id", referencedColumnName = "item_id")
