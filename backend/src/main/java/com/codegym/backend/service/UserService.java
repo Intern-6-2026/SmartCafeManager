@@ -31,7 +31,6 @@ public class UserService {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
                 .orElseThrow(() -> new RuntimeException("Account not found or has been deleted!"));
-
         String roleName = account.getRole() != null ? account.getRole().getRoleName() : "USER";
 
         Optional<Employee> empOpt = employeeRepository.findByAccount(account);
@@ -46,6 +45,7 @@ public class UserService {
                     .phone(emp.getPhoneNumber())
                     .address(emp.getAddress())
                     .salary(emp.getSalary())
+                    .imageUrl(emp.getImageUrl())
                     .roleName(roleName)
                     .build();
         }
@@ -62,6 +62,7 @@ public class UserService {
                     .phone(cus.getPhoneNumber())
                     .address(cus.getAddress())
                     .loyaltyPoints(cus.getLoyaltyPoints())
+                    .imageUrl(cus.getImageUrl())
                     .roleName(roleName)
                     .build();
         }
@@ -78,11 +79,20 @@ public class UserService {
         Optional<Employee> empOpt = employeeRepository.findByAccount(account);
         if (empOpt.isPresent()) {
             Employee emp = empOpt.get();
-            emp.setFullName(request.getFullName());
-            emp.setDateOfBirth(request.getDateOfBirth());
-            emp.setGender(request.getGender());
-            emp.setPhoneNumber(request.getPhoneNumber());
-            emp.setAddress(request.getAddress());
+            if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+                emp.setFullName(request.getFullName());
+            }
+            if (request.getDateOfBirth() != null)
+                emp.setDateOfBirth(request.getDateOfBirth());
+            if (request.getGender() != null)
+                emp.setGender(request.getGender());
+            if (request.getPhoneNumber() != null)
+                emp.setPhoneNumber(request.getPhoneNumber());
+            if (request.getAddress() != null)
+                emp.setAddress(request.getAddress());
+            if (request.getImageUrl() != null)
+                emp.setImageUrl(request.getImageUrl());
+
             employeeRepository.save(emp);
             return getCurrentUserProfile();
         }
@@ -90,11 +100,20 @@ public class UserService {
         Optional<Customer> cusOpt = customerRepository.findByAccount(account);
         if (cusOpt.isPresent()) {
             Customer cus = cusOpt.get();
-            cus.setFullName(request.getFullName());
-            cus.setDateOfBirth(request.getDateOfBirth());
-            cus.setGender(request.getGender());
-            cus.setPhoneNumber(request.getPhoneNumber());
-            cus.setAddress(request.getAddress());
+            if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+                cus.setFullName(request.getFullName());
+            }
+            if (request.getDateOfBirth() != null)
+                cus.setDateOfBirth(request.getDateOfBirth());
+            if (request.getGender() != null)
+                cus.setGender(request.getGender());
+            if (request.getPhoneNumber() != null)
+                cus.setPhoneNumber(request.getPhoneNumber());
+            if (request.getAddress() != null)
+                cus.setAddress(request.getAddress());
+            if (request.getImageUrl() != null)
+                cus.setImageUrl(request.getImageUrl());
+
             customerRepository.save(cus);
             return getCurrentUserProfile();
         }
@@ -107,7 +126,6 @@ public class UserService {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
                 .orElseThrow(() -> new RuntimeException("Account does not exist!"));
-
         if (!passwordEncoder.matches(request.getOldPassword(), account.getPassword())) {
             throw new RuntimeException("Old password is incorrect!");
         }

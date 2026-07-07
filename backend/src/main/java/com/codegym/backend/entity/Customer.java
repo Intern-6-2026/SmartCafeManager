@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "customer")
+@jakarta.persistence.Table(name = "customer")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -37,6 +37,9 @@ public class Customer extends BaseEntity {
 
     @Column(name = "address")
     private String address;
+
+    @Column(name = "image_url")
+    private String imageUrl;
 
     @Column(name = "loyalty_points")
     private Integer loyaltyPoints;

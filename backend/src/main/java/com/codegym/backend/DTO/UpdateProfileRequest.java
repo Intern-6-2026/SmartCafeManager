@@ -12,4 +12,5 @@ public class UpdateProfileRequest {
     private Gender gender;
     private String phoneNumber;
     private String address;
+    private String imageUrl;
 }

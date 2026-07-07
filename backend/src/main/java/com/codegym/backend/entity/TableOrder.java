@@ -1,28 +1,14 @@
 package com.codegym.backend.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import com.codegym.backend.enums.PaymentMethod;
 import com.codegym.backend.enums.StatusTableOrder;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "table_order")
+@jakarta.persistence.Table(name = "table_order")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,38 +17,38 @@ import java.time.LocalDateTime;
 public class TableOrder extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long table_order_id;
+    @Column(name = "order_id")
+    private Long tableOrderId;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "table_id", referencedColumnName = "table_id")
-    private Tables table_id;
+    @JoinColumn(name = "table_id")
+    private Tables table;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "customer_id", referencedColumnName = "customer_id")
-    private Customer customer_id;
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "employee_id", referencedColumnName = "employee_id")
-    private Employee employee_id;
+    @JoinColumn(name = "employee_id")
+    private Employee employee;
 
     @Column(name = "open_at", nullable = false)
-    private LocalDateTime open_at;
+    private LocalDateTime openAt;
 
-    @Column(name = "close_at", nullable = false)
-    private LocalDateTime close_at;
+    @Column(name = "close_at")
+    private LocalDateTime closeAt;
 
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 0)
-    private BigDecimal total_amount;
+    private BigDecimal totalAmount;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_method", nullable = false)
-    private PaymentMethod payment_method;
+    @Column(name = "payment_method")
+    private PaymentMethod paymentMethod;
 
-    @Column(name = "paid_at", nullable = false)
-    private LocalDateTime paid_at;
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private StatusTableOrder status;
-
 }

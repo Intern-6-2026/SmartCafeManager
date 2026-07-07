@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.codegym.backend.dto.ForgotPasswordRequest;
 import com.codegym.backend.dto.LoginRequest;
-import com.codegym.backend.dto.LoginResponse;
 import com.codegym.backend.dto.ResetPasswordRequest;
 import com.codegym.backend.service.AuthService;
 
@@ -22,8 +21,12 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        try {
+            return ResponseEntity.ok(authService.login(request));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping("/forgot-password")

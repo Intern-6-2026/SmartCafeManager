@@ -22,9 +22,10 @@ import lombok.Setter;
 public class MenuCategory extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "category_id")
+    private Long categoryId;
 
     @Column(name = "category_name", nullable = false, unique = true)
-    private String category_name;
+    private String categoryName;
 
 }

@@ -1,25 +1,11 @@
 package com.codegym.backend.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.EnumType;
+import jakarta.persistence.*;
 import com.codegym.backend.enums.StatusOrderDetail;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
-@Table(name = "order_detail")
+@jakarta.persistence.Table(name = "order_detail")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -28,23 +14,24 @@ import lombok.Setter;
 public class OrderDetail {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long order_detail_id;
+    @Column(name = "order_detail_id")
+    private Long orderDetailId;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "order_id", referencedColumnName = "order_id")
-    private TableOrder order_id;
+    @JoinColumn(name = "order_id")
+    private TableOrder order;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "item_id", referencedColumnName = "item_id")
-    private Item item_id;
+    @JoinColumn(name = "item_id")
+    private Item item;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
     @Column(name = "unit_price", nullable = false)
-    private Double unit_price;
+    private Double unitPrice;
 
-    @Column(name = "note", nullable = false)
+    @Column(name = "note")
     private String note;
 
     @Enumerated(EnumType.STRING)

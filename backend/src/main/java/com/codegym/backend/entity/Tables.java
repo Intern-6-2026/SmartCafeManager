@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "table")
+@Table(name = "cafe_table")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,19 +27,20 @@ import lombok.Setter;
 public class Tables extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long table_id;
+    @Column(name = "table_id")
+    private Long tableId;
 
     @Column(name = "table_name", nullable = false, unique = true)
-    private String table_name;
+    private String tableName;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "physical_state", nullable = false)
-    private PhysicalState physical_state;
+    private PhysicalState physicalState;
 
     @Column(name = "is_occupied", nullable = false)
-    private Boolean is_occupied;
+    private Boolean isOccupied;
 
-    @Column(name = "service_status", nullable = false)
     @Enumerated(EnumType.STRING)
-    private ServiceStatus service_status;
+    @Column(name = "service_status", nullable = false)
+    private ServiceStatus serviceStatus;
 }

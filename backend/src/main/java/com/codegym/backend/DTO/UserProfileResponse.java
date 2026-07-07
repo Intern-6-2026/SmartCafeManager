@@ -20,4 +20,5 @@ public class UserProfileResponse {
     private BigDecimal salary;
     private Integer loyaltyPoints;
     private String roleName;
+    private String imageUrl;
 }

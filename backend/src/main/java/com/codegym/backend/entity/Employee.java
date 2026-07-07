@@ -7,7 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "employee")
+@jakarta.persistence.Table(name = "employee")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -43,5 +43,5 @@ public class Employee extends BaseEntity {
     private BigDecimal salary;
 
     @Column(name = "image_url")
-    private String image_url;
+    private String imageUrl;
 }
