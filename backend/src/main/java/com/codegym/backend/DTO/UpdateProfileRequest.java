@@ -1,4 +1,4 @@
-package com.codegym.backend.DTO;
+package com.codegym.backend.dto;
 
 import java.util.Date;
 import com.codegym.backend.enums.Gender;

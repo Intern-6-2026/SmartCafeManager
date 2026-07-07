@@ -10,10 +10,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.codegym.backend.DTO.ForgotPasswordRequest;
-import com.codegym.backend.DTO.LoginRequest;
-import com.codegym.backend.DTO.LoginResponse;
-import com.codegym.backend.DTO.ResetPasswordRequest;
+import com.codegym.backend.dto.ForgotPasswordRequest;
+import com.codegym.backend.dto.LoginRequest;
+import com.codegym.backend.dto.LoginResponse;
+import com.codegym.backend.dto.ResetPasswordRequest;
 import com.codegym.backend.entity.Account;
 import com.codegym.backend.enums.AccountStatus;
 import com.codegym.backend.repository.AccountRepository;

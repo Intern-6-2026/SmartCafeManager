@@ -32,7 +32,7 @@ public class Item extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id", referencedColumnName = "category_id")
-    private Menu_Category category_id;
+    private MenuCategory category_id;
 
     @Column(name = "item_name", nullable = false, unique = true)
     private String item_name;

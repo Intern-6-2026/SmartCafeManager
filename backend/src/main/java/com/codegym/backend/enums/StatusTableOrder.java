@@ -1,5 +1,5 @@
 package com.codegym.backend.enums;
 
-public enum Status_Table_Order {
+public enum StatusTableOrder {
     OPEN, PAID, CANCELLED
 }

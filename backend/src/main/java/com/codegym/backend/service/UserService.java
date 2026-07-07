@@ -8,7 +8,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.codegym.backend.DTO.*;
+import com.codegym.backend.dto.*;
 import com.codegym.backend.entity.Account;
 import com.codegym.backend.entity.Customer;
 import com.codegym.backend.entity.Employee;

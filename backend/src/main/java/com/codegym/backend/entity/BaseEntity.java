@@ -18,14 +18,14 @@ public abstract class BaseEntity {
     private Date createdAt;
 
     @Column(name = "created_by")
-    private Long createdBy;
+    private String createdBy;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Date updatedAt;
 
     @Column(name = "updated_by")
-    private Long updatedBy;
+    private String updatedBy;
 
     @Column(name = "deleted_at")
     private Date deletedAt;

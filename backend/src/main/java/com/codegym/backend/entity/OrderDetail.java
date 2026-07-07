@@ -11,7 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.EnumType;
-import com.codegym.backend.enums.Status_Order_Detail;
+import com.codegym.backend.enums.StatusOrderDetail;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,7 +25,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Order_Detail {
+public class OrderDetail {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long order_detail_id;
@@ -49,5 +49,5 @@ public class Order_Detail {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private Status_Order_Detail status;
+    private StatusOrderDetail status;
 }

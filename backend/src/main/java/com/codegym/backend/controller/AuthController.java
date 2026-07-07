@@ -6,10 +6,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.codegym.backend.DTO.ForgotPasswordRequest;
-import com.codegym.backend.DTO.LoginRequest;
-import com.codegym.backend.DTO.LoginResponse;
-import com.codegym.backend.DTO.ResetPasswordRequest;
+import com.codegym.backend.dto.ForgotPasswordRequest;
+import com.codegym.backend.dto.LoginRequest;
+import com.codegym.backend.dto.LoginResponse;
+import com.codegym.backend.dto.ResetPasswordRequest;
 import com.codegym.backend.service.AuthService;
 
 import lombok.RequiredArgsConstructor;

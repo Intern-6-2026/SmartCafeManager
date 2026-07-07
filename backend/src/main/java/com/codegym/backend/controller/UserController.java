@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.codegym.backend.DTO.ChangePasswordRequest;
-import com.codegym.backend.DTO.UpdateProfileRequest;
-import com.codegym.backend.DTO.UserProfileResponse;
+import com.codegym.backend.dto.ChangePasswordRequest;
+import com.codegym.backend.dto.UpdateProfileRequest;
+import com.codegym.backend.dto.UserProfileResponse;
 import com.codegym.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 

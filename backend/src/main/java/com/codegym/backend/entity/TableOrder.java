@@ -12,7 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import com.codegym.backend.enums.PaymentMethod;
-import com.codegym.backend.enums.Status_Table_Order;
+import com.codegym.backend.enums.StatusTableOrder;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -63,6 +63,6 @@ public class Table_Order extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private Status_Table_Order status;
+    private StatusTableOrder status;
 
 }

@@ -1,5 +1,5 @@
 package com.codegym.backend.enums;
 
-public enum Status_Order_Detail {
+public enum StatusOrderDetail {
     PENDING, CONFIRMED, SERVED, CANCELLED
 }
