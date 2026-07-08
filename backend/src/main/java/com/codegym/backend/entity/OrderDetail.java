@@ -1,6 +1,7 @@
 package com.codegym.backend.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import com.codegym.backend.enums.StatusOrderDetail;
 import lombok.*;
 
@@ -11,7 +12,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OrderDetail {
+public class OrderDetail extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "order_detail_id")
@@ -28,8 +29,8 @@ public class OrderDetail {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    @Column(name = "unit_price", nullable = false)
-    private Double unitPrice;
+    @Column(name = "unit_price", nullable = false, precision = 15, scale = 0)
+    private BigDecimal unitPrice;
 
     @Column(name = "note")
     private String note;

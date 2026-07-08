@@ -2,6 +2,7 @@ package com.codegym.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 
 @Entity
 @jakarta.persistence.Table(name = "item")
@@ -21,13 +22,13 @@ public class Item extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
-    private MenuCategory category; // Đã đổi từ category_id -> category
+    private MenuCategory category;
 
     @Column(name = "item_name", nullable = false, unique = true)
     private String itemName;
 
-    @Column(name = "price", nullable = false)
-    private Double price;
+    @Column(name = "price", nullable = false, precision = 15, scale = 0)
+    private BigDecimal price;
 
     @Column(name = "description")
     private String description;
