@@ -76,6 +76,19 @@ public class UserService {
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
                 .orElseThrow(() -> new RuntimeException("Account not found!"));
 
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            String newEmail = request.getEmail().trim();
+
+            if (!newEmail.equalsIgnoreCase(account.getEmail())) {
+                Optional<Account> existingAccount = accountRepository.findByEmailAndDeletedAtIsNull(newEmail);
+                if (existingAccount.isPresent()) {
+                    throw new RuntimeException("Email này đã được đăng ký bởi một tài khoản khác trong hệ thống!");
+                }
+                account.setEmail(newEmail);
+                accountRepository.save(account);
+            }
+        }
+
         Optional<Employee> empOpt = employeeRepository.findByAccount(account);
         if (empOpt.isPresent()) {
             Employee emp = empOpt.get();
