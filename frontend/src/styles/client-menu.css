@@ -322,6 +322,7 @@ header {
   margin-left: auto;
   background: transparent;
   padding: 14px 14px 16px;
+  border-left: 3px solid var(--line);
   min-width: 320px;
 }
 

@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from "react";
-import "../styles/ClientMenu.css";
+import "../styles/client-menu.css";
+import AddDrinkModal from "./add-drink";
+import FeedbackModal from "./feedback";
 
-/* Hard code data, sau này có thể lấy từ API */
+/* hard coded data */
 const CATEGORIES = ["Coffee", "Trà", "Nước Ép", "Đá xay", "Bánh"];
 
 const MENU_ITEMS = [
@@ -12,11 +14,11 @@ const MENU_ITEMS = [
   { id: 5, name: "Bạc xỉu", price: 30000, wait: "5:00", category: "Coffee", img: "images/Bạc_xỉu.png" },
   { id: 6, name: "Cappuccino", price: 35000, wait: "7:00", category: "Coffee", img: "images/cappuccino.png" },
   { id: 7, name: "Trà đào cam sả", price: 30000, wait: "5:00", category: "Trà", img: "images/tra_dao_cam_sa.png" },
-  { id: 8, name: "Trà sữa trân châu", price: 35000, wait: "6:00", category: "Trà", img: "images/tra_sua_tran_chau.png" },
-  { id: 9, name: "Nước ép cam", price: 30000, wait: "5:00", category: "Nước Ép", img: "images/nuoc_ep_cam.png" },
-  { id: 10, name: "Nước ép dứa", price: 30000, wait: "5:00", category: "Nước Ép", img: "images/nuoc_ep_dua.png" },
-  { id: 11, name: "Đá xay socola", price: 35000, wait: "6:00", category: "Đá xay", img: "images/da_xay_socola.png" },
-  { id: 12, name: "Đá xay matcha", price: 35000, wait: "6:00", category: "Đá xay", img: "images/da_xay_matcha.png"}
+  { id: 8, name: "Trà vải", price: 30000, wait: "5:00", category: "Trà", img: "images/tra_vai.png" },
+  { id: 9, name: "Trà sữa trân châu", price: 35000, wait: "6:00", category: "Trà", img: "images/tra_sua_tran_chau.png" },
+  { id: 10, name: "Trà sữa matcha", price: 35000, wait: "6:00", category: "Trà", img: "images/tra_sua_matcha.png" },
+  { id: 11, name: "Nước ép cam", price: 30000, wait: "5:00", category: "Nước Ép", img: "images/nuoc_ep_cam.png" },
+  { id: 12, name: "Nước ép dứa", price: 30000, wait: "5:00", category: "Nước Ép", img: "images/nuoc_ep_dua.png"}
 ];
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n) + "đ";
@@ -28,25 +30,40 @@ function ClientMenu() {
     { id: 1, qty: 1 },
     { id: 2, qty: 1 },
   ]);
+  const [selectedItem, setSelectedItem] = useState(null); // món đang mở modal Thêm món
+  const [feedbackOpen, setFeedbackOpen] = useState(false); // modal Phản hồi
 
+  /* Lọc món theo Service Type */
   const filtered = useMemo(
     () => MENU_ITEMS.filter((m) => m.category === category),
     [category]
   );
 
-  /*  Giỏ hàng  */
+  /* Giỏ hàng  */
   const cartRows = cart
     .map((c) => ({ ...MENU_ITEMS.find((m) => m.id === c.id), qty: c.qty }))
     .filter((r) => r.name);
   const total = cartRows.reduce((s, r) => s + r.price * r.qty, 0);
 
-  const addToCart = (id) =>
+  const addToCart = (id, qty = 1) =>
     setCart((prev) => {
       const found = prev.find((c) => c.id === id);
       return found
-        ? prev.map((c) => (c.id === id ? { ...c, qty: c.qty + 1 } : c))
-        : [...prev, { id, qty: 1 }];
+        ? prev.map((c) => (c.id === id ? { ...c, qty: c.qty + qty } : c))
+        : [...prev, { id, qty }];
     });
+
+  /* Bấm "Thêm" trong modal Thêm món */
+  const confirmAddItem = (item, qty) => {
+    addToCart(item.id, qty);
+    setSelectedItem(null);
+  };
+
+  /* Bấm "Gửi" trong modal Phản hồi */
+  const submitFeedback = (data) => {
+    console.log("Phản hồi:", data);
+    setFeedbackOpen(false);
+  };
 
   const changeQty = (id, delta) =>
     setCart((prev) =>
@@ -72,6 +89,7 @@ function ClientMenu() {
             <h1 className="brand-name-not-bold">CAFÉ</h1>
           </div>
           <div className="header-title">THÔNG TIN BÀN</div>
+          {/* Nút ≡ mở panel Service Type */}
           <button
             className="menu-btn"
             aria-label="Mở danh sách loại dịch vụ"
@@ -85,7 +103,7 @@ function ClientMenu() {
         </div>
       </header>
 
-      {/* ----- Drawer Service Type (hiện khi ấn nút ≡) ----- */}
+      {/* Types of Drinks*/}
       <div
         className={`drawer-overlay ${menuOpen ? "show" : ""}`}
         onClick={() => setMenuOpen(false)}
@@ -104,15 +122,14 @@ function ClientMenu() {
 
       <main>
         <div className="main-content">
-          
           <div className="menu">
             <div className="grid-menu">
               {filtered.map((m) => (
                 <button
                   className="card"
                   key={m.id}
-                  onClick={() => addToCart(m.id)}
-                  aria-label={`Thêm ${m.name} vào đơn`}
+                  onClick={() => setSelectedItem(m)}
+                  aria-label={`Chọn ${m.name}`}
                 >
                   <div className="card-img">
                     <img src={m.img} alt={m.name} className="item-img" />
@@ -127,7 +144,7 @@ function ClientMenu() {
             </div>
           </div>
 
-          {/*Chi tiết đơn hàng*/}
+          {/* Chi tiết đơn hàng */}
           <section className="order-detail">
             <div className="order-header">
               <span className="order-header-title">Tên món</span>
@@ -189,7 +206,9 @@ function ClientMenu() {
               <button className="btn-goimon">Gọi món</button>
               <button className="btn-thanhtoan">Thanh toán</button>
               <button className="btn-goinhanvien">Gọi nhân viên</button>
-              <button className="btn-phanhoi">Phản hồi</button>
+              <button className="btn-feedback" onClick={() => setFeedbackOpen(true)}>
+                Phản hồi
+              </button>
             </div>
           </section>
         </div>
@@ -204,6 +223,18 @@ function ClientMenu() {
           </p>
         </footer>
       </main>
+
+      {/* 2 MODAL (component riêng) */}
+      <AddDrinkModal
+        item={selectedItem}
+        onConfirm={confirmAddItem}
+        onClose={() => setSelectedItem(null)}
+      />
+      <FeedbackModal
+        open={feedbackOpen}
+        onSubmit={submitFeedback}
+        onClose={() => setFeedbackOpen(false)}
+      />
     </div>
   );
 }
