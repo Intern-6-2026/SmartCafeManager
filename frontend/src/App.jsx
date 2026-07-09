@@ -1,7 +1,9 @@
+import ClientMenu from "./components/client-menu";
+
 function App() {
   return (
     <>
-      <h1>Smart Cafe</h1>
+      <ClientMenu/>
     </>
   );
 }
