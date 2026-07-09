@@ -69,6 +69,25 @@ Dữ liệu gốc trong DB đã cung cấp sẵn các tài khoản dưới đây
 
 > **Base Path:** `/api/v1/auth` *(Công khai, không yêu cầu Token)*
 
+* **Mô tả chuyên sâu về chức năng:**
+* Đây là cổng an ninh đầu tiên của hệ thống. API thực hiện đối chiếu thông tin `username` và `password` với cơ sở dữ liệu (mật khẩu được kiểm tra qua thuật toán mã hóa Bcrypt).
+* Kiểm tra cờ trạng thái tài khoản: Nếu tài khoản bị khóa (`INACTIVE`) hoặc đã bị xóa mềm (`deleted_at is not null`), hệ thống sẽ từ chối truy cập ngay lập tức.
+* Nếu hợp lệ, Backend sẽ sinh ra một chuỗi **JWT (JSON Web Token)** có thời hạn để Frontend sử dụng cho các request bảo mật sau này.
+* **Đặc biệt:** API có tính toán thời gian `password_changed_at`. Nếu mật khẩu đã quá hạn 30 ngày chưa đổi, cờ `requirePasswordChange: true` sẽ được trả về.
+
+* **Hành vi & Giao diện trên Frontend (UI/UX):**
+* **Giao diện:** Màn hình Form đăng nhập với 2 ô input (Username, Password), nút "Đăng nhập", checkbox "Ghi nhớ tôi" và đường dẫn "Quên mật khẩu?".
+* **Khi người dùng thao tác:**
+* Nhấn nút "Đăng nhập", nút này sẽ chuyển sang trạng thái Loading (spin icon) và bị disable để tránh click đúp.
+
+* **Xử lý Response thành công (200 OK):**
+* Frontend lưu `token` vào `localStorage`, `sessionStorage` hoặc `Cookies` (và đưa vào global state như Redux/Vuex/Pinia).
+* **Kiểm tra cờ `requirePasswordChange`:**
+* Nếu là **`true`**: Frontend **chặn không cho vào Trang chủ**, buộc chuyển hướng (Redirect) ngay sang màn hình *Đổi mật khẩu bắt buộc*, kèm thông báo: *"Mật khẩu của bạn đã hết hạn 30 ngày, vui lòng đổi mật khẩu mới để tiếp tục"*.
+* Nếu là **`false`**: Điều hướng người dùng vào giao diện tương ứng với Phân quyền (`ADMIN` vào Admin Dashboard, `STAFF` vào màn hình POS/Thu ngân/Bếp, `CUSTOMER` vào màn hình Menu/Đặt bàn).
+
+* **Xử lý thất bại (400):** Hiển thị Toast message màu đỏ hoặc lỗi chữ đỏ ngay dưới form: *"Tên đăng nhập hoặc mật khẩu không chính xác"*.
+
 #### 1.1. Đăng nhập hệ thống (Login)
 
 * **Phương thức:** `POST`
