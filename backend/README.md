@@ -1,6 +1,5 @@
 
 
-```markdown
 # ☕ Smart Cafe Management - API Testing Guide (Postman)
 
 Tài liệu này cung cấp hướng dẫn chi tiết về cách thiết lập môi trường và thực hiện kiểm thử các API của hệ thống **Smart Cafe Management** bằng công cụ Postman. Dự án hiện tại hỗ trợ các tính năng về **Xác thực người dùng (Authentication)** và **Quản lý hồ sơ (User Profile)** dành cho 3 phân quyền: `ADMIN`, `STAFF`, và `CUSTOMER`.
