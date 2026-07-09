@@ -7,18 +7,9 @@
   --line: #E4D2B8;
 }
 
-* {
-  box-sizing: border-box;
-}
+/* Mọi rule đều scope trong .add-drink để không xung đột với modal Phản Hồi */
 
-body {
-  margin: 0;
-  background: #E9E2D4;
-  font-family: 'Be Vietnam Pro', sans-serif;
-}
-
-
-.modal-overlay {
+.modal-overlay.add-drink {
   display: none;
   position: fixed;
   inset: 0;
@@ -29,99 +20,110 @@ body {
   z-index: 100;
 }
 
-.modal-overlay.show {
+.modal-overlay.add-drink.show {
   display: flex;
 }
 
-.modal-box {
+.add-drink .modal-box {
   width: 100%;
   max-width: 320px;
   background: #fff;
   border: 1px solid var(--tan-deep);
   border-radius: 10px;
   padding: 18px 20px 20px;
+  position: relative;
 }
 
-.modal-title {
-  font-size: 15px;
+/* Tiêu đề nằm đè lên viền trên như mockup (kiểu legend) */
+.add-drink .modal-title {
+  position: absolute;
+  top: -10px;
+  left: 16px;
+  background: #fff;
+  padding: 0 8px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--ink);
-  padding-bottom: 10px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--line);
+  border-radius: 4px;
 }
 
-.modal-field-row {
+.add-drink .modal-field-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
+  margin: 16px 0 14px;
+  justify-content: center;
 }
 
-.modal-field {
+.add-drink .modal-field {
   margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
-.modal-label {
+.add-drink .modal-label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--ink-soft);
+  color: var(--ink);
 }
 
-.modal-field .modal-label {
-  display: block;
-  margin-bottom: 6px;
-}
-
-.modal-value {
+.add-drink .modal-value {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--ink);
 }
 
-.modal-input {
-  width: 100%;
+.add-drink .modal-input {
+  width: 130px;
   font-family: inherit;
   font-size: 13.5px;
   color: var(--ink);
   border: 1px solid var(--tan-deep);
-  border-radius: 6px;
-  padding: 8px 10px;
+  border-radius: 4px;
+  padding: 7px 10px;
   background: #fff;
   outline: none;
 }
 
-.modal-input:focus {
+.add-drink .modal-input:focus {
   border-color: var(--ink);
 }
 
-.modal-actions {
+.add-drink .modal-actions {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   gap: 14px;
   margin-top: 18px;
 }
 
-.btn-them,
-.btn-dong {
+.add-drink .btn-them,
+.add-drink .btn-dong {
   min-width: 96px;
   padding: 8px 14px;
   border-radius: 6px;
   border: 1px solid var(--tan-deep);
   background: #fff;
-  color: var(--tan-deep);
+  color: var(--ink);
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
-.btn-them:hover,
-.btn-dong:hover {
+.add-drink .btn-them:hover,
+.add-drink .btn-dong:hover {
   background: var(--tan-light);
 }
 
-.btn-them:active,
-.btn-dong:active {
+.add-drink .btn-them:active,
+.add-drink .btn-dong:active {
   transform: scale(.97);
+}
+
+.add-drink .btn-them:focus-visible,
+.add-drink .btn-dong:focus-visible {
+  outline: 2px solid var(--tan-deep);
+  outline-offset: 2px;
 }
