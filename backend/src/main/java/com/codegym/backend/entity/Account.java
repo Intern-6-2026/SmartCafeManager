@@ -36,7 +36,7 @@ public class Account extends BaseEntity {
     @Column(name = "reset_token_expiry")
     private Date resetTokenExpiry;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", referencedColumnName = "role_id")
     private Role role;
 
