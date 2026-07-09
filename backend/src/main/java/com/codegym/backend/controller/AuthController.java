@@ -1,7 +1,7 @@
 package com.codegym.backend.controller;
 
 import org.springframework.http.ResponseEntity;
-// import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,7 +11,6 @@ import com.codegym.backend.dto.ForgotPasswordRequest;
 import com.codegym.backend.dto.LoginRequest;
 import com.codegym.backend.dto.ResetPasswordRequest;
 import com.codegym.backend.service.AuthService;
-
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -22,6 +21,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
             return ResponseEntity.ok(authService.login(request));
@@ -31,7 +31,7 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    // @PreAuthorize("hasRole('ROLE_USER') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         try {
             return ResponseEntity.ok(authService.processForgotPassword(request));
@@ -41,6 +41,7 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
         try {
             return ResponseEntity.ok(authService.processResetPassword(request));

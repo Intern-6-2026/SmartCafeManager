@@ -1,6 +1,7 @@
 package com.codegym.backend.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,6 +22,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getProfile() {
         try {
             UserProfileResponse profile = userService.getCurrentUserProfile();
@@ -31,6 +33,7 @@ public class UserController {
     }
 
     @PutMapping("/change-password")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
         try {
             String message = userService.changePassword(request);
@@ -41,6 +44,7 @@ public class UserController {
     }
 
     @PutMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileRequest request) {
         try {
             UserProfileResponse updatedProfile = userService.updateProfile(request);
