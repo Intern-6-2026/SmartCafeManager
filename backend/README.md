@@ -70,7 +70,13 @@ Dữ liệu gốc trong DB đã cung cấp sẵn các tài khoản dưới đây
 > **Base Path:** `/api/v1/auth` *(Công khai, không yêu cầu Token)*
 
 #### 1.1. Đăng nhập hệ thống (Login)
-
+* **Mô tả chuyên sâu về chức năng:**
+* Đây là cổng an ninh đầu tiên của hệ thống. API thực hiện đối chiếu thông tin `username` và `password` với cơ sở dữ liệu (mật khẩu được kiểm tra qua thuật toán mã hóa Bcrypt).
+* Kiểm tra cờ trạng thái tài khoản: Nếu tài khoản bị khóa (`INACTIVE`) hoặc đã bị xóa mềm (`deleted_at is not null`), hệ thống sẽ từ chối truy cập ngay lập tức.
+* Nếu hợp lệ, Backend sẽ sinh ra một chuỗi **JWT (JSON Web Token)** có thời hạn để Frontend sử dụng cho các request bảo mật sau này.
+* **Đặc biệt:** API có tính toán thời gian `password_changed_at`. Nếu mật khẩu đã quá hạn 30 ngày chưa đổi, cờ `requirePasswordChange: true` sẽ được trả về.
+* Nếu là **`true`**: Frontend **chặn không cho vào Trang chủ**, buộc chuyển hướng (Redirect) ngay sang màn hình *Đổi mật khẩu bắt buộc*, kèm thông báo: *"Mật khẩu của bạn đã hết hạn 30 ngày, vui lòng đổi mật khẩu mới để tiếp tục"*.
+  
 * **Phương thức:** `POST`
 * **URL:** `{{baseUrl}}/auth/login`
 * **Headers:** `Content-Type: application/json`
@@ -97,6 +103,11 @@ Dữ liệu gốc trong DB đã cung cấp sẵn các tài khoản dưới đây
 * **`400 Bad Request`**: `"Incorrect password!"` hoặc `"Account does not exist or has been deleted!"`.
 
 #### 1.2. Yêu cầu khôi phục mật khẩu (Forgot Password)
+* **Mô tả chuyên sâu về chức năng:**
+* Khởi tạo quy trình lấy lại mật khẩu cho người dùng khi họ quên.
+* Kiểm tra `email` có tồn tại trong hệ thống và tài khoản gắn liền có đang `ACTIVE` hay không.
+* Nếu hợp lệ, hệ thống tự động sinh ra một **mã OTP 6 chữ số ngẫu nhiên**, lưu vào database kèm thời hạn sử dụng (thuộc tính `reset_token_expiry`, quy định là **5 phút** kể từ lúc tạo).
+* Gọi service gửi Email chứa mã OTP này tới hòm thư của người dùng.
 
 * **Phương thức:** `POST`
 * **URL:** `{{baseUrl}}/auth/forgot-password`
@@ -114,7 +125,12 @@ Dữ liệu gốc trong DB đã cung cấp sẵn các tài khoản dưới đây
 * **`400 Bad Request`**: `"No valid account found for this email!"`
 
 #### 1.3. Đặt lại mật khẩu mới (Reset Password)
-
+* **Mô tả chuyên sâu về chức năng:**
+* Bước cuối cùng của quy trình khôi phục mật khẩu.
+* Đối chiếu `token` (mã OTP 6 số) người dùng gửi lên với cột `reset_token` trong database.
+* Kiểm tra tính hợp lệ của thời gian: Nếu thời điểm hiện tại đã vượt quá `reset_token_expiry` (quá 5 phút), yêu cầu sẽ bị từ chối.
+* Nếu hợp lệ, mã hóa Bcrypt mật khẩu mới (`newPassword`), cập nhật vào database, reset cột `password_changed_at` về thời điểm hiện tại và xóa bỏ chuỗi OTP (set null) để không ai dùng lại được mã này nữa.
+  
 * **Phương thức:** `POST`
 * **URL:** `{{baseUrl}}/auth/reset-password`
 * **Headers:** `Content-Type: application/json`
@@ -138,6 +154,11 @@ Dữ liệu gốc trong DB đã cung cấp sẵn các tài khoản dưới đây
 > **Base Path:** `/api/v1/users` *(Bắt buộc truyền Token)* > **Header chung cho toàn module:** `Authorization: Bearer {{token}}`
 
 #### 2.1. Xem thông tin cá nhân (Get Profile)
+* **Mô tả chuyên sâu về chức năng:**
+* API lấy thông tin định danh và chi tiết của tài khoản đang đăng nhập. Không cần truyền ID trên URL vì Backend sẽ tự động trích xuất `username` từ **JWT Token** nằm trong Header `Authorization`.
+* Dựa vào Role của tài khoản, Backend sẽ query vào bảng `employee` (nếu là ADMIN/STAFF) hoặc bảng `customer` (nếu là CUSTOMER) để trả về DTO phù hợp nhất.
+* Hệ thống tự động lọc và xử lý dữ liệu: Nhân viên thì trả về `salary` (lương) và ẩn điểm tích lũy; Khách hàng thì trả về `loyaltyPoints` (điểm thưởng) và set lương bằng `null`.
+* Hiện tại đã thực hiện đưa salary và loyaltyPoints vào phần output, admin mới có thể xem qua thông tin về hai nội dung này (sẽ điều chỉnh sau)
 
 * **Phương thức:** `GET`
 * **URL:** `{{baseUrl}}/users/profile`
@@ -162,7 +183,11 @@ Dữ liệu gốc trong DB đã cung cấp sẵn các tài khoản dưới đây
 *(**Lưu ý:** Với tài khoản `CUSTOMER`: Thuộc tính `salary` sẽ là `null`, trong khi `loyaltyPoints` sẽ có giá trị).*
 
 #### 2.2. Cập nhật thông tin cá nhân (Update Profile)
-
+* **Mô tả chuyên sâu về chức năng:**
+* Cho phép người dùng tự chỉnh sửa thông tin cá nhân của mình.
+* API hỗ trợ cơ chế **Partial Update (Cập nhật từng phần)**: Người dùng muốn sửa trường nào thì gửi trường đó, các trường không gửi hoặc gửi `null` sẽ được Backend giữ nguyên dữ liệu cũ trong DB.
+* Có xử lý logic kiểm tra ràng buộc (Validation): Nếu người dùng đổi Email sang một chuỗi Email mới, Backend sẽ query kiểm tra xem Email mới này đã bị tài khoản khác chiếm dụng hay chưa.
+  
 * **Phương thức:** `PUT`
 * **URL:** `{{baseUrl}}/users/profile`
 * **Body:**
@@ -183,7 +208,12 @@ Dữ liệu gốc trong DB đã cung cấp sẵn các tài khoản dưới đây
 * **Kỳ vọng:** Trả về HTTP **`200 OK`** kèm đối tượng Profile đã được cập nhật.
 
 #### 2.3. Đổi mật khẩu (Change Password)
-
+* **Mô tả chuyên sâu về chức năng:**
+* Dành cho người dùng **đã đăng nhập vào hệ thống** muốn đổi mật khẩu mới (khác với luồng Quên mật khẩu ở Module 1).
+* Xác thực kép: Yêu cầu người dùng phải nhập đúng Mật khẩu hiện tại (`oldPassword`). Backend sẽ Bcrypt match mật khẩu cũ này trong DB, nếu sai sẽ từ chối ngay.
+* Kiểm tra ràng buộc logic: Mật khẩu mới (`newPassword`) không được phép trùng với mật khẩu cũ.
+* Cập nhật mật khẩu mới đã mã hóa và tự động gia hạn thời gian `password_changed_at`.
+  
 * **Phương thức:** `PUT`
 * **URL:** `{{baseUrl}}/users/change-password`
 * **Body:**
