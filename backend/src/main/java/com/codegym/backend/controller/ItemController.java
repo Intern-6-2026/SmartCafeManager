@@ -2,6 +2,7 @@ package com.codegym.backend.controller;
 
 import com.codegym.backend.entity.Item;
 import com.codegym.backend.service.ItemService;
+import com.codegym.backend.dto.ItemResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -19,19 +20,19 @@ public class ItemController {
 
     // Link 1: http://localhost:8080/api/v1/auth/items
     @GetMapping("/api/v1/auth/items")
-    public ResponseEntity<List<Item>> getAllItems() {
-        return ResponseEntity.ok(itemService.getAllItems()); 
+    public ResponseEntity<List<ItemResponse>> getAllItems() {
+        return ResponseEntity.ok(itemService.getAllItems());
     }
 
     // Link 2: http://localhost:8080/api/v1/auth/items/latest
     @GetMapping("/api/v1/auth/items/latest")
-    public ResponseEntity<List<Item>> getLatestItems() {
+    public ResponseEntity<List<ItemResponse>> getLatestItems() {
         return ResponseEntity.ok(itemService.getLatestItems());
     }
 
     // Link 3: http://localhost:8080/api/v1/auth/items/best-sellers
     @GetMapping("/api/v1/auth/items/best-sellers")
-    public ResponseEntity<List<Item>> getBestSellerItems() {
+    public ResponseEntity<List<ItemResponse>> getBestSellerItems() {
         return ResponseEntity.ok(itemService.getBestSellerItems());
     }
 }
