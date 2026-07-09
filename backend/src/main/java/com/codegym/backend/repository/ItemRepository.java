@@ -11,25 +11,37 @@ import java.util.List;
 @Repository
 public interface ItemRepository extends JpaRepository<Item, Long> {
 
-       // 1. Tìm các món sắp xếp theo ID giảm dần (mới nhất) kèm giới hạn số lượng
-       List<Item> findByOrderByItemIdDesc(Pageable pageable);
+       // 1. Tìm các món ăn mới nhất kèm giới hạn số lượng và chưa bị xóa mềm
+       List<Item> findByDeletedAtIsNullOrderByItemIdDesc(Pageable pageable);
 
-       // 2. Tìm các món sắp xếp theo số lượng bán giảm dần (bán chạy nhất) kèm giới
-       // hạn số lượng
-       List<Item> findByOrderByTotalOrderCountDesc(Pageable pageable);
+       // 2. Tìm các món ăn bán chạy nhất kèm giới hạn số lượng và chưa bị xóa mềm
+       List<Item> findByDeletedAtIsNullOrderByTotalOrderCountDesc(Pageable pageable);
 
+       // 3. Lấy tất cả DTO món ăn đang hoạt động trong hệ thống
        @Query("SELECT new com.codegym.backend.dto.ItemResponse(i.itemId, i.itemCode, c.categoryId, c.categoryName, i.itemName, i.price, i.description, i.imageUrl, i.isAvailable, i.totalOrderCount) "
                      +
-                     "FROM Item i JOIN i.category c")
+                     "FROM Item i JOIN i.category c "
+                     +
+                     "WHERE i.deletedAt IS NULL")
        List<ItemResponse> findAllItemsAsDTO();
 
+       // 4. Lấy DTO các món ăn mới nhất và chưa bị xóa mềm
        @Query("SELECT new com.codegym.backend.dto.ItemResponse(i.itemId, i.itemCode, c.categoryId, c.categoryName, i.itemName, i.price, i.description, i.imageUrl, i.isAvailable, i.totalOrderCount) "
                      +
-                     "FROM Item i JOIN i.category c ORDER BY i.createdAt DESC, i.itemId DESC")
+                     "FROM Item i JOIN i.category c "
+                     +
+                     "WHERE i.deletedAt IS NULL "
+                     +
+                     "ORDER BY i.createdAt DESC, i.itemId DESC")
        List<ItemResponse> findLatestItems(Pageable pageable);
 
+       // 5. Lấy DTO các món ăn bán chạy nhất và chưa bị xóa mềm
        @Query("SELECT new com.codegym.backend.dto.ItemResponse(i.itemId, i.itemCode, c.categoryId, c.categoryName, i.itemName, i.price, i.description, i.imageUrl, i.isAvailable, i.totalOrderCount) "
                      +
-                     "FROM Item i JOIN i.category c ORDER BY i.totalOrderCount DESC")
+                     "FROM Item i JOIN i.category c "
+                     +
+                     "WHERE i.deletedAt IS NULL "
+                     +
+                     "ORDER BY i.totalOrderCount DESC")
        List<ItemResponse> findBestSellerItems(Pageable pageable);
 }
