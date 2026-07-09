@@ -1,5 +1,3 @@
-
-
 # ☕ Smart Cafe Management - API Testing Guide (Postman)
 
 Tài liệu này cung cấp hướng dẫn chi tiết về cách thiết lập môi trường và thực hiện kiểm thử các API của hệ thống **Smart Cafe Management** bằng công cụ Postman. Dự án hiện tại hỗ trợ các tính năng về **Xác thực người dùng (Authentication)** và **Quản lý hồ sơ (User Profile)** dành cho 3 phân quyền: `ADMIN`, `STAFF`, và `CUSTOMER`.
@@ -61,7 +59,7 @@ Dữ liệu gốc trong DB đã cung cấp sẵn các tài khoản dưới đây
 | `khach_vip01` | khachvip1@gmail.com | **CUSTOMER** | Khách hàng VIP |
 | `khach_thuong01` | khachthuong1@gmail.com | **CUSTOMER** | Khách hàng thường |
 
-> **💡 Lưu ý:** Mật khẩu trong DB được mã hóa bằng Bcrypt. Khi test thực tế, hãy sử dụng mật khẩu mặc định được quy định lúc tạo dữ liệu mẫu (thường là `123456` hoặc `password`).
+> **💡 Lưu ý:** Mật khẩu trong DB được mã hóa bằng Bcrypt. Khi test thực tế, hãy sử dụng mật khẩu mặc định được quy định lúc tạo dữ liệu mẫu (thường là `123456`).
 
 ---
 
