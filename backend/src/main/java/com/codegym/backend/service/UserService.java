@@ -82,7 +82,7 @@ public class UserService {
             if (!newEmail.equalsIgnoreCase(account.getEmail())) {
                 Optional<Account> existingAccount = accountRepository.findByEmailAndDeletedAtIsNull(newEmail);
                 if (existingAccount.isPresent()) {
-                    throw new RuntimeException("Email này đã được đăng ký bởi một tài khoản khác trong hệ thống!");
+                    throw new RuntimeException("This email is already registered by another account in the system!");
                 }
                 account.setEmail(newEmail);
                 accountRepository.save(account);

@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.codegym.backend.dto.ChangePasswordRequest;
 import com.codegym.backend.dto.UpdateProfileRequest;
-import com.codegym.backend.dto.UserProfileResponse;
 import com.codegym.backend.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -24,33 +24,19 @@ public class UserController {
     @GetMapping("/profile")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getProfile() {
-        try {
-            UserProfileResponse profile = userService.getCurrentUserProfile();
-            return ResponseEntity.ok(profile);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(userService.getCurrentUserProfile());
     }
 
     @PutMapping("/change-password")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
-        try {
-            String message = userService.changePassword(request);
-            return ResponseEntity.ok(message);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        String message = userService.changePassword(request);
+        return ResponseEntity.ok(message);
     }
 
     @PutMapping("/profile")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileRequest request) {
-        try {
-            UserProfileResponse updatedProfile = userService.updateProfile(request);
-            return ResponseEntity.ok(updatedProfile);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<?> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
+        return ResponseEntity.ok(userService.updateProfile(request));
     }
 }

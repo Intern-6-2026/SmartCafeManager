@@ -11,6 +11,7 @@ import com.codegym.backend.dto.ForgotPasswordRequest;
 import com.codegym.backend.dto.LoginRequest;
 import com.codegym.backend.dto.ResetPasswordRequest;
 import com.codegym.backend.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -22,31 +23,19 @@ public class AuthController {
 
     @PostMapping("/login")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        try {
-            return ResponseEntity.ok(authService.login(request));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
     }
 
     @PostMapping("/forgot-password")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        try {
-            return ResponseEntity.ok(authService.processForgotPassword(request));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return ResponseEntity.ok(authService.processForgotPassword(request));
     }
 
     @PostMapping("/reset-password")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
-        try {
-            return ResponseEntity.ok(authService.processResetPassword(request));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return ResponseEntity.ok(authService.processResetPassword(request));
     }
 }
