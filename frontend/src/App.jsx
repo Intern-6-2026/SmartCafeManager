@@ -1,11 +1,14 @@
-import AddDrinkModal from "./components/add-drink";
-import ClientMenu from "./components/client-menu";
-import FeedbackModal from "./components/feedback";
+import ClientMenu from "./pages/client-menu";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 function App() {
   return (
-    <>
-      <ClientMenu />
-    </>
+    <BrowserRouter>
+      <Routes>
+        
+        <Route path="/menu/table/:tableId" element={<ClientMenu/>} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

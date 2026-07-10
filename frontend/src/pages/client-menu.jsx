@@ -1,29 +1,30 @@
 import React, { useMemo, useState } from "react";
 import "../styles/client-menu.css";
-import AddDrinkModal from "./add-drink";
-import FeedbackModal from "./feedback";
-
+import AddDrinkModal from "../components/add-drink";
+import FeedbackModal from "../components/feedback";
+import { useParams } from "react-router-dom";
 /* hard coded data */
 const CATEGORIES = ["Coffee", "Trà", "Nước Ép", "Đá xay", "Bánh"];
 
 const MENU_ITEMS = [
-  { id: 1, name: "Cà phê đen", price: 25000, wait: "5:00", category: "Coffee", img: "images/iced-black-coffee.png" },
-  { id: 2, name: "Cà phê sữa", price: 30000, wait: "5:00", category: "Coffee", img: "images/cafe-sua-da.png" },
-  { id: 3, name: "Cà phê hạt dẻ", price: 35000, wait: "6:00", category: "Coffee", img: "images/cà phê hạt dẻ.png" },
-  { id: 4, name: "Cà phê muối", price: 35000, wait: "6:00", category: "Coffee", img: "images/cà_phê_muối.png" },
-  { id: 5, name: "Bạc xỉu", price: 30000, wait: "5:00", category: "Coffee", img: "images/Bạc_xỉu.png" },
-  { id: 6, name: "Cappuccino", price: 35000, wait: "7:00", category: "Coffee", img: "images/cappuccino.png" },
-  { id: 7, name: "Trà đào cam sả", price: 30000, wait: "5:00", category: "Trà", img: "images/tra_dao_cam_sa.png" },
-  { id: 8, name: "Trà vải", price: 30000, wait: "5:00", category: "Trà", img: "images/tra_vai.png" },
-  { id: 9, name: "Trà sữa trân châu", price: 35000, wait: "6:00", category: "Trà", img: "images/tra_sua_tran_chau.png" },
-  { id: 10, name: "Trà sữa matcha", price: 35000, wait: "6:00", category: "Trà", img: "images/tra_sua_matcha.png" },
-  { id: 11, name: "Nước ép cam", price: 30000, wait: "5:00", category: "Nước Ép", img: "images/nuoc_ep_cam.png" },
-  { id: 12, name: "Nước ép dứa", price: 30000, wait: "5:00", category: "Nước Ép", img: "images/nuoc_ep_dua.png"}
+  { id: 1, name: "Cà phê đen", price: 25000, wait: "5:00", category: "Coffee", img: "/images/iced-black-coffee.png" },
+  { id: 2, name: "Cà phê sữa", price: 30000, wait: "5:00", category: "Coffee", img: "/images/cafe-sua-da.png" },
+  { id: 3, name: "Cà phê hạt dẻ", price: 35000, wait: "6:00", category: "Coffee", img: "/images/cà phê hạt dẻ.png" },
+  { id: 4, name: "Cà phê muối", price: 35000, wait: "6:00", category: "Coffee", img: "/images/cà_phê_muối.png" },
+  { id: 5, name: "Bạc xỉu", price: 30000, wait: "5:00", category: "Coffee", img: "/images/Bạc_xỉu.png" },
+  { id: 6, name: "Cappuccino", price: 35000, wait: "7:00", category: "Coffee", img: "/images/cappuccino.png" },
+  { id: 7, name: "Trà đào cam sả", price: 30000, wait: "5:00", category: "Trà", img: "/images/tra_dao_cam_sa.png" },
+  { id: 8, name: "Trà vải", price: 30000, wait: "5:00", category: "Trà", img: "/images/tra_vai.png" },
+  { id: 9, name: "Trà sữa trân châu", price: 35000, wait: "6:00", category: "Trà", img: "/images/tra_sua_tran_chau.png" },
+  { id: 10, name: "Trà sữa matcha", price: 35000, wait: "6:00", category: "Trà", img: "/images/tra_sua_matcha.png" },
+  { id: 11, name: "Nước ép cam", price: 30000, wait: "5:00", category: "Nước Ép", img: "/images/nuoc_ep_cam.png" },
+  { id: 12, name: "Nước ép dứa", price: 30000, wait: "5:00", category: "Nước Ép", img: "/images/nuoc_ep_dua.png"}
 ];
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n) + "đ";
 
 function ClientMenu() {
+  const { tableId } = useParams();
   const [menuOpen, setMenuOpen] = useState(false);
   const [category, setCategory] = useState("Coffee");
   const [cart, setCart] = useState([
@@ -146,6 +147,7 @@ function ClientMenu() {
 
           {/* Chi tiết đơn hàng */}
           <section className="order-detail">
+            <h3>Bàn số: {tableId}</h3>
             <div className="order-header">
               <span className="order-header-title">Tên món</span>
               <span className="order-header-title">Thời gian chờ</span>
@@ -165,7 +167,7 @@ function ClientMenu() {
                     aria-label={`Xoá ${r.name}`}
                     onClick={() => removeItem(r.id)}
                   >
-                    <img src="images/Icon Remove.png" alt="" className="remove-icon" />
+                    <img src="/images/Icon Remove.png" alt="" className="remove-icon" />
                   </button>
                   <div className="order-info">
                     <div className="order-top">
@@ -214,7 +216,7 @@ function ClientMenu() {
         </div>
 
         <footer>
-          <img src="images/Logo.png" alt="Logo" className="brand-logo" />
+          <img src="/images/Logo.png" alt="Logo" className="brand-logo" />
           <p className="contact-infor">
             Chấp nhận : Visa, MasterCard, Vouchers <br />
             Phí giao dịch áp dụng cho thẻ tín dụng <br />
