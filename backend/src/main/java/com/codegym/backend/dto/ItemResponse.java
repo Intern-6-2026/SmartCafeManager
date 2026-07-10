@@ -1,5 +1,7 @@
 package com.codegym.backend.dto;
 
+import java.math.BigDecimal;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,7 +15,7 @@ public class ItemResponse {
     private Long categoryId;
     private String categoryName;
     private String itemName;
-    private Double price;
+    private BigDecimal price;
     private String description;
     private String imageUrl;
     private Boolean isAvailable;
