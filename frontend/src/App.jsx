@@ -1,8 +1,14 @@
+import ClientMenu from "./pages/client-menu";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 function App() {
   return (
-    <>
-      <h1>Smart Cafe</h1>
-    </>
+    <BrowserRouter>
+      <Routes>
+        
+        <Route path="/menu/table/:tableId" element={<ClientMenu/>} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
