@@ -21,18 +21,30 @@ public class AuthController {
 
     private final AuthService authService;
 
+    /**
+     * API đăng nhập người dùng.
+     * Đường dẫn API: http://localhost:8080/api/v1/auth/login
+     */
     @PostMapping("/login")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
+    /**
+     * Yêu cầu email đặt lại mật khẩu.
+     * Đường dẫn API: http://localhost:8080/api/v1/auth/forgot-password
+     */
     @PostMapping("/forgot-password")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         return ResponseEntity.ok(authService.processForgotPassword(request));
     }
 
+    /**
+     * Reset password using the sent recovery token or OTP.
+     * API Link: http://localhost:8080/api/v1/auth/reset-password
+     */
     @PostMapping("/reset-password")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -16,7 +17,7 @@ public class NotificationService {
 
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
-    private static final Long SSE_TIMEOUT = 30L * 60 * 1000;
+    private static final long SSE_TIMEOUT = 30L * 60 * 1000;
 
     public SseEmitter addEmitter() {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
@@ -33,7 +34,7 @@ public class NotificationService {
         this.emitters.remove(emitter);
     }
 
-    public void sendNotification(String message) {
+    public void sendNotification(@NonNull String message) {
         List<SseEmitter> deadEmitters = new CopyOnWriteArrayList<>();
 
         for (SseEmitter emitter : emitters) {
@@ -42,7 +43,6 @@ public class NotificationService {
                         .name("notification")
                         .data(message));
             } catch (IOException e) {
-                // Nếu gửi thất bại (client đã ngắt kết nối), đánh dấu để xóa
                 deadEmitters.add(emitter);
             }
         }
