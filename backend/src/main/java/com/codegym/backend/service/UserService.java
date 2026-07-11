@@ -70,6 +70,7 @@ public class UserService {
         throw new RuntimeException("The account has not been set up with personal information (Profile)!");
     }
 
+    @SuppressWarnings("null")
     @Transactional
     public UserProfileResponse updateProfile(UpdateProfileRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();

@@ -21,12 +21,20 @@ public class UserController {
 
     private final UserService userService;
 
+    /**
+     * Get the current authenticated user's profile.
+     * API Link: http://localhost:8080/api/v1/users/profile
+     */
     @GetMapping("/profile")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getProfile() {
         return ResponseEntity.ok(userService.getCurrentUserProfile());
     }
 
+    /**
+     * Change the password of the current authenticated user.
+     * API Link: http://localhost:8080/api/v1/users/change-password
+     */
     @PutMapping("/change-password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
@@ -34,6 +42,10 @@ public class UserController {
         return ResponseEntity.ok(message);
     }
 
+    /**
+     * Update the current authenticated user's profile.
+     * API Link: http://localhost:8080/api/v1/users/profile
+     */
     @PutMapping("/profile")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {

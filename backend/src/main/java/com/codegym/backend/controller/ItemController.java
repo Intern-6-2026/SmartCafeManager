@@ -2,9 +2,10 @@ package com.codegym.backend.controller;
 
 import com.codegym.backend.dto.ItemResponse;
 import com.codegym.backend.service.ItemService;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,11 +13,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/items")
-@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class ItemController {
 
-    @Autowired
-    private ItemService itemService;
+    private final ItemService itemService;
 
     /**
      * Lấy toàn bộ danh sách món ăn đang hoạt động (chưa xóa)
