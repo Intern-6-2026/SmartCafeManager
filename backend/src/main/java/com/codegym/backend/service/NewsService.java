@@ -1,9 +1,12 @@
 package com.codegym.backend.service;
 
+import com.codegym.backend.entity.Account;
 import com.codegym.backend.entity.News;
+import com.codegym.backend.repository.AccountRepository;
 import com.codegym.backend.repository.NewsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,6 +22,8 @@ public class NewsService {
     private final CloudinaryService cloudinaryService;
     private final SimpMessagingTemplate messagingTemplate;
 
+    private final AccountRepository accountRepository;
+
     public List<News> getAllNews() {
         return newsRepository.findByDeletedAtIsNullOrderByCreatedAtDesc();
     }
@@ -28,11 +33,16 @@ public class NewsService {
     public News createNews(String title, String summary, String content, MultipartFile image) throws Exception {
         String imageUrl = cloudinaryService.uploadImage(image);
 
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Account curentAccount = accountRepository.findByUsernameAndDeletedAtIsNull(username)
+                .orElseThrow(() -> new RuntimeException("Không timm thấy tài khoản người đăng"));
+
         News news = News.builder()
                 .title(title)
                 .summary(summary)
                 .content(content)
                 .imageUrl(imageUrl)
+                .author(curentAccount)
                 .build();
         News savedNews = newsRepository.save(news);
         messagingTemplate.convertAndSend("/topic/news", "NEW_NEWS_ADDED|" + savedNews.getTitle());
