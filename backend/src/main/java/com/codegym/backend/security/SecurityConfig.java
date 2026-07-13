@@ -1,7 +1,5 @@
 package com.codegym.backend.security;
 
-// Đảm bảo đã import đúng thư viện này
-import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -37,22 +36,22 @@ public class SecurityConfig {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
-    @Bean
+@Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Cú pháp chuẩn để mở khóa trang lỗi nội bộ
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
                         
+    
                         .requestMatchers(
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password")
                         .permitAll()
-                        
-                        // 2. Mở khóa toàn bộ cụm items (chấp cả có xẹt hay không)
                         .requestMatchers(HttpMethod.GET, "/api/v1/items", "/api/v1/items/", "/api/v1/items/**").permitAll()
+                        
+                        .requestMatchers("/api/v1/customer/**").permitAll() 
                         
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session

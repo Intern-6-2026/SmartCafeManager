@@ -1,222 +1,117 @@
-# ☕ Smart Cafe Management - API Testing Guide (Postman)
+# 🛒 TÀI LIỆU TÍCH HỢP HỆ THỐNG GỌI MÓN TẠI BÀN (DÀNH RIÊNG CHO FRONT-END)
 
-Tài liệu này cung cấp hướng dẫn chi tiết về cách thiết lập môi trường và thực hiện kiểm thử các API của hệ thống **Smart Cafe Management** bằng công cụ Postman. Dự án hiện tại hỗ trợ các tính năng về **Xác thực người dùng (Authentication)** và **Quản lý hồ sơ (User Profile)** dành cho 3 phân quyền: `ADMIN`, `STAFF`, và `CUSTOMER`.
-
----
-
-## 📑 Mục lục
-1. [Yêu cầu chuẩn bị](#1-yêu-cầu-chuẩn-bị)
-2. [Thiết lập môi trường Postman](#2-thiết-lập-môi-trường-postman)
-3. [Danh sách tài khoản Test](#3-danh-sách-tài-khoản-test)
-4. [Danh sách API & Test Cases](#4-danh-sách-api--test-cases)
-   - [Module Authentication](#module-1-authentication)
-   - [Module User Profile](#module-2-user-profile)
-5. [Quy trình Test thực tế (Workflow)](#5-quy-trình-test-thực-tế-khuyến-nghị)
+Tài liệu này định nghĩa cách thức giao tiếp giữa ứng dụng Client (Giao diện Khách hàng) và Hệ thống Máy chủ (Backend). Front-end chỉ cần quan tâm đến cách xây dựng giao diện dựa trên các quy trình nghiệp vụ và cấu trúc dữ liệu JSON được mô tả bên dưới.
 
 ---
 
-## 1. Yêu cầu chuẩn bị
-
-Để bắt đầu kiểm thử, vui lòng đảm bảo hệ thống của bạn đã đáp ứng các điều kiện sau:
-* **Postman:** Đã cài đặt phiên bản mới nhất.
-* **Server Backend:** Đang chạy ở môi trường local tại port `8080`.
-* **Cơ sở dữ liệu:** Đã import thành công file `smart_cafe_management.sql` vào MySQL.
-
----
-
-## 2. Thiết lập môi trường Postman
-
-Để quá trình kiểm thử diễn ra trơn tru (đặc biệt là việc tự động xử lý JWT Token), hãy tạo một **Environment** mới trong Postman (ví dụ: `Smart Cafe Local`) và cấu hình các biến sau:
-
-| Tên biến (VARIABLE) | Value mặc định (INITIAL VALUE) | Mô tả |
-| :--- | :--- | :--- |
-| `baseUrl` | `http://localhost:8080/api/v1` | URL gốc của toàn bộ API |
-| `token` | *(Để trống)* | Token JWT sẽ được tự động lưu vào đây |
-
-### ⚡ Tự động lưu JWT Token
-Tại request **`POST /auth/login`**, hãy chuyển sang tab **Tests** trong Postman và dán đoạn mã script sau. Đoạn mã này sẽ tự động bắt token từ Response và lưu vào môi trường:
-
-```javascript
-var jsonData = pm.response.json();
-if (jsonData.token) {
-    pm.environment.set("token", jsonData.token);
-    console.log("Đã lưu JWT Token vào môi trường!");
-}
-
-```
+## 🛠️ THÔNG SỐ KỸ THUẬT CHUNG
+* **Cấu hình Base URL:** `http://localhost:8080/api/v1/customer`
+* **Cơ chế Bảo mật (Authentication):** **Không yêu cầu Token** (Hệ thống mở công khai cho khách quét mã QR tại bàn để order trực tiếp).
+* **Kiểu truyền dữ liệu (Content-Type):** Toàn bộ 7 API sử dụng phương thức truyền tham số trực tiếp trên đường dẫn **URL Query Parameters** (`application/x-www-form-urlencoded`). Tham số được gắn sau dấu `?` và nối nhau bằng dấu `&`.
+* **Định dạng dữ liệu nhận về:** `Chuỗi văn bản (String)` hoặc `Đối tượng JSON / Mảng JSON`.
 
 ---
 
-## 3. Danh sách tài khoản Test
+## 🗺️ PHẦN 1: TOÀN BỘ QUY TRÌNH NGHIỆP VỤ (UI WORKFLOW)
 
-Dữ liệu gốc trong DB đã cung cấp sẵn các tài khoản dưới đây (trạng thái `ACTIVE`). Sử dụng các tài khoản này để kiểm tra tính phân quyền của hệ thống:
+Quy trình trải nghiệm của khách hàng trên ứng dụng tương ứng với vòng đời từ lúc vào quán đến lúc thanh toán ra về bao gồm 4 giai đoạn chính:
 
-| Username | Email | Vai trò (Role) | Mô tả |
-| --- | --- | --- | --- |
-| `admin` | codegymintern@gmail.com | **ADMIN** | Quản trị viên hệ thống |
-| `thungan01` | thungan1@smartcafe.vn | **STAFF** | Thu ngân (Nhân viên) |
-| `phabep01` | phabep1@smartcafe.vn | **STAFF** | Pha chế / Bếp (Nhân viên) |
-| `khach_vip01` | khachvip1@gmail.com | **CUSTOMER** | Khách hàng VIP |
-| `khach_thuong01` | khachthuong1@gmail.com | **CUSTOMER** | Khách hàng thường |
+### Giai đoạn 1: Quét QR & Chọn món vào giỏ tạm
+* Khách hàng quét mã QR dán tại bàn để truy cập vào ứng dụng (Hệ thống nhận diện qua tham số `tableName`, ví dụ: `Ban01`).
+* Khách xem menu, chọn một món ăn, nhập số lượng và ghi chú (nếu có) rồi ấn "Thêm vào giỏ". Lúc này món ăn mới chỉ nằm trong **Giỏ hàng tạm thời** của riêng bàn đó và ở trạng thái chờ chốt (`PENDING`). Nhà bếp chưa hề biết đến sự tồn tại của các món này.
 
-> **💡 Lưu ý:** Mật khẩu trong DB được mã hóa bằng Bcrypt. Khi test thực tế, hãy sử dụng mật khẩu mặc định được quy định lúc tạo dữ liệu mẫu (thường là `123456`).
+### Giai đoạn 2: Xác nhận gửi đơn xuống bếp (Chốt đơn)
+* Khách mở Giỏ hàng tạm thời ra để kiểm tra lại. Sau khi chốt, khách bấm nút **[GỌI MÓN]** hoặc **[ĐẶT ĐỒ]**.
+* Hệ thống chuyển trạng thái toàn bộ món trong giỏ tạm từ chờ chốt (`PENDING`) sang đã xác nhận (`CONFIRMED`). Lúc này, thông báo mới chính thức hiển thị ở màn hình của nhà bếp để đầu bếp chế biến, đồng thời hệ thống tự động khóa bàn, đổi trạng thái bàn sang "Đang chờ món" (`WAITING_FOOD`).
 
----
+### Giai đoạn 3: Theo dõi trạng thái làm món & Gọi thêm
+* Khách hàng có thể truy cập vào màn hình "Lịch sử gọi món" để theo dõi xem món nào bếp đang làm (`CONFIRMED`) và món nào nhân viên đã bốc bê lên bàn phục vụ xong (`SERVED`).
+* Trong quá trình ngồi ăn, khách hoàn toàn có thể lặp lại Giai đoạn 1 và 2 để gọi thêm đồ uống hoặc món ăn mới mà không làm ảnh hưởng đến các món cũ đã gọi. Hệ thống sẽ tự động tính lũy tổng số tiền.
 
-## 4. Danh sách API & Test Cases
-
-### MODULE 1: AUTHENTICATION
-
-> **Base Path:** `/api/v1/auth` *(Công khai, không yêu cầu Token)*
-
-#### 1.1. Đăng nhập hệ thống (Login)
-
-* **Phương thức:** `POST`
-* **URL:** `{{baseUrl}}/auth/login`
-* **Headers:** `Content-Type: application/json`
-* **Body:**
-```json
-{
-  "username": "admin",
-  "password": "your_password_here"
-}
-
-```
-
-* **Kỳ vọng (Expected Responses):**
-* **`200 OK`**:
-```json
-{
-  "token": "eyJhbGciOiJlUzI1NiJ9...",
-  "message": "Login successful!",
-  "requirePasswordChange": false
-}
-
-```
-
-* **`400 Bad Request`**: `"Incorrect password!"` hoặc `"Account does not exist or has been deleted!"`.
-
-#### 1.2. Yêu cầu khôi phục mật khẩu (Forgot Password)
-
-* **Phương thức:** `POST`
-* **URL:** `{{baseUrl}}/auth/forgot-password`
-* **Headers:** `Content-Type: application/json`
-* **Body:**
-```json
-{
-  "email": "thungan1@smartcafe.vn"
-}
-
-```
-
-* **Kỳ vọng:**
-* **`200 OK`**: `"Password recovery OTP has been sent to your email."`
-* **`400 Bad Request`**: `"No valid account found for this email!"`
-
-#### 1.3. Đặt lại mật khẩu mới (Reset Password)
-
-* **Phương thức:** `POST`
-* **URL:** `{{baseUrl}}/auth/reset-password`
-* **Headers:** `Content-Type: application/json`
-* **Body:**
-```json
-{
-  "token": "123456",
-  "newPassword": "NewPassword123!"
-}
-
-```
-
-* **Kỳ vọng:**
-* **`200 OK`**: `"New password updated successfully!"`
-* **`400 Bad Request`**: `"Invalid recovery token or account does not exist!"`
+### Giai đoạn 4: Xem hóa đơn & Yêu cầu tính tiền ra về
+* Ăn xong, khách bấm vào nút "Xem hóa đơn" để kiểm tra tổng số tiền tích lũy tích hợp (`totalAmount`) và danh sách các món ăn đã dùng.
+* Khách bấm chọn phương thức thanh toán mong muốn (ví dụ: Chuyển khoản ngân hàng) và ấn **[XÁC NHẬN THANH TOÁN]**. Trạng thái của bàn lập tức đổi sang "Chờ tính tiền" (`REQUESTING_BILL`) để thông báo cho quầy thu ngân cầm hóa đơn giấy hoặc mang mã QR ngân hàng ra tận bàn cho khách.
 
 ---
 
-### MODULE 2: USER PROFILE
+## 📑 PHẦN 2 & 3: CHI TIẾT 7 API VÀ TẤT CẢ CÁC KỊCH BẢN PHÁT SINH
 
-> **Base Path:** `/api/v1/users` *(Bắt buộc truyền Token)* > **Header chung cho toàn module:** `Authorization: Bearer {{token}}`
+### 1. API THÊM MÓN VÀO GIỎ TẠM THỜI
+* **Method:** `POST`
+* **Endpoint:** `/add-item`
+* **Mục đích:** Lưu món ăn khách vừa chọn vào giỏ hàng tạm thời. Nếu món đó đã có sẵn trong giỏ tạm, hệ thống sẽ tự động cộng dồn số lượng.
 
-#### 2.1. Xem thông tin cá nhân (Get Profile)
-
-* **Phương thức:** `GET`
-* **URL:** `{{baseUrl}}/users/profile`
-* **Kỳ vọng (Với tài khoản `STAFF`):**
-```json
-{
-  "username": "thungan01",
-  "email": "thungan1@smartcafe.vn",
-  "fullName": "Trần Thu Ngân",
-  "dateOfBirth": "1998-10-20T00:00:00.000+00:00",
-  "gender": "FEMALE",
-  "phone": "0905333444",
-  "address": "45 Hùng Vương, Đà Nẵng",
-  "salary": 8500000.00,
-  "loyaltyPoints": null,
-  "roleName": "STAFF",
-  "imageUrl": "[https://cdn-icons-png.flaticon.com/512/3135/3135789.png](https://cdn-icons-png.flaticon.com/512/3135/3135789.png)"
+#### 🟢 Kịch bản 1: Thành công
+* **Mô tả:** Khách chọn 2 ly Cà phê sữa, ghi chú "Ít đường nhiều đá" tại Bàn 01.
+* **URL Request:** `http://localhost:8080/api/v1/customer/add-item?tableName=Ban01&itemId=1&quantity=2&note=It duong nhieu da`
+* **Trạng thái mạng (Status Code):** `200 OK`
+* **Dữ liệu nhận về (Response):**
+  ```text
+  Đã thêm món vào giỏ hàng tạm thời!
+  🔴 Kịch bản 2: Thất bại do lỗi nhập liệu từ giao diệnMô tả: Front-end thiết kế lỗi, khi gửi Request đi bị khuyết mất tham số số lượng quantity.URL Request: http://localhost:8080/api/v1/customer/add-item?tableName=Ban01&itemId=1&note=It duongTrạng thái mạng (Status Code): 400 Bad RequestDữ liệu nhận về (Response):JSON{
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Required request parameter 'quantity' is not present"
 }
-
-```
-
-*(**Lưu ý:** Với tài khoản `CUSTOMER`: Thuộc tính `salary` sẽ là `null`, trong khi `loyaltyPoints` sẽ có giá trị).*
-
-#### 2.2. Cập nhật thông tin cá nhân (Update Profile)
-
-* **Phương thức:** `PUT`
-* **URL:** `{{baseUrl}}/users/profile`
-* **Body:**
-```json
-{
-  "fullName": "Trần Thu Ngân (Đã sửa)",
-  "dateOfBirth": "1998-10-20",
-  "gender": "FEMALE",
-  "phoneNumber": "0905999888",
-  "address": "123 Bạch Đằng, Đà Nẵng",
-  "email": "thungan_new@smartcafe.vn",
-  "imageUrl": "[https://cdn-icons-png.flaticon.com/512/3135/new-avatar.png](https://cdn-icons-png.flaticon.com/512/3135/new-avatar.png)"
+🔴 Kịch bản 3: Thất bại do vi phạm logic nghiệp vụ hệ thốngMô tả: Khách sử dụng ứng dụng can thiệp chỉnh sửa mã QR hoặc ID món ăn không có trong thực đơn của nhà hàng.URL Request: http://localhost:8080/api/v1/customer/add-item?tableName=Ban01&itemId=9999&quantity=1Trạng thái mạng (Status Code): 500 Internal Server ErrorDữ liệu nhận về (Response):JSON{
+  "status": 500,
+  "message": "Món ăn không tồn tại!"
 }
-
-```
-
-*(**Lưu ý:** Chỉ chấp nhận `gender` là `MALE` hoặc `FEMALE`. Trường nào không truyền hoặc truyền `null` sẽ được giữ nguyên).*
-* **Kỳ vọng:** Trả về HTTP **`200 OK`** kèm đối tượng Profile đã được cập nhật.
-
-#### 2.3. Đổi mật khẩu (Change Password)
-
-* **Phương thức:** `PUT`
-* **URL:** `{{baseUrl}}/users/change-password`
-* **Body:**
-```json
-{
-  "oldPassword": "your_current_password",
-  "newPassword": "NewStrongPassword456!"
+2. API XEM TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM THỜIMethod: GETEndpoint: /cartMục đích: Lấy ra danh sách các món ăn đang nằm chờ trong giỏ (Chỉ lấy các món có trạng thái là PENDING).🟢 Kịch bản 1: Thành công (Giỏ hàng đang có đồ)URL Request: http://localhost:8080/api/v1/customer/cart?tableName=Ban01Trạng thái mạng (Status Code): 200 OKDữ liệu nhận về (Mảng JSON):JSON[
+  {
+    "orderDetailId": 401,
+    "quantity": 2,
+    "unitPrice": 35000.00,
+    "note": "It duong nhieu da",
+    "status": "PENDING",
+    "item": {
+      "itemId": 1,
+      "itemName": "Cà phê sữa đá",
+      "price": 35000.00
+    }
+  }
+]
+🔴 Kịch bản 2: Thất bại do logic nghiệp vụ (Bàn trống hoàn toàn)Mô tả: Khách vừa ngồi vào bàn, chưa bấm thêm bất cứ món nào vào giỏ nhưng đã ấn nút "Xem giỏ hàng". Lúc này hệ thống chưa kích hoạt mở hóa đơn cho bàn này.URL Request: http://localhost:8080/api/v1/customer/cart?tableName=Ban01Trạng thái mạng (Status Code): 500 Internal Server ErrorDữ liệu nhận về (Response):JSON{
+  "status": 500,
+  "message": "Bàn hiện tại không có hóa đơn nào đang mở!"
 }
-
-```
-
-* **Kỳ vọng:**
-* **`200 OK`**: `"Password changed successfully!"`
-* **`400 Bad Request`**: `"Old password is incorrect!"`
-
----
-
-## 5. Quy trình Test thực tế khuyến nghị
-
-Tester nên thực hiện bài test theo luồng (**End-to-End Flow**) dưới đây để đảm bảo logic nghiệp vụ chặt chẽ:
-
-1. **Test Xác thực:** Gọi `POST /auth/login` với tài khoản `thungan01`. Kiểm tra xem biến `token` đã được tự động lưu vào *Environment Variable* hay chưa.
-2. **Test Xem Profile:** Gọi `GET /users/profile`. Đảm bảo dữ liệu trả về đúng với role `STAFF` (có hiển thị `salary`, `loyaltyPoints` là null).
-3. **Test Cập nhật Profile:** Gọi `PUT /users/profile`, thay đổi số điện thoại hoặc địa chỉ thành số mới. Sau đó gọi lại `GET /users/profile` để kiểm tra dữ liệu đã thực sự được lưu xuống DB chưa.
-4. **Test Luồng Quên Mật Khẩu (Đặc biệt):** - Gọi `POST /auth/forgot-password` với email `thungan1@smartcafe.vn`.
-* *Mẹo test nhanh:* Nếu không tiện check Email, hãy query trực tiếp xuống DB bằng lệnh SQL sau để lấy mã OTP:
-```sql
-SELECT reset_token FROM account WHERE username = 'thungan01';
-
-```
-
-* Gọi `POST /auth/reset-password` bằng mã OTP vừa lấy được.
-
-5. **Xác nhận đổi mật khẩu:** Gọi lại `POST /auth/login` với mật khẩu cũ *(phải thất bại với status 400)* và sau đó login bằng mật khẩu mới *(phải thành công với status 200)*.
-
-```
+3. API BẤM NÚT [GỌI MÓN] ĐỂ XÁC NHẬN GỬI XUỐNG BẾPMethod: POSTEndpoint: /confirm-orderMục đích: Chốt toàn bộ danh sách trong giỏ tạm gửi đi. Chuyển trạng thái các món từ PENDING $\rightarrow$ CONFIRMED.🟢 Kịch bản 1: Thành côngURL Request: http://localhost:8080/api/v1/customer/confirm-order?tableName=Ban01Trạng thái mạng (Status Code): 200 OKDữ liệu nhận về (Response):PlaintextĐã gửi đơn hàng thành công xuống bếp!
+🔴 Kịch bản 2: Thất bại do logic nghiệp vụ (Cố tình gửi giỏ trống)Mô tả: Khách đã bấm nút gửi bếp một lần rồi (giỏ tạm đã sạch trống), sau đó lại cố tình ấn tiếp nút "Gửi bếp" thêm lần nữa khi chưa chọn thêm món mới nào.URL Request: http://localhost:8080/api/v1/customer/confirm-order?tableName=Ban01Trạng thái mạng (Status Code): 500 Internal Server ErrorDữ liệu nhận về (Response):JSON{
+  "status": 500,
+  "message": "Giỏ hàng của bạn đang trống, không thể gọi món!"
+}
+4. API XEM LỊCH SỬ CÁC MÓN ĐÃ GỌI XUỐNG BẾPMethod: GETEndpoint: /order-historyMục đích: Lấy ra danh sách các món ăn đã gửi xuống bếp thành công để khách theo dõi tiến độ làm đồ (Lọc các món có trạng thái khác PENDING).🟢 Kịch bản 1: Thành côngURL Request: http://localhost:8080/api/v1/customer/order-history?tableName=Ban01Trạng thái mạng (Status Code): 200 OKDữ liệu nhận về (Mảng JSON):JSON[
+  {
+    "orderDetailId": 401,
+    "quantity": 2,
+    "unitPrice": 35000.00,
+    "status": "CONFIRMED",
+    "item": { "itemName": "Cà phê sữa đá" }
+  },
+  {
+    "orderDetailId": 398,
+    "quantity": 1,
+    "unitPrice": 45000.00,
+    "status": "SERVED",
+    "item": { "itemName": "Bánh mì hướng dương" }
+  }
+]
+5. API XEM CHI TIẾT TỔNG QUAN HÓA ĐƠNMethod: GETEndpoint: /invoiceMục đích: Trả về cấu trúc DTO độc lập gồm tổng tiền và toàn bộ danh sách món ăn phục vụ cho màn hình tổng quan hóa đơn trước khi khách nhấn nút thanh toán tiền ra về.🟢 Kịch bản 1: Thành côngURL Request: http://localhost:8080/api/v1/customer/invoice?tableName=Ban01Trạng thái mạng (Status Code): 200 OKDữ liệu nhận về (Đối tượng DTO JSON phẳng):JSON{
+  "tableOrderId": 1001,
+  "tableName": "Ban01",
+  "totalAmount": 115000.00,
+  "orderStatus": "OPEN",
+  "serviceStatus": "WAITING_FOOD",
+  "openAt": "2026-07-13T20:15:00",
+  "orderDetails": [
+    { "orderDetailId": 401, "quantity": 2, "unitPrice": 35000.00, "status": "CONFIRMED" },
+    { "orderDetailId": 398, "quantity": 1, "unitPrice": 45000.00, "status": "SERVED" }
+  ]
+}
+6. API KHÁCH ẤN NÚT YÊU CẦU THANH TOÁNMethod: POSTEndpoint: /request-checkoutMục đích: Gửi hình thức thanh toán mong muốn lên quầy thu ngân để báo nhân viên cầm hóa đơn ra bàn kiểm tra chốt bàn.🟢 Kịch bản 1: Thành côngMô tả: Khách chọn hình thức chuyển khoản ngân hàng (BANK_TRANSFER).URL Request: http://localhost:8080/api/v1/customer/request-checkout?tableName=Ban01&paymentMethod=BANK_TRANSFERTrạng thái mạng (Status Code): 200 OKDữ liệu nhận về (Response):PlaintextYêu cầu thanh toán bằng BANK_TRANSFER đã được gửi! Nhân viên sẽ đến ngay.
+🔴 Kịch bản 2: Thất bại do truyền sai ký tự quy ước (Enum)Mô tả: Front-end gửi chuỗi chữ thường hoặc sai tên ký tự quy định định dạng lên máy chủ (tien_mat, momo_pay).URL Request: http://localhost:8080/api/v1/customer/request-checkout?tableName=Ban01&paymentMethod=momoTrạng thái mạng (Status Code): 400 Bad RequestDữ liệu nhận về (Response):JSON{
+  "status": 400,
+  "message": "Failed to convert value of type 'java.lang.String' to required type..."
+}
+7. API CÁC YÊU CẦU DỊCH VỤ KHÁC (NÚT TRỢ GIÚP NHANH)Method: POSTEndpoint: /call-serviceMục đích: Khách cần hỗ trợ các dịch vụ phụ (ví dụ: xin thêm khăn lau, gọi phục vụ trực tiếp giải quyết sự cố bàn ghế...).🟢 Kịch bản 1: Thành côngMô tả: Khách nhấn nút "Gọi phục vụ" trên màn hình hỗ trợ nhanh.URL Request: http://localhost:8080/api/v1/customer/call-service?tableName=Ban01&status=CALLING_WAITERTrạng thái mạng (Status Code): 200 OKDữ liệu nhận về (Response):PlaintextHệ thống đã ghi nhận yêu cầu: CALLING_WAITER
+📊 PHẦN 4: BẢNG TRA CỨU CÁC TẬP HỢP DỮ LIỆU QUY ƯỚC (ENUMS)Để tránh lỗi đồng bộ dữ liệu mạng (400 Bad Request), Front-end bắt buộc phải truyền chính xác các chuỗi văn bản VIẾT HOA TOÀN BỘ dưới đây khi thực hiện tạo Request:1. Phương thức thanh toán (PaymentMethod)Giá trị chuỗi gửi lênÝ nghĩa hiển thị trên giao diệnCASHThanh toán bằng Tiền mặtBANK_TRANSFERThanh toán bằng Chuyển khoản Ngân hàng (Quét QR mã định danh)MOMOThanh toán qua Ví điện tử MoMoVNPAYThanh toán qua Cổng VNPay2. Trạng thái dịch vụ của Bàn (ServiceStatus)Giá trị chuỗi quy ướcÝ nghĩa trạng thái hiển thị của bànNORMALBàn hoạt động bình thườngWAITING_FOODKhách đã chốt đơn thành công, đang chờ bếp lên đồCALLING_WAITERKhách đang bấm chuông gọi nhân viên hỗ trợ trực tiếpREQUESTING_BILLKhách đã chọn phương thức thanh toán, đang chờ thu ngân tính tiền3. Trạng thái chi tiết món ăn (StatusOrderDetail)Giá trị nhận về từ APIÝ nghĩa vòng đời món ănPENDINGMón ăn mới chỉ nằm trong giỏ hàng tạm thời (Chưa gửi bếp)CONFIRMEDĐã gửi xuống bếp thành công, đầu bếp đang chế biếnSERVEDĐồ ăn/thức uống đã được nhân viên phục vụ bưng ra bànCANCELLEDMón ăn bị hủy bỏ (Do nhà hàng hết nguyên liệu hoặc khách đổi món sớm)

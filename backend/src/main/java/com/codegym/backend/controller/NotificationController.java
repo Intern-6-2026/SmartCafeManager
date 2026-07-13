@@ -21,23 +21,20 @@ public class NotificationController {
 
     // 1. API dành cho Header của Nhân viên/Quản lý mở lên để lắng nghe real-time
     // Link: http://localhost:8080/api/v1/auth/notification/subscribe
-    @GetMapping(value = "/api/v1/auth/notification/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping(value = "/api/v1/items/**", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribe() {
         return notificationService.addEmitter();
     }
 
     // 2. API dành cho khách hàng ấn nút [Gọi món] hoặc [Gọi phục vụ]
     // Link: http://localhost:8080/api/v1/auth/notification/send
-    @PostMapping("/api/v1/auth/notification/send")
+    @PostMapping("/api/v1/items/**")
     public ResponseEntity<String> sendNotification(
             @RequestParam String tableName,
-            @RequestParam String actionType) { // "GỌI MÓN" hoặc "GỌI PHỤC VỤ"
+            @RequestParam String actionType) { 
         
         String message = "Bàn " + tableName + " vừa yêu cầu: [" + actionType + "]";
-        
-        // Kích hoạt bắn thông báo real-time xuống cho các máy nhân viên
         notificationService.sendNotification(message);
-        
         return ResponseEntity.ok("Đã gửi thông báo thành công!");
     }
 }

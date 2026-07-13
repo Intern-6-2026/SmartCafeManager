@@ -18,19 +18,16 @@ public class ItemController {
     @Autowired
     private ItemService itemService;
 
-    // Khớp với cấu hình Security: GET /api/v1/items
     @GetMapping("")
     public ResponseEntity<List<ItemResponse>> getAllItems() {
         return ResponseEntity.ok(itemService.getAllItems());
     }
 
-    // Khớp với cấu hình Security: GET /api/v1/items/latest
     @GetMapping("/latest")
     public ResponseEntity<List<ItemResponse>> getLatestItems() {
         return ResponseEntity.ok(itemService.getLatestItems());
     }
 
-    // Khớp với cấu hình Security: GET /api/v1/items/best-sellers
     @GetMapping("/best-sellers")
     public ResponseEntity<List<ItemResponse>> getBestSellerItems() {
         return ResponseEntity.ok(itemService.getBestSellerItems());
