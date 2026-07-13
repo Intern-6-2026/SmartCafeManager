@@ -1,7 +1,7 @@
 package com.codegym.backend.controller;
 
 import java.util.List;
-
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +13,7 @@ import com.codegym.backend.service.ItemService;
 
 @RestController
 @RequestMapping("/api/v1/items")
+@CrossOrigin(origins = "*")
 public class ItemController {
 
     @Autowired
