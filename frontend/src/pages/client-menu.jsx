@@ -31,6 +31,7 @@ function ClientMenu() {
     { id: 1, qty: 1 },
     { id: 2, qty: 1 },
   ]);
+  const [orderNote, setOrderNote] = useState("");
   const [selectedItem, setSelectedItem] = useState(null); // món đang mở modal Thêm món
   const [feedbackOpen, setFeedbackOpen] = useState(false); // modal Phản hồi
 
@@ -202,6 +203,19 @@ function ClientMenu() {
             <div className="order-total">
               <span className="total-label">Tổng tiền</span>
               <span className="total-value">{fmt(total)}</span>
+            </div>
+            
+            <div className="order-note">
+              <label htmlFor="order-note-input" className="order-note-label">
+                Ghi chú
+              </label>
+              <textarea
+                id="order-note-input"
+                className="order-note-input"
+                placeholder="Ví dụ: ít đá, không đường..."
+                value={orderNote}
+                onChange={(e) => setOrderNote(e.target.value)}
+              />
             </div>
 
             <div className="order-actions">

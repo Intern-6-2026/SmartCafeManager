@@ -5,7 +5,6 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        
         <Route path="/menu/table/:tableId" element={<ClientMenu/>} />
       </Routes>
     </BrowserRouter>
