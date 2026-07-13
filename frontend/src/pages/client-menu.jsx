@@ -203,6 +203,19 @@ function ClientMenu() {
               <span className="total-label">Tổng tiền</span>
               <span className="total-value">{fmt(total)}</span>
             </div>
+            
+            <div className="order-note">
+              <label htmlFor="order-note-input" className="order-note-label">
+                Ghi chú
+              </label>
+              <textarea
+                id="order-note-input"
+                className="order-note-input"
+                placeholder="Ví dụ: ít đá, không đường..."
+                value={orderNote}
+                onChange={(e) => setOrderNote(e.target.value)}
+              />
+            </div>
 
             <div className="order-actions">
               <button className="btn-goimon">Gọi món</button>
