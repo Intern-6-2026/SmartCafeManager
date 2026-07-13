@@ -3,12 +3,16 @@ package com.codegym.backend.dto;
 import java.math.BigDecimal;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class ItemResponse {
     private Long itemId;
     private String itemCode;
@@ -20,4 +24,5 @@ public class ItemResponse {
     private String imageUrl;
     private Boolean isAvailable;
     private Integer totalOrderCount;
+
 }

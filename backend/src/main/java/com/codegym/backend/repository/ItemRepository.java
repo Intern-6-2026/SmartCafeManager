@@ -1,7 +1,8 @@
 package com.codegym.backend.repository;
 
-import com.codegym.backend.dto.ItemResponse;
 import com.codegym.backend.entity.Item;
+import com.codegym.backend.dto.ItemResponse;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

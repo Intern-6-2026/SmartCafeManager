@@ -1,5 +1,6 @@
 package com.codegym.backend.security;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -45,6 +46,9 @@ public class SecurityConfig {
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .csrf(csrf -> csrf.disable())
                                 .authorizeHttpRequests(auth -> auth
+                                                .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR)
+                                                .permitAll()
+
                                                 .requestMatchers(
                                                                 "/api/v1/auth/login",
                                                                 "/api/v1/auth/forgot-password",
@@ -55,7 +59,8 @@ public class SecurityConfig {
                                                                 "/swagger-ui.html",
                                                                 "/ws-news/**")
                                                 .permitAll()
-                                                .requestMatchers(HttpMethod.GET, "/api/v1/items/**", "/api/v1/news")
+                                                .requestMatchers(HttpMethod.GET, "/api/v1/items", "/api/v1/items/",
+                                                                "/api/v1/items/**", "/api/v1/news")
                                                 .permitAll()
                                                 .anyRequest().authenticated())
                                 .sessionManagement(session -> session
