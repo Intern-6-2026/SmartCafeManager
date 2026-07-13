@@ -1,20 +1,31 @@
 export default function Input({
-    type,
-    placeholder
+    label,
+    placeholder,
+    type = "text",
 }) {
-
     return (
+        <div className="mb-6">
 
-        <input
+            <label className="font-semibold text-[#5D4037]">
+                {label}
+            </label>
 
-            type={type}
+            <input
+                type={type}
+                placeholder={placeholder}
+                className="
+                mt-2
+                w-full
+                rounded-xl
+                border
+                border-gray-300
+                px-4
+                py-3
+                outline-none
+                focus:border-[#C69A6B]
+                "
+            />
 
-            placeholder={placeholder}
-
-            className="input"
-
-        />
-
+        </div>
     );
-
 }

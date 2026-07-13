@@ -1,13 +1,16 @@
-export default function Button({
-    children,
-    type = "button",
-    onClick
-}) {
+export default function Button({ children }) {
     return (
         <button
-            type={type}
-            onClick={onClick}
-            className="primary-btn"
+            className="
+            w-full
+            py-3
+            rounded-xl
+            bg-[#C69A6B]
+            text-white
+            font-semibold
+            hover:bg-[#B5835A]
+            duration-300
+            "
         >
             {children}
         </button>

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+import ClientMenu from "../pages/client-menu";
 import Login from "../pages/auth/Login";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import Otp from "../pages/auth/Otp";
@@ -44,6 +44,11 @@ export default function AppRoutes() {
                 <Route
                     path="/change-password"
                     element={<ChangePassword />}
+                />
+
+                <Route
+                    path="/menu/table/:tableId"
+                    element={<ClientMenu />}
                 />
 
             </Routes>
