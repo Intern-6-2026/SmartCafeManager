@@ -16,7 +16,7 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
            "i.description as description, i.imageUrl as imageUrl, i.isAvailable as isAvailable, " +
            "i.totalOrderCount as totalOrderCount " +
            "FROM Item i JOIN i.category c")
-    List<ItemProjection> findAllItemsAsDTO();
+    List<ItemProjection> findAllItemsAsDTO(Pageable pageable);
 
     @Query("SELECT i.itemId as itemId, i.itemCode as itemCode, c.categoryId as categoryId, " +
            "c.categoryName as categoryName, i.itemName as itemName, i.price as price, " +
