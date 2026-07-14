@@ -44,6 +44,13 @@ public class AuthService {
             throw new RuntimeException("Mật khẩu không chính xác!");
         }
 
+        if (account.getRole() == null || account.getRole().getRoleName() == null) {
+            throw new RuntimeException("Tài khoản chưa được phân quyền trên hệ thống");
+        }
+        String roleName = account.getRole().getRoleName();
+
+        String userName = account.getUsername();
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
@@ -58,7 +65,7 @@ public class AuthService {
             requirePasswordChange = true;
         }
 
-        return new LoginResponse(token, "Đăng nhập thành công!", requirePasswordChange);
+        return new LoginResponse(token, "Đăng nhập thành công!", requirePasswordChange, roleName, userName);
     }
 
     @Transactional
