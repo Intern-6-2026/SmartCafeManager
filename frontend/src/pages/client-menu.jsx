@@ -1,9 +1,18 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "../styles/client-menu.css";
 import AddDrinkModal from "../components/add-drink";
 import FeedbackModal from "../components/feedback";
 import { useParams } from "react-router-dom";
-/* hard coded data */
+import {
+  addItemToCart,
+  getCart,
+  confirmOrder,
+  requestCheckout,
+  callService,
+  getApiErrorMessage,
+} from "../services/apiService";
+
+/* hard coded data (hiển thị menu — backend chưa có API lấy menu theo danh mục) */
 const CATEGORIES = ["Coffee", "Trà", "Nước Ép", "Đá xay", "Bánh"];
 
 const MENU_ITEMS = [
@@ -24,15 +33,23 @@ const MENU_ITEMS = [
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n) + "đ";
 
 function ClientMenu() {
+  /* Route: /menu/table/:tableId — tableId chính là tableName gửi lên API (vd: Ban01) */
   const { tableId } = useParams();
+  const tableName = tableId;
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [category, setCategory] = useState("Coffee");
-  const [cart, setCart] = useState([
-    { id: 1, qty: 1 },
-    { id: 2, qty: 1 },
-  ]);
+  const [cart, setCart] = useState([]); // giỏ tạm PENDING lấy từ server
   const [selectedItem, setSelectedItem] = useState(null); // món đang mở modal Thêm món
   const [feedbackOpen, setFeedbackOpen] = useState(false); // modal Phản hồi
+  const [paymentMethod, setPaymentMethod] = useState("CASH"); // enum backend
+  const [message, setMessage] = useState(""); // thông báo kết quả API
+  const [loading, setLoading] = useState(false);
+
+  const notify = (msg) => {
+    setMessage(String(msg));
+    setTimeout(() => setMessage(""), 4000);
+  };
 
   /* Lọc món theo Service Type */
   const filtered = useMemo(
@@ -40,40 +57,108 @@ function ClientMenu() {
     [category]
   );
 
-  /* Giỏ hàng  */
-  const cartRows = cart
-    .map((c) => ({ ...MENU_ITEMS.find((m) => m.id === c.id), qty: c.qty }))
-    .filter((r) => r.name);
+  /* ===== API 2: Xem giỏ hàng tạm thời (PENDING) ===== */
+  const loadCart = useCallback(async () => {
+    try {
+      const res = await getCart(tableName);
+      setCart(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      // 500 "Bàn hiện tại không có hóa đơn nào đang mở!" => giỏ trống, không phải lỗi thật
+      if (err?.response?.status === 500) {
+        setCart([]);
+      } else {
+        setCart([]);
+        notify(getApiErrorMessage(err, "Không kết nối được máy chủ."));
+      }
+    }
+  }, [tableName]);
+
+  useEffect(() => {
+    loadCart();
+  }, [loadCart]);
+
+  /* Giỏ hàng: map dữ liệu server sang hàng hiển thị */
+  const cartRows = cart.map((c) => {
+    const local = MENU_ITEMS.find((m) => m.id === c.item?.itemId);
+    return {
+      orderDetailId: c.orderDetailId,
+      name: c.item?.itemName ?? "—",
+      price: c.unitPrice,
+      qty: c.quantity,
+      note: c.note,
+      wait: local?.wait ?? "—",
+    };
+  });
   const total = cartRows.reduce((s, r) => s + r.price * r.qty, 0);
 
-  const addToCart = (id, qty = 1) =>
-    setCart((prev) => {
-      const found = prev.find((c) => c.id === id);
-      return found
-        ? prev.map((c) => (c.id === id ? { ...c, qty: c.qty + qty } : c))
-        : [...prev, { id, qty }];
-    });
-
-  /* Bấm "Thêm" trong modal Thêm món */
-  const confirmAddItem = (item, qty) => {
-    addToCart(item.id, qty);
-    setSelectedItem(null);
+  /* ===== API 1: Thêm món vào giỏ tạm — bấm "Thêm" trong modal ===== */
+  const confirmAddItem = async (item, qty, note) => {
+    setLoading(true);
+    try {
+      const res = await addItemToCart(tableName, item.id, qty, note);
+      notify(res.data);
+      await loadCart();
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Thêm món thất bại."));
+    } finally {
+      setLoading(false);
+      setSelectedItem(null);
+    }
   };
 
-  /* Bấm "Gửi" trong modal Phản hồi */
+  /* ===== API 3: [GỌI MÓN] chốt đơn gửi bếp ===== */
+  const handleGoiMon = async () => {
+    setLoading(true);
+    try {
+      const res = await confirmOrder(tableName);
+      notify(res.data);
+      await loadCart(); // giỏ tạm sẽ trống sau khi chốt
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Gọi món thất bại."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ===== API 6: Yêu cầu thanh toán ===== */
+  const handleThanhToan = async () => {
+    setLoading(true);
+    try {
+      const res = await requestCheckout(tableName, paymentMethod);
+      notify(res.data);
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Gửi yêu cầu thanh toán thất bại."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ===== API 7: Gọi nhân viên ===== */
+  const handleGoiNhanVien = async () => {
+    setLoading(true);
+    try {
+      const res = await callService(tableName, "CALLING_WAITER");
+      notify(res.data);
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Gọi nhân viên thất bại."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* Backend hiện KHÔNG có API sửa/xoá món trong giỏ tạm,
+     nên các nút này chỉ hiển thị thông báo. */
+  const changeQty = () =>
+    notify("Backend chưa hỗ trợ sửa số lượng. Hãy thêm món để cộng dồn.");
+  const removeItem = () =>
+    notify("Backend chưa hỗ trợ xoá món khỏi giỏ tạm.");
+
+  /* Bấm "Gửi" trong modal Phản hồi (chưa có API phản hồi trong tài liệu) */
   const submitFeedback = (data) => {
     console.log("Phản hồi:", data);
+    notify("Cảm ơn bạn đã gửi phản hồi!");
     setFeedbackOpen(false);
   };
-
-  const changeQty = (id, delta) =>
-    setCart((prev) =>
-      prev
-        .map((c) => (c.id === id ? { ...c, qty: c.qty + delta } : c))
-        .filter((c) => c.qty > 0)
-    );
-
-  const removeItem = (id) => setCart((prev) => prev.filter((c) => c.id !== id));
 
   const pickCategory = (c) => {
     setCategory(c);
@@ -121,6 +206,9 @@ function ClientMenu() {
         ))}
       </nav>
 
+      {/* Thông báo kết quả API */}
+      {message && <div className="api-message" role="status">{message}</div>}
+
       <main>
         <div className="main-content">
           <div className="menu">
@@ -145,7 +233,7 @@ function ClientMenu() {
             </div>
           </div>
 
-          {/* Chi tiết đơn hàng */}
+          {/* Chi tiết đơn hàng (giỏ tạm PENDING từ server) */}
           <section className="order-detail">
             <h3>Bàn số: {tableId}</h3>
             <div className="order-header">
@@ -161,11 +249,11 @@ function ClientMenu() {
                 </div>
               )}
               {cartRows.map((r) => (
-                <div className="order-row" key={r.id}>
+                <div className="order-row" key={r.orderDetailId}>
                   <button
                     className="remove-btn"
                     aria-label={`Xoá ${r.name}`}
-                    onClick={() => removeItem(r.id)}
+                    onClick={removeItem}
                   >
                     <img src="/images/Icon Remove.png" alt="" className="remove-icon" />
                   </button>
@@ -175,12 +263,13 @@ function ClientMenu() {
                       <span className="order-wait">{r.wait}</span>
                       <span className="order-price">{fmt(r.price)}</span>
                     </div>
+                    {r.note && <div className="order-item-note">Ghi chú: {r.note}</div>}
                     <div className="order-bottom">
                       <div className="order-qty">
                         <button
                           className="qty-btn"
                           aria-label={`Giảm số lượng ${r.name}`}
-                          onClick={() => changeQty(r.id, -1)}
+                          onClick={changeQty}
                         >
                           −
                         </button>
@@ -188,7 +277,7 @@ function ClientMenu() {
                         <button
                           className="qty-btn"
                           aria-label={`Tăng số lượng ${r.name}`}
-                          onClick={() => changeQty(r.id, 1)}
+                          onClick={changeQty}
                         >
                           +
                         </button>
@@ -203,11 +292,35 @@ function ClientMenu() {
               <span className="total-label">Tổng tiền</span>
               <span className="total-value">{fmt(total)}</span>
             </div>
-            
+
+            {/* Phương thức thanh toán — enum backend yêu cầu viết hoa */}
+            <div className="payment-method">
+              <label htmlFor="payment-select" className="payment-label">
+                Phương thức thanh toán
+              </label>
+              <select
+                id="payment-select"
+                className="payment-select"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <option value="CASH">Tiền mặt</option>
+                <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
+                <option value="MOMO">Ví MoMo</option>
+                <option value="VNPAY">VNPay</option>
+              </select>
+            </div>
+
             <div className="order-actions">
-              <button className="btn-goimon">Gọi món</button>
-              <button className="btn-thanhtoan">Thanh toán</button>
-              <button className="btn-goinhanvien">Gọi nhân viên</button>
+              <button className="btn-goimon" onClick={handleGoiMon} disabled={loading}>
+                Gọi món
+              </button>
+              <button className="btn-thanhtoan" onClick={handleThanhToan} disabled={loading}>
+                Thanh toán
+              </button>
+              <button className="btn-goinhanvien" onClick={handleGoiNhanVien} disabled={loading}>
+                Gọi nhân viên
+              </button>
               <button className="btn-feedback" onClick={() => setFeedbackOpen(true)}>
                 Phản hồi
               </button>
