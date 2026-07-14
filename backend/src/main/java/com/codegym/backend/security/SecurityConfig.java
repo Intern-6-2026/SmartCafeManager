@@ -2,7 +2,6 @@ package com.codegym.backend.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -36,23 +35,24 @@ public class SecurityConfig {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
-@Bean
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
                         
-    
+                        // 1. Các API xác thực (Login, Forgot password...) cho phép truy cập tự do
                         .requestMatchers(
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password")
                         .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/items", "/api/v1/items/", "/api/v1/items/**").permitAll()
-                        
-                        .requestMatchers("/api/v1/customer/**").permitAll() 
-                        
+                        // 2. ĐỒNG BỘ MỚI: Cho phép tất cả các phương thức (GET, POST, PUT...) đến /api/v1/items/** hoạt động công khai
+                        .requestMatchers("/api/v1/items/**").permitAll()
+                        // 3. (Optional) Giữ lại phòng hờ nếu front-end cũ vẫn gọi sang luồng customer
+                        .requestMatchers("/api/v1/customer/**").permitAll()
+                        // Tất cả các request khác (ví dụ: API của Admin, Quản lý) bắt buộc phải xác thực qua JWT
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

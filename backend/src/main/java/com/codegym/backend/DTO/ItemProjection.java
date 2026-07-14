@@ -12,5 +12,5 @@ public interface ItemProjection {
     String getDescription();
     String getImageUrl();
     Boolean getIsAvailable();
-    Long getTotalOrderCount(); // Tự động map mượt mà cho cả Integer hoặc Long
+    Long getTotalOrderCount();
 }

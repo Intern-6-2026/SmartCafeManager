@@ -12,10 +12,10 @@ import com.codegym.backend.entity.Item;
 import com.codegym.backend.entity.OrderDetail;
 import com.codegym.backend.entity.TableOrder;
 import com.codegym.backend.entity.Tables;
+import com.codegym.backend.enums.PaymentMethod;
 import com.codegym.backend.enums.ServiceStatus;
 import com.codegym.backend.enums.StatusOrderDetail;
 import com.codegym.backend.enums.StatusTableOrder;
-import com.codegym.backend.enums.PaymentMethod;
 import com.codegym.backend.repository.ItemRepository;
 import com.codegym.backend.repository.OrderDetailRepository;
 import com.codegym.backend.repository.TableOrderRepository;
@@ -193,27 +193,46 @@ public class CustomerOrderServiceImpl implements CustomerOrderService {
         tablesRepository.save(table);
     }
     // 9. NGHIỆP VỤ MỚI: LẤY TỔNG QUAN HÓA ĐƠN ĐÃ ĐƯỢC CHUYỂN ĐỔI SANG DTO SẠCH SẼ
-    @Override
-    @Transactional(readOnly = true)
-    public com.codegym.backend.dto.TableOrderSummaryDTO getInvoiceSummaryDTO(String tableName) {
-        // BƯỚC 1: Tìm kiếm thông tin bàn
-        Tables table = tablesRepository.findByTableName(tableName)
-                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+// 9. NGHIỆP VỤ MỚI: LẤY TỔNG QUAN HÓA ĐƠN ĐÃ ĐƯỢC CHUYỂN ĐỔI SANG DTO SẠCH SẼ
+@Override
+@Transactional(readOnly = true)
+public com.codegym.backend.dto.TableOrderSummaryDTO getInvoiceSummaryDTO(String tableName) {
+    // BƯỚC 1: Tìm kiếm thông tin bàn
+    Tables table = tablesRepository.findByTableName(tableName)
+            .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
 
-        // BƯỚC 2: Tìm kiếm hóa đơn đang OPEN của bàn đó
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào chưa thanh toán!"));
+    // BƯỚC 2: Tìm kiếm hóa đơn đang OPEN của bàn đó
+    TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+            .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào chưa thanh toán!"));
 
-        // BƯỚC 3: Lấy toàn bộ danh sách món ăn thuộc hóa đơn này (Bao gồm cả món PENDING và món đã CONFIRMED)
-        List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
-        return com.codegym.backend.dto.TableOrderSummaryDTO.builder()
-                .tableOrderId(order.getTableOrderId())
-                .tableName(table.getTableName())
-                .totalAmount(order.getTotalAmount())
-                .orderStatus(order.getStatus())
-                .serviceStatus(table.getServiceStatus())
-                .openAt(order.getOpenAt())
-                .orderDetails(details)
-                .build();
-    }
+    // BƯỚC 3: Lấy toàn bộ danh sách món ăn thuộc hóa đơn này
+    List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
+
+    // BƯỚC 4: Tự động tính toán tổng tiền thực tế thời gian thực (Bao gồm cả PENDING, CONFIRMED, SERVED)
+    BigDecimal calculatedTotal = details.stream()
+            .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    // BƯỚC 5: Đưa vào Builder của TableOrderSummaryDTO và map sang list con phẳng
+    return com.codegym.backend.dto.TableOrderSummaryDTO.builder()
+            .tableOrderId(order.getTableOrderId())
+            .tableName(table.getTableName())
+            .totalAmount(calculatedTotal)
+            .orderStatus(order.getStatus())
+            .serviceStatus(table.getServiceStatus())
+            .openAt(order.getOpenAt())
+            .orderDetails(details.stream().map(d -> {
+                return com.codegym.backend.dto.OrderDetailMinDTO.builder()
+                        .orderDetailId(d.getOrderDetailId())
+                        .quantity(d.getQuantity())
+                        .unitPrice(d.getUnitPrice())
+                        .note(d.getNote())
+                        .status(d.getStatus().toString())
+                        .itemId(d.getItem() != null ? d.getItem().getItemId() : null)
+                        .itemName(d.getItem() != null ? d.getItem().getItemName() : null)
+                        .imageUrl(d.getItem() != null ? d.getItem().getImageUrl() : null)
+                        .build();
+            }).collect(java.util.stream.Collectors.toList()))
+            .build();
+}
 }

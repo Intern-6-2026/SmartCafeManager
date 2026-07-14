@@ -1,6 +1,7 @@
 package com.codegym.backend.controller;
 
 import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -11,14 +12,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.codegym.backend.entity.OrderDetail;
-import com.codegym.backend.entity.TableOrder;
-import com.codegym.backend.enums.ServiceStatus;
 import com.codegym.backend.enums.PaymentMethod;
+import com.codegym.backend.enums.ServiceStatus;
 import com.codegym.backend.enums.StatusOrderDetail;
 import com.codegym.backend.service.CustomerOrderService;
 
 @RestController
-@RequestMapping("/api/v1/customer")
+@RequestMapping("/api/v1/items")
 @CrossOrigin("*")
 public class CustomerController {
 
@@ -57,12 +57,13 @@ public class CustomerController {
         return ResponseEntity.ok(orderedItems);
     }
 
-    // 5. [BỊ THIẾU CŨ]: XEM CHI TIẾT HÓA ĐƠN LỚN (Để lấy tổng tiền totalAmount trước khi bấm thanh toán)
+    // 5. NGHIỆP VỤ: XEM CHI TIẾT HÓA ĐƠN LỚN (Lấy tổng tiền totalAmount trước khi bấm thanh toán)
     @GetMapping("/invoice")
     public ResponseEntity<com.codegym.backend.dto.TableOrderSummaryDTO> getCurrentInvoice(@RequestParam String tableName) {
-    return ResponseEntity.ok(customerOrderService.getInvoiceSummaryDTO(tableName));
+        return ResponseEntity.ok(customerOrderService.getInvoiceSummaryDTO(tableName));
     }
-    // 6. [BỊ THIẾU CŨ]: KHÁCH ẤN NÚT YÊU CẦU THANH TOÁN (Chọn phương thức CASH, BANK_TRANSFER,...)
+
+    // 6. NGHIỆP VỤ: KHÁCH ẤN NÚT YÊU CẦU THANH TOÁN (Chọn phương thức CASH, BANK_TRANSFER,...)
     @PostMapping("/request-checkout")
     public ResponseEntity<String> requestCheckout(
             @RequestParam String tableName,
