@@ -1,7 +1,12 @@
 import axios from "axios";
 
 // Đường dẫn cơ sở của Backend Spring Boot
-const API_BASE_URL = "http://localhost:8080/api/v1";
+const API_BASE_URL = "/api/v1";
+
+// Gọi API lấy toàn bộ món ăn (menu đầy đủ, kèm danh mục + ảnh)
+export const getAllItems = async () => {
+  return await axios.get(`${API_BASE_URL}/items`);
+};
 
 // Gọi API lấy món mới nhất
 export const getLatestItems = async () => {
@@ -13,7 +18,8 @@ export const getBestSellerItems = async () => {
   return await axios.get(`${API_BASE_URL}/items/best-sellers`);
 };
 
-const CUSTOMER_URL = `${API_BASE_URL}/customer`;
+/* Các API gọi món tại bàn — theo tài liệu mới, nằm dưới /api/v1/items */
+const CUSTOMER_URL = `${API_BASE_URL}/items`;
  
 // API 1: Thêm món vào giỏ tạm thời (note là tuỳ chọn)
 export const addItemToCart = async (tableName, itemId, quantity, note) => {

@@ -7,4 +7,12 @@ export default defineConfig({
     react(),
     tailwindcss(), // <-- Dòng này kích hoạt Tailwind v4
   ],
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
+    },
+  },
 });
