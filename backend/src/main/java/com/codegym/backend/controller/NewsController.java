@@ -19,8 +19,10 @@ public class NewsController {
      * API này được công khai hoàn toàn (permitAll), cho phép tất cả mọi người
      * (bao gồm khách vãng lai chưa đăng nhập và người dùng đã có tài khoản)
      * đều có thể truy cập và xem danh sách tin tức.
-     * 
-     * Đường dẫn API: http://localhost:8080/api/v1/news
+     *
+     * Yêu cầu phân quyền: Công khai, không yêu cầu đăng nhập (permitAll()).
+     *
+     * Đường dẫn API: GET http://localhost:8080/api/v1/news
      */
     @GetMapping
     @PreAuthorize("permitAll()")
@@ -30,12 +32,20 @@ public class NewsController {
 
     /**
      * Tạo mới một bài viết tin tức.
+     * API nhận dữ liệu đầu vào dưới định dạng multipart/form-data để hỗ trợ
+     * tải lên (upload) file hình ảnh đính kèm cùng với các văn bản thông thường.
+     *
      * Yêu cầu phân quyền: Chỉ những tài khoản có vai trò Quản trị viên (ADMIN)
      * hoặc Nhân viên (STAFF) mới được phép thực hiện chức năng này.
-     * API nhận dữ liệu đầu vào dưới định dạng `multipart/form-data` để hỗ trợ
-     * tải lên (upload) file hình ảnh đính kèm cùng với các văn bản thông thường.
-     * 
-     * Đường dẫn API: http://localhost:8080/api/v1/news
+     *
+     * Đường dẫn API: POST http://localhost:8080/api/v1/news
+     * Content-Type: multipart/form-data
+     *
+     * Tham số:
+     * - title: Tiêu đề bài viết.
+     * - summary: Nội dung tóm tắt (không bắt buộc).
+     * - content: Nội dung chi tiết bài viết.
+     * - image: File hình ảnh đính kèm (không bắt buộc).
      */
     @PostMapping(consumes = "multipart/form-data")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
@@ -49,13 +59,21 @@ public class NewsController {
 
     /**
      * Cập nhật thông tin của một bài viết tin tức đã tồn tại dựa trên ID.
-     * Yêu cầu phân quyền: Tương tự như tạo mới, chỉ ADMIN và STAFF mới có quyền
-     * thao tác.
-     * Cho phép chỉnh sửa các thông tin như tiêu đề, nội dung tóm tắt, nội dung chi
-     * tiết,
-     * hoặc tải lên hình ảnh mới để thay thế hình ảnh cũ.
-     * 
-     * Đường dẫn API: http://localhost:8080/api/v1/news/{id}
+     * Cho phép chỉnh sửa các thông tin như tiêu đề, nội dung tóm tắt, nội dung
+     * chi tiết, hoặc tải lên hình ảnh mới để thay thế hình ảnh cũ.
+     *
+     * Yêu cầu phân quyền: Tương tự như tạo mới, chỉ ADMIN và STAFF mới có
+     * quyền thao tác.
+     *
+     * Đường dẫn API: PUT http://localhost:8080/api/v1/news/{id}
+     * Content-Type: multipart/form-data
+     *
+     * Tham số:
+     * - id: ID của bài viết tin tức cần cập nhật.
+     * - title: Tiêu đề bài viết.
+     * - summary: Nội dung tóm tắt (không bắt buộc).
+     * - content: Nội dung chi tiết bài viết.
+     * - image: File hình ảnh mới để thay thế ảnh cũ (không bắt buộc).
      */
     @PutMapping(value = "/{id}", consumes = "multipart/form-data")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
@@ -70,13 +88,16 @@ public class NewsController {
 
     /**
      * Xóa một bài viết tin tức cụ thể khỏi hệ thống thông qua ID.
-     * Yêu cầu phân quyền: Cần tài khoản cấp ADMIN hoặc STAFF để thực thi hành động
-     * này.
-     * (Lưu ý: Tùy thuộc vào thiết kế của service, đây có thể là xóa mềm - đánh dấu
-     * xóa,
-     * hoặc xóa cứng - xóa vĩnh viễn khỏi cơ sở dữ liệu).
-     * 
-     * Đường dẫn API: http://localhost:8080/api/v1/news/{id}
+     * (Lưu ý: Tùy thuộc vào thiết kế của service, đây có thể là xóa mềm - đánh
+     * dấu xóa, hoặc xóa cứng - xóa vĩnh viễn khỏi cơ sở dữ liệu).
+     *
+     * Yêu cầu phân quyền: Cần tài khoản cấp ADMIN hoặc STAFF để thực thi hành
+     * động này.
+     *
+     * Đường dẫn API: DELETE http://localhost:8080/api/v1/news/{id}
+     *
+     * Tham số:
+     * - id: ID của bài viết tin tức cần xóa.
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")

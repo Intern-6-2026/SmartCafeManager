@@ -55,6 +55,7 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
         String token = jwtTokenProvider.generateToken(userDetails);
 
         long thirtyDaysInMillis = 30L * 24 * 60 * 60 * 1000;
@@ -94,7 +95,7 @@ public class AuthService {
     @Transactional
     public String processResetPassword(ResetPasswordRequest request) {
         Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
-                .orElseThrow(() -> new RuntimeException("Mã khôi phục không hợp lệ hoặc tài khoản không tồn tại!"));
+                .orElseThrow(() -> new RuntimeException("Mã OTP không hợp lệ."));
 
         if (account.getResetTokenExpiry().before(new Date())) {
             throw new RuntimeException("Mã khôi phục đã hết hạn (quá 5 phút)!");
