@@ -1,8 +1,9 @@
 package com.codegym.backend.security;
 
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -18,7 +19,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import lombok.RequiredArgsConstructor;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -45,6 +45,7 @@ public class SecurityConfig {
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .csrf(csrf -> csrf.disable())
                                 .authorizeHttpRequests(auth -> auth
+                                                // 1. Các API xác thực công khai và tài liệu Swagger
                                                 .requestMatchers(
                                                                 "/api/v1/auth/login",
                                                                 "/api/v1/auth/forgot-password",
@@ -55,8 +56,15 @@ public class SecurityConfig {
                                                                 "/swagger-ui.html",
                                                                 "/ws-news/**")
                                                 .permitAll()
-                                                .requestMatchers(HttpMethod.GET, "/api/v1/items/**", "/api/v1/news")
+
+                                                // 2. CHO PHÉP TẤT CẢ (Cả GET, POST) các API gọi món/giỏ hàng của Khách tại bàn
+                                                .requestMatchers("/api/v1/items/**", "/api/v1/news")
                                                 .permitAll()
+                                                // 3. CHỈ CHO PHÉP ADMIN truy cập các API quản lý sản phẩm
+                                                // (Lưu ý: "ADMIN" khớp với cấu hình Role trong DB/JWT của anh, ví dụ: ROLE_ADMIN)
+                                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+
+                                                // 4. Tất cả các request khác (ví dụ: quản lý nhân viên, hóa đơn nội bộ) cần xác thực
                                                 .anyRequest().authenticated())
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
