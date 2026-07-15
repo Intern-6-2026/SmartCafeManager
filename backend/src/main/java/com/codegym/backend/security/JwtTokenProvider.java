@@ -28,11 +28,9 @@ public class JwtTokenProvider {
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(authority -> authority.getAuthority())
                 .collect(Collectors.toList());
-
         claims.put("roles", roles);
 
         return createToken(claims, userDetails.getUsername());
@@ -55,9 +53,15 @@ public class JwtTokenProvider {
         return extractClaim(token, claims -> claims.getSubject());
     }
 
-    @SuppressWarnings("unchecked")
     public List<String> extractRoles(String token) {
-        return extractClaim(token, claims -> claims.get("roles", List.class));
+        Claims claims = extractAllClaims(token);
+        Object rolesObj = claims.get("roles");
+        if (rolesObj instanceof List<?>) {
+            return ((List<?>) rolesObj).stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.toList());
+        }
+        return List.of();
     }
 
     public boolean isTokenExpired(String token) {

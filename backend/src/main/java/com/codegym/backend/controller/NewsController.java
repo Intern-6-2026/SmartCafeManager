@@ -29,7 +29,7 @@ public class NewsController {
      * API Link: http://localhost:8080/api/v1/news
      */
     @PostMapping(consumes = "multipart/form-data")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> createNews(
             @RequestParam("title") String title,
             @RequestParam(value = "summary", required = false) String summary,
@@ -43,7 +43,7 @@ public class NewsController {
      * API Link: http://localhost:8080/api/v1/news/{id}
      */
     @PutMapping(value = "/{id}", consumes = "multipart/form-data")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> updateNews(
             @PathVariable Long id,
             @RequestParam("title") String title,
@@ -58,7 +58,7 @@ public class NewsController {
      * API Link: http://localhost:8080/api/v1/news/{id}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> deleteNews(@PathVariable Long id) {
         newsService.deleteNews(id);
         return ResponseEntity.ok("Delete news successfully!");

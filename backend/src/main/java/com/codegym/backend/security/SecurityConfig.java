@@ -59,9 +59,14 @@ public class SecurityConfig {
                                                                 "/swagger-ui.html",
                                                                 "/ws-news/**")
                                                 .permitAll()
+
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/items", "/api/v1/items/",
                                                                 "/api/v1/items/**", "/api/v1/news")
                                                 .permitAll()
+
+                                                .requestMatchers(HttpMethod.POST, "/api/v1/news")
+                                                .permitAll()
+
                                                 .anyRequest().authenticated())
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
