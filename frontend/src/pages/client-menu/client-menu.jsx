@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "../../styles/client-menu.css";
 import AddDrinkModal from "../../components/add-drink";
 import FeedbackModal from "../../components/feedback";
+import CheckoutModal from "../../components/checkout";
 import { useParams } from "react-router-dom";
 import {
   getAllItems,
@@ -9,6 +10,7 @@ import {
   getCart,
   confirmOrder,
   requestCheckout,
+  getInvoice,
   callService,
   getApiErrorMessage,
 } from "../../services/apiService";
@@ -46,6 +48,8 @@ function ClientMenu() {
   const [cart, setCart] = useState([]); // giỏ tạm PENDING lấy từ server
   const [selectedItem, setSelectedItem] = useState(null); // món đang mở modal Thêm món
   const [feedbackOpen, setFeedbackOpen] = useState(false); // modal Phản hồi
+  const [checkoutOpen, setCheckoutOpen] = useState(false); // modal Thanh toán
+  const [invoice, setInvoice] = useState(null); // dữ liệu hóa đơn từ API /invoice
   const [paymentMethod, setPaymentMethod] = useState("CASH"); // enum backend
   const [message, setMessage] = useState(""); // thông báo kết quả API
   const [loading, setLoading] = useState(false);
@@ -144,18 +148,34 @@ function ClientMenu() {
     }
   };
 
-  /* ===== API 9: Yêu cầu thanh toán ===== */
+  /* ===== API 8: Bấm nút "Thanh toán" -> lấy hóa đơn, mở modal ===== */
   const handleThanhToan = async () => {
+    setLoading(true);
+    try {
+      const res = await getInvoice(tableName);
+      setInvoice(res.data);
+      setCheckoutOpen(true);
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Không lấy được hóa đơn."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ===== API 9: Bấm "Xác nhận" trong modal -> gửi yêu cầu thanh toán ===== */
+  const confirmCheckout = async () => {
     setLoading(true);
     try {
       const res = await requestCheckout(tableName, paymentMethod);
       notify(res.data);
+      setCheckoutOpen(false);
     } catch (err) {
       notify(getApiErrorMessage(err, "Gửi yêu cầu thanh toán thất bại."));
     } finally {
       setLoading(false);
     }
   };
+
 
   /* ===== API 10: Gọi nhân viên ===== */
   const handleGoiNhanVien = async () => {
@@ -199,7 +219,6 @@ function ClientMenu() {
             <h1 className="brand-name-not-bold">CAFÉ</h1>
           </div>
           <div className="header-title">THÔNG TIN BÀN</div>
-          {/* Nút ≡ mở panel Service Type */}
           <button
             className="menu-btn"
             aria-label="Mở danh sách loại dịch vụ"
@@ -377,6 +396,15 @@ function ClientMenu() {
         open={feedbackOpen}
         onSubmit={submitFeedback}
         onClose={() => setFeedbackOpen(false)}
+      />
+      <CheckoutModal
+        open={checkoutOpen}
+        invoice={invoice}
+        paymentMethod={paymentMethod}
+        onChangeMethod={setPaymentMethod}
+        onConfirm={confirmCheckout}
+        onClose={() => setCheckoutOpen(false)}
+        loading={loading}
       />
     </div>
   );
