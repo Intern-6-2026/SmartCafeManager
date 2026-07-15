@@ -22,8 +22,15 @@ public class AuthController {
     private final AuthService authService;
 
     /**
-     * API đăng nhập người dùng.
-     * Đường dẫn API: http://localhost:8080/api/v1/auth/login
+     * Xử lý yêu cầu đăng nhập của người dùng.
+     * Nhận vào thông tin tài khoản (username) và mật khẩu (password). Nếu xác thực
+     * thành công,
+     * hệ thống sẽ trả về một chuỗi JWT (Json Web Token) cùng với các thông tin cơ
+     * bản
+     * (vai trò, tên người dùng, trạng thái có cần đổi mật khẩu hay không).
+     * API này được mở công khai (permitAll) để bất kỳ ai cũng có thể gọi chức năng
+     * đăng nhập.
+     * * Đường dẫn API: POST http://localhost:8080/api/v1/auth/login
      */
     @PostMapping("/login")
     @PreAuthorize("permitAll()")
@@ -32,8 +39,14 @@ public class AuthController {
     }
 
     /**
-     * Yêu cầu email đặt lại mật khẩu.
-     * Đường dẫn API: http://localhost:8080/api/v1/auth/forgot-password
+     * Yêu cầu gửi mã OTP để khôi phục mật khẩu (Quên mật khẩu).
+     * Người dùng cung cấp địa chỉ email đã đăng ký. Hệ thống sẽ kiểm tra xem email
+     * có tồn tại
+     * và đang hoạt động hay không. Nếu hợp lệ, một mã OTP/Token sẽ được tạo ra và
+     * gửi đến email đó
+     * (thường có hiệu lực trong khoảng thời gian ngắn, ví dụ 5 phút).
+     * API này cũng được mở công khai (permitAll).
+     * * Đường dẫn API: POST http://localhost:8080/api/v1/auth/forgot-password
      */
     @PostMapping("/forgot-password")
     @PreAuthorize("permitAll()")
@@ -42,8 +55,14 @@ public class AuthController {
     }
 
     /**
-     * Reset password using the sent recovery token or OTP.
-     * API Link: http://localhost:8080/api/v1/auth/reset-password
+     * Thiết lập lại mật khẩu mới sử dụng mã khôi phục (OTP/Token).
+     * Người dùng gửi lên mã xác nhận (đã nhận được từ email) cùng với mật khẩu mới
+     * mong muốn.
+     * Hệ thống sẽ kiểm tra tính hợp lệ và thời hạn của mã OTP. Nếu mọi thứ chính
+     * xác,
+     * mật khẩu mới sẽ được mã hóa và cập nhật vào cơ sở dữ liệu.
+     * API này cũng được mở công khai (permitAll).
+     * * Đường dẫn API: POST http://localhost:8080/api/v1/auth/reset-password
      */
     @PostMapping("/reset-password")
     @PreAuthorize("permitAll()")

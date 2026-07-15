@@ -22,8 +22,13 @@ public class UserController {
     private final UserService userService;
 
     /**
-     * Get the current authenticated user's profile.
-     * API Link: http://localhost:8080/api/v1/users/profile
+     * Lấy thông tin hồ sơ (profile) của người dùng hiện đang đăng nhập.
+     * Hệ thống sẽ tự động trích xuất định danh người dùng từ JWT Token được gửi kèm
+     * trong Header (SecurityContextHolder). Sau đó truy vấn thông tin chi tiết
+     * (Nhân viên hoặc Khách hàng).
+     * Yêu cầu phân quyền: Người dùng bắt buộc phải đăng nhập hợp lệ
+     * (isAuthenticated()).
+     * * Đường dẫn API: GET http://localhost:8080/api/v1/users/profile
      */
     @GetMapping("/profile")
     @PreAuthorize("isAuthenticated()")
@@ -32,8 +37,14 @@ public class UserController {
     }
 
     /**
-     * Change the password of the current authenticated user.
-     * API Link: http://localhost:8080/api/v1/users/change-password
+     * Thay đổi mật khẩu của người dùng hiện đang đăng nhập.
+     * Yêu cầu người dùng cung cấp mật khẩu cũ (để xác minh chính chủ) và mật khẩu
+     * mới.
+     * Hệ thống sẽ tự nhận diện người dùng đang thao tác dựa trên Token hiện tại,
+     * ngăn chặn việc đổi mật khẩu của tài khoản khác.
+     * Yêu cầu phân quyền: Người dùng bắt buộc phải đăng nhập hợp lệ
+     * (isAuthenticated()).
+     * * Đường dẫn API: PUT http://localhost:8080/api/v1/users/change-password
      */
     @PutMapping("/change-password")
     @PreAuthorize("isAuthenticated()")
@@ -43,8 +54,13 @@ public class UserController {
     }
 
     /**
-     * Update the current authenticated user's profile.
-     * API Link: http://localhost:8080/api/v1/users/profile
+     * Cập nhật thông tin hồ sơ cá nhân của người dùng hiện đang đăng nhập.
+     * Cho phép chỉnh sửa các thông tin như: Họ tên, ngày sinh, giới tính, số điện
+     * thoại,
+     * địa chỉ, email và hình ảnh đại diện (avatar).
+     * Yêu cầu phân quyền: Người dùng bắt buộc phải đăng nhập hợp lệ
+     * (isAuthenticated()).
+     * * Đường dẫn API: PUT http://localhost:8080/api/v1/users/profile
      */
     @PutMapping("/profile")
     @PreAuthorize("isAuthenticated()")
