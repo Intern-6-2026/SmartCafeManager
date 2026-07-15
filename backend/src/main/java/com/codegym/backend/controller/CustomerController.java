@@ -80,4 +80,36 @@ public class CustomerController {
         customerOrderService.updateTableServiceStatus(tableName, status);
         return ResponseEntity.ok("Hệ thống đã ghi nhận yêu cầu: " + status);
     }
+    // 8. NGHIỆP VỤ: SỬA SỐ LƯỢNG SẢN PHẨM TRONG GIỎ HÀNG TẠM
+    @PostMapping("/update-quantity")
+    public ResponseEntity<String> updateCartItemQuantity(
+            @RequestParam String tableName,
+            @RequestParam Long itemId,
+            @RequestParam Integer newQuantity) {
+        
+        if (newQuantity <= 0) {
+            // Nếu số lượng truyền vào <= 0 thì tự động xóa món đó luôn cho tiện
+            customerOrderService.removeItemFromCart(tableName, itemId);
+            return ResponseEntity.ok("Số lượng nhỏ hơn hoặc bằng 0. Đã xóa món khỏi giỏ hàng!");
+        }
+        
+        customerOrderService.updateItemQuantityInCart(tableName, itemId, newQuantity);
+        return ResponseEntity.ok("Đã cập nhật số lượng món ăn!");
+    }
+
+    // 9. NGHIỆP VỤ: XÓA MỘT SẢN PHẨM KHỎI GIỎ HÀNG TẠM
+    @PostMapping("/remove-item")
+    public ResponseEntity<String> removeItemFromCart(
+            @RequestParam String tableName,
+            @RequestParam Long itemId) {
+        customerOrderService.removeItemFromCart(tableName, itemId);
+        return ResponseEntity.ok("Đã xóa món ăn khỏi giỏ hàng tạm thời!");
+    }
+
+    // 10. NGHIỆP VỤ: XÓA SẠCH GIỎ HÀNG TẠM (Hủy giỏ hàng)
+    @PostMapping("/clear-cart")
+    public ResponseEntity<String> clearCart(@RequestParam String tableName) {
+        customerOrderService.clearTemporaryCart(tableName);
+        return ResponseEntity.ok("Đã xóa toàn bộ món trong giỏ hàng tạm!");
+    }
 }

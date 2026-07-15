@@ -235,4 +235,63 @@ public com.codegym.backend.dto.TableOrderSummaryDTO getInvoiceSummaryDTO(String 
             }).collect(java.util.stream.Collectors.toList()))
             .build();
 }
+// 10. NGHIỆP VỤ MỚI: CẬP NHẬT SỐ LƯỢNG MÓN ĂN TRONG GIỎ HÀNG TẠM (PENDING)
+@Override
+@Transactional
+public void updateItemQuantityInCart(String tableName, Long itemId, Integer newQuantity) {
+    Tables table = tablesRepository.findByTableName(tableName)
+            .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+
+    TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở cho bàn này!"));
+
+    List<OrderDetail> existingDetails = orderDetailRepository
+            .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
+
+    if (existingDetails.isEmpty()) {
+        throw new RuntimeException("Món ăn không tồn tại trong giỏ hàng tạm thời!");
+    }
+
+    // Cập nhật số lượng mới cứng do Front-end truyền xuống
+    OrderDetail detail = existingDetails.get(0);
+    detail.setQuantity(newQuantity);
+    orderDetailRepository.save(detail);
+}
+
+// 11. NGHIỆP VỤ MỚI: XÓA MỘT MÓN CỤ THỂ KHỎI GIỎ HÀNG TẠM (PENDING)
+@Override
+@Transactional
+public void removeItemFromCart(String tableName, Long itemId) {
+    Tables table = tablesRepository.findByTableName(tableName)
+            .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+
+    TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở cho bàn này!"));
+
+    List<OrderDetail> existingDetails = orderDetailRepository
+            .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
+
+    if (!existingDetails.isEmpty()) {
+        orderDetailRepository.delete(existingDetails.get(0));
+    }
+}
+
+// 12. NGHIỆP VỤ MỚI: XÓA SẠCH TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM (PENDING)
+@Override
+@Transactional
+public void clearTemporaryCart(String tableName) {
+    Tables table = tablesRepository.findByTableName(tableName)
+            .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+
+    TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở cho bàn này!"));
+
+    // Tìm tất cả các món đang PENDING của bàn này
+    List<OrderDetail> pendingDetails = orderDetailRepository
+            .findByOrderTableOrderIdAndStatus(order.getTableOrderId(), StatusOrderDetail.PENDING);
+
+    if (!pendingDetails.isEmpty()) {
+        orderDetailRepository.deleteAll(pendingDetails);
+    }
+}
 }
