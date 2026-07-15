@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import "../styles/client-menu.css";
-import AddDrinkModal from "../components/add-drink";
-import FeedbackModal from "../components/feedback";
+import "../../styles/client-menu.css";
+import AddDrinkModal from "../../components/add-drink";
+import FeedbackModal from "../../components/feedback";
 import { useParams } from "react-router-dom";
 import {
   getAllItems,
@@ -11,7 +11,7 @@ import {
   requestCheckout,
   callService,
   getApiErrorMessage,
-} from "../services/apiService";
+} from "../../services/apiService";
 
 /* Menu dự phòng khi không kết nối được server (giữ đúng shape đã chuẩn hoá) */
 const FALLBACK_MENU = [
@@ -38,10 +38,8 @@ const normalizeItem = (it) => ({
 });
 
 function ClientMenu() {
-  /* Route: /menu/table/:tableId — tableId chính là tableName gửi lên API (vd: Ban01) */
-  const { tableId } = useParams();
-  const tableName = tableId;
-
+  /* Route: /menu/table/:tableName — tableName chính là tên bàn gửi lên API (vd: ban01) */
+  const { tableName } = useParams();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuItems, setMenuItems] = useState([]); // menu lấy từ server
   const [category, setCategory] = useState("");
@@ -109,7 +107,7 @@ function ClientMenu() {
   /* Giỏ hàng: response phẳng { orderDetailId, itemName, quantity, unitPrice, status } */
   const cartRows = cart.map((c) => ({
     orderDetailId: c.orderDetailId,
-    name: c.itemName ?? "—",
+    name: c.item?.itemName ?? c.itemName ?? "—",
     price: c.unitPrice,
     qty: c.quantity,
     note: c.note,
@@ -267,7 +265,7 @@ function ClientMenu() {
 
           {/* Chi tiết đơn hàng (giỏ tạm PENDING từ server) */}
           <section className="order-detail">
-            <h3>Bàn số: {tableId}</h3>
+            <h3>{tableName}</h3>
             <div className="order-header">
               <span className="order-header-title">Tên món</span>
               <span className="order-header-title">Giá</span>
