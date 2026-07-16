@@ -38,10 +38,10 @@ function Body() {
         </div>
       </section>
 
-      {/* 2. Phần Món mới nhất (Hiển thị tất cả) */}
+      {/* 2. Phần Món mới nhất */}
       <section className="container mx-auto my-8 overflow-hidden rounded-lg">
         <div className="bg-[#EBE2CB] p-6 flex flex-col items-center">
-          <h2 className="text-2xl font-bold mb-4">Các món mới nhất</h2>
+          <h2 className="text-2xl font-bold mb-4">Top 4 món mới nhất</h2>
           <button className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium">
             Khám phá
           </button>
@@ -74,10 +74,12 @@ function Body() {
         </div>
       </section>
 
-      {/* 3. Phần Món bán chạy nhất (Hiển thị tất cả) */}
+      {/* 3. Phần Món bán chạy nhất */}
       <section className="container mx-auto my-8 overflow-hidden rounded-lg">
         <div className="bg-[#EBE2CB] p-6 flex flex-col items-center">
-          <h2 className="text-2xl font-bold mb-4">Các món bán chạy nhất</h2>
+          <h2 className="text-2xl font-bold mb-4">
+            Top những món bán chạy nhất
+          </h2>
           <button className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium">
             Khám phá
           </button>
@@ -115,13 +117,32 @@ function Body() {
         <h2 className="text-2xl font-bold text-[#4a3f33] mb-3">
           Đăng kí để nhận voucher khuyến mãi 15%!
         </h2>
+        <p className="text-[#70665b] mb-6">
+          Đăng kí thành viên để nhận voucher khuyến mãi 15% cho lần mua sắm tiếp
+          theo
+        </p>
         <div className="flex flex-col gap-4">
-          <input
-            type="email"
-            placeholder="Địa chỉ email"
-            className="w-full px-4 py-3 rounded-lg border border-gray-300"
-          />
-          <button className="w-full bg-[#3E2723] text-white py-3 rounded-lg font-bold">
+          <div className="flex items-center w-full bg-white rounded-lg px-4 py-3 border border-gray-300 shadow-sm focus-within:ring-2 focus-within:ring-[#4a3f33]">
+            <svg
+              className="w-5 h-5 text-gray-400 mr-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
+            </svg>
+            <input
+              type="email"
+              placeholder="Địa chỉ email"
+              className="flex-grow bg-transparent outline-none text-gray-700 placeholder-gray-500"
+            />
+          </div>
+          <button className="w-full bg-[#3E2723] text-white py-3 rounded-lg font-bold text-lg hover:bg-[#5D4037] transition-all duration-300 shadow-md transform hover:scale-[1.02]">
             Đăng kí
           </button>
         </div>

@@ -85,7 +85,7 @@ function ClientMenu() {
       <header>
         <div className="header-row">
           <div className="brand">
-            <img src="/images/Logo.png" alt="Logo" className="brand-logo" />
+            <img src="/images/logo.jpg" alt="Logo" className="brand-logo" />
             <h1 className="brand-name-bold">NEO</h1>
             <h1 className="brand-name-not-bold">CAFÉ</h1>
           </div>
@@ -216,7 +216,7 @@ function ClientMenu() {
         </div>
 
         <footer>
-          <img src="/images/Logo.png" alt="Logo" className="brand-logo" />
+          <img src="/images/logo.jpg" alt="Logo" className="brand-logo" />
           <p className="contact-infor">
             Chấp nhận : Visa, MasterCard, Vouchers <br />
             Phí giao dịch áp dụng cho thẻ tín dụng <br />
