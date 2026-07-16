@@ -37,6 +37,7 @@ public class NotificationController {
         String message = "Bàn " + request.getTableName() + " vừa yêu cầu: [" + request.getActionType() + "]";
         notificationService.sendNotification(message);
 
+<<<<<<< HEAD
         return ResponseEntity.ok("Đã gửi thông báo thành công!");
     }
 
@@ -45,5 +46,8 @@ public class NotificationController {
     public static class NotificationDto {
         private String tableName;
         private String actionType;
+=======
+        return ResponseEntity.ok("Notification sent successfully!");
+>>>>>>> 6f367d9e48f4cbd30c14a9e766cc61f749f977ed
     }
 }
