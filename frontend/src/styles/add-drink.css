@@ -52,14 +52,14 @@
   align-items: center;
   gap: 8px;
   margin: 16px 0 14px;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .add-drink .modal-field {
   margin-bottom: 14px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
 }
 
@@ -126,4 +126,41 @@
 .add-drink .btn-dong:focus-visible {
   outline: 2px solid var(--tan-deep);
   outline-offset: 2px;
+}
+
+/* ---------- Order note ---------- */
+
+.order-note {
+  margin: 12px 0 4px;
+}
+
+.order-note-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.order-note-input {
+  width: 100%;
+  min-height: 56px;
+  resize: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+  outline: none;
+}
+
+.order-note-input:focus {
+  border-color: var(--tan-deep);
+}
+
+.order-note-input::placeholder {
+  color: var(--ink-soft);
+  opacity: .7;
 }
