@@ -39,7 +39,6 @@ body {
   min-height: 100vh;
 }
 
-/* ---------- Header ---------- */
 header {
   background: var(--tan);
   padding: 16px 18px 18px;
@@ -323,7 +322,6 @@ header {
   margin-left: auto;
   background: transparent;
   padding: 14px 14px 16px;
-  border-left: 3px solid var(--line);
   min-width: 320px;
 }
 
@@ -501,7 +499,7 @@ header {
 .btn-goimon,
 .btn-goinhanvien,
 .btn-thanhtoan,
-.btn-phanhoi {
+.btn-feedback {
   padding: 10px 16px;
   border-radius: 18px;
   border: none;
@@ -530,7 +528,7 @@ header {
   font-weight: 700;
 }
 
-.btn-phanhoi {
+.btn-feedback {
   background: #ffffff;
   border: 1.5px dashed var(--tan);
   color: var(--ink);
@@ -539,14 +537,14 @@ header {
 .btn-goimon:hover,
 .btn-goinhanvien:hover,
 .btn-thanhtoan:hover,
-.btn-phanhoi:hover {
+.btn-feedback:hover {
   filter: brightness(.95);
 }
 
 .btn-goimon:active,
 .btn-goinhanvien:active,
 .btn-thanhtoan:active,
-.btn-phanhoi:active {
+.btn-feedback:active {
   transform: scale(.97);
 }
 
