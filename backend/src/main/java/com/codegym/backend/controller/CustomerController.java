@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.codegym.backend.entity.OrderDetail;
+import com.codegym.backend.dto.CartItemResponse;
 import com.codegym.backend.enums.PaymentMethod;
 import com.codegym.backend.enums.ServiceStatus;
 import com.codegym.backend.enums.StatusOrderDetail;
@@ -36,13 +36,13 @@ public class CustomerController {
         return ResponseEntity.ok("Đã thêm món vào giỏ hàng tạm thời!");
     }
 
-    // 2. NGHIỆP VỤ: XEM TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM (Chỉ lấy món PENDING)
+// 2. NGHIỆP VỤ: XEM TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM (Chỉ lấy món PENDING)
     @GetMapping("/cart")
-    public ResponseEntity<List<OrderDetail>> getTemporaryCart(@RequestParam String tableName) {
-        List<OrderDetail> cartItems = customerOrderService.getCartByStatus(tableName, StatusOrderDetail.PENDING);
-        return ResponseEntity.ok(cartItems);
+    // Đảm bảo kiểu trả về trong ResponseEntity là List<CartItemResponse>
+    public ResponseEntity<List<CartItemResponse>> getTemporaryCart(@RequestParam String tableName) {
+    List<CartItemResponse> cartItems = customerOrderService.getCartByStatus(tableName, StatusOrderDetail.PENDING);
+    return ResponseEntity.ok(cartItems);
     }
-
     // 3. NGHIỆP VỤ: BẤM NÚT [GỌI MÓN] ĐỂ XÁC NHẬN GỬI XUỐNG BẾP (Chuyển PENDING -> CONFIRMED)
     @PostMapping("/confirm-order")
     public ResponseEntity<String> confirmOrder(@RequestParam String tableName) {
@@ -50,10 +50,10 @@ public class CustomerController {
         return ResponseEntity.ok("Đã gửi đơn hàng thành công xuống bếp!");
     }
 
-    // 4. NGHIỆP VỤ: XEM TẤT CẢ CÁC MÓN ĐÃ GỌI XUỐNG BẾP (Lấy món CONFIRMED hoặc SERVED)
+    // 4. ĐÃ SỬA: XEM TẤT CẢ CÁC MÓN ĐÃ GỌI XUỐNG BẾP (Chuyển sang dùng CartItemResponse DTO sạch)
     @GetMapping("/order-history")
-    public ResponseEntity<List<OrderDetail>> getOrderHistory(@RequestParam String tableName) {
-        List<OrderDetail> orderedItems = customerOrderService.getOrderedItems(tableName);
+    public ResponseEntity<List<CartItemResponse>> getOrderHistory(@RequestParam String tableName) {
+        List<CartItemResponse> orderedItems = customerOrderService.getOrderedItems(tableName);
         return ResponseEntity.ok(orderedItems);
     }
 
@@ -80,6 +80,7 @@ public class CustomerController {
         customerOrderService.updateTableServiceStatus(tableName, status);
         return ResponseEntity.ok("Hệ thống đã ghi nhận yêu cầu: " + status);
     }
+
     // 8. NGHIỆP VỤ: SỬA SỐ LƯỢNG SẢN PHẨM TRONG GIỎ HÀNG TẠM
     @PostMapping("/update-quantity")
     public ResponseEntity<String> updateCartItemQuantity(
@@ -88,7 +89,6 @@ public class CustomerController {
             @RequestParam Integer newQuantity) {
         
         if (newQuantity <= 0) {
-            // Nếu số lượng truyền vào <= 0 thì tự động xóa món đó luôn cho tiện
             customerOrderService.removeItemFromCart(tableName, itemId);
             return ResponseEntity.ok("Số lượng nhỏ hơn hoặc bằng 0. Đã xóa món khỏi giỏ hàng!");
         }
