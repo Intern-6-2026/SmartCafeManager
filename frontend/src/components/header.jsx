@@ -8,8 +8,8 @@ function Header() {
 
   // Định nghĩa menu khớp với các route bạn đã có
   const menuItems = [
-    { name: "Xem Menu", path: "/menu/table/TB001" }, // Tạm để TB001 làm ví dụ
-    { name: "Đặt món", path: "/menu/table/TB001" },
+    { name: "Xem Menu", path: "/menu/table/ban01" }, // Tạm để TB001 làm ví dụ
+    { name: "Đặt món", path: "/menu/table/ban01" },
     { name: "Món đã đặt", path: "/" }, // Bạn cần bổ sung route này sau
     { name: "Yêu cầu thanh toán", path: "/" },
     { name: "Gọi phục vụ", path: "/" },
