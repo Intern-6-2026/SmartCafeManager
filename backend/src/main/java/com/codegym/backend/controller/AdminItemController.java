@@ -19,7 +19,7 @@ public class AdminItemController {
 
     private final ItemService itemService;
 
-    // 1. LẤY CHI TIẾT MỘT MÓN ĂN THEO ID
+    // 1. LẤY CHI TIẾT MỘT MÓN ĂN THEO ID (Dùng để hiển thị lên form Sửa ở Front-end)
     @GetMapping("/{id}")
     public ResponseEntity<?> getItemById(@PathVariable Long id) {
         try {
@@ -30,7 +30,7 @@ public class AdminItemController {
         }
     }
 
-    // 2. THÊM MỚI MÓN ĂN
+    // 2. THÊM MỚI MÓN ĂN (POST)
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createItem(
             @RequestParam("itemCode") String itemCode,
@@ -51,18 +51,19 @@ public class AdminItemController {
         }
     }
 
-    // 3. CẬP NHẬT (SỬA) MÓN ĂN - ĐÃ LÀM TƯƠNG TỰ (RÃ PHẲNG THAM SỐ, CÓ CHỌN FILE ẢNH MỚI)
-    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    // 3. CẬP NHẬT MÓN ĂN - CHUYỂN SANG POST CHO AN TOÀN & NHẬN MULTIPART TRƠN TRU
+    // API sẽ là: POST /api/v1/admin/items/{id}
+    @PostMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateItem(
             @PathVariable Long id,
-            @RequestParam("itemCode") String itemCode,
-            @RequestParam("itemName") String itemName,
-            @RequestParam("price") BigDecimal price,
+            @RequestParam(value = "itemCode", required = false) String itemCode,
+            @RequestParam(value = "itemName", required = false) String itemName,
+            @RequestParam(value = "price", required = false) BigDecimal price,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestParam(value = "newCategoryName", required = false) String newCategoryName,
-            @RequestParam(value = "isAvailable", required = false, defaultValue = "true") Boolean isAvailable,
-            @RequestPart(value = "image", required = false) MultipartFile image // Cho phép tải ảnh mới lên để thay thế ảnh cũ
+            @RequestParam(value = "isAvailable", required = false) Boolean isAvailable,
+            @RequestPart(value = "image", required = false) MultipartFile image // Chỉ truyền lên khi cần đổi ảnh mới
     ) {
         try {
             ItemResponse updatedItem = itemService.updateItem(

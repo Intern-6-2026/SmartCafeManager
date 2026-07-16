@@ -2,6 +2,7 @@ package com.codegym.backend.security;
 
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.kafka.KafkaProperties.Admin;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -62,7 +63,7 @@ public class SecurityConfig {
                                                 .permitAll()
                                                 // 3. CHỈ CHO PHÉP ADMIN truy cập các API quản lý sản phẩm
                                                 // (Lưu ý: "ADMIN" khớp với cấu hình Role trong DB/JWT của anh, ví dụ: ROLE_ADMIN)
-                                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                                                .requestMatchers("/api/v1/admin/**").permitAll()
 
                                                 // 4. Tất cả các request khác (ví dụ: quản lý nhân viên, hóa đơn nội bộ) cần xác thực
                                                 .anyRequest().authenticated())

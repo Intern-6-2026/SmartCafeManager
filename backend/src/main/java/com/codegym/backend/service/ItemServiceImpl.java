@@ -1,5 +1,6 @@
 package com.codegym.backend.service;
 
+import java.io.IOException; // <-- Thêm import này để xử lý lỗi upload file
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -10,8 +11,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.codegym.backend.dto.ItemResponse;
 import com.codegym.backend.entity.Item;
+import com.codegym.backend.entity.MenuCategory;
 import com.codegym.backend.repository.ItemRepository;
-// import com.codegym.backend.repository.CategoryRepository; // Bật dòng này nếu anh có Repo Category
+import com.codegym.backend.repository.MenuCategoryRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,7 +22,8 @@ import lombok.RequiredArgsConstructor;
 public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
-    // private final CategoryRepository categoryRepository; // Bật dòng này nếu anh có Repo Category
+    private final MenuCategoryRepository menuCategoryRepository;
+    private final CloudinaryService cloudinaryService; // <-- 1. Inject CloudinaryService của anh vào đây
 
     @Override
     public List<ItemResponse> getAllItems() {
@@ -50,34 +53,31 @@ public class ItemServiceImpl implements ItemService {
     // ==========================================
     @Override
     @Transactional
-    public ItemResponse createItem(String itemCode, String itemName, BigDecimal price, String description, Long categoryId, String newCategoryName, MultipartFile image) {
+    public ItemResponse createItem(String itemCode, String itemName, BigDecimal price, String description, Long menuCategoryId, String newMenuCategoryName, MultipartFile image) {
         String imageUrl = null;
         
-        // Upload ảnh lên Cloudinary nếu có file
+        // 2. Sử dụng CloudinaryService thật để lấy URL ảnh
         if (image != null && !image.isEmpty()) {
             try {
-                imageUrl = "https://res.cloudinary.com/demo/image/upload/v1572212344/sample.jpg"; 
-                // Khi chạy thật: imageUrl = cloudinaryService.uploadImage(image);
-            } catch (Exception e) {
-                throw new RuntimeException("Lỗi khi upload ảnh: " + e.getMessage());
+                imageUrl = cloudinaryService.uploadImage(image); // <-- Gọi hàm upload thật!
+            } catch (IOException e) { // <-- Catch chính xác IOException ném ra từ hàm của anh
+                throw new RuntimeException("Lỗi khi upload ảnh lên Cloudinary: " + e.getMessage());
             }
         }
 
-        // Logic Category
-        // com.codegym.backend.entity.Category category = null;
-        /* Bật đoạn này khi đã sẵn sàng kết nối CategoryRepository
-        if (newCategoryName != null && !newCategoryName.trim().isEmpty()) {
-            category = categoryRepository.findByCategoryName(newCategoryName.trim())
+        // Logic xử lý MenuCategory
+        MenuCategory menuCategory = null;
+        if (newMenuCategoryName != null && !newMenuCategoryName.trim().isEmpty()) {
+            menuCategory = menuCategoryRepository.findByCategoryName(newMenuCategoryName.trim())
                     .orElseGet(() -> {
-                        com.codegym.backend.entity.Category newCat = new com.codegym.backend.entity.Category();
-                        newCat.setCategoryName(newCategoryName.trim());
-                        return categoryRepository.save(newCat);
+                        MenuCategory newCat = new MenuCategory();
+                        newCat.setCategoryName(newMenuCategoryName.trim()); 
+                        return menuCategoryRepository.save(newCat);
                     });
-        } else if (categoryId != null) {
-            category = categoryRepository.findById(categoryId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục!"));
+        } else if (menuCategoryId != null) {
+            menuCategory = menuCategoryRepository.findById(menuCategoryId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục với ID: " + menuCategoryId));
         }
-        */
 
         Item item = Item.builder()
                 .itemCode(itemCode)
@@ -87,57 +87,62 @@ public class ItemServiceImpl implements ItemService {
                 .imageUrl(imageUrl)
                 .isAvailable(true)
                 .totalOrderCount(0)
-                // .category(category)
+                .category(menuCategory) 
                 .build();
 
         Item savedItem = itemRepository.save(item);
         return mapToItemResponse(savedItem);
     }
 
-    // ==========================================
-    // --- 3. CẬP NHẬT (SỬA) MÓN ĂN ---
-    // ==========================================
+    // --- 3. CẬP NHẬT (SỬA) MÓN ĂN AN TOÀN ---
     @Override
     @Transactional
-    public ItemResponse updateItem(Long itemId, String itemCode, String itemName, BigDecimal price, String description, Long categoryId, String newCategoryName, Boolean isAvailable, MultipartFile image) {
+    public ItemResponse updateItem(Long itemId, String itemCode, String itemName, BigDecimal price, String description, Long menuCategoryId, String newMenuCategoryName, Boolean isAvailable, MultipartFile image) {
+        // 1. Lấy món ăn cũ từ DB ra làm gốc
         Item existingItem = itemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn với ID: " + itemId));
 
-        // Cập nhật thông tin cơ bản
-        existingItem.setItemCode(itemCode);
-        existingItem.setItemName(itemName);
-        existingItem.setPrice(price);
-        existingItem.setDescription(description);
-        existingItem.setIsAvailable(isAvailable != null ? isAvailable : existingItem.getIsAvailable());
+        // 2. Chỉ cập nhật những trường thực sự được truyền lên (Tránh bị đè null)
+        if (itemCode != null && !itemCode.trim().isEmpty()) {
+            existingItem.setItemCode(itemCode);
+        }
+        if (itemName != null && !itemName.trim().isEmpty()) {
+            existingItem.setItemName(itemName);
+        }
+        if (price != null) {
+            existingItem.setPrice(price);
+        }
+        if (description != null) {
+            existingItem.setDescription(description);
+        }
+        if (isAvailable != null) {
+            existingItem.setIsAvailable(isAvailable);
+        }
 
-        // Xử lý upload ảnh mới (Nếu người dùng không chọn ảnh mới, giữ nguyên ảnh cũ)
+        // 3. Xử lý ảnh: Upload ảnh thật nếu có file gửi lên
         if (image != null && !image.isEmpty()) {
             try {
-                String newImageUrl = "https://res.cloudinary.com/demo/image/upload/v1572212344/sample.jpg"; 
-                // Khi chạy thật: newImageUrl = cloudinaryService.uploadImage(image);
+                String newImageUrl = cloudinaryService.uploadImage(image); // <-- Gọi hàm upload thật!
                 existingItem.setImageUrl(newImageUrl); 
-            } catch (Exception e) {
+            } catch (IOException e) { // <-- Catch IOException ném ra từ hàm của anh
                 throw new RuntimeException("Lỗi khi upload ảnh mới lên Cloudinary: " + e.getMessage());
             }
         }
 
-        // Logic xử lý Category lúc sửa
-        // com.codegym.backend.entity.Category category = null;
-        /* Bật đoạn này khi đã sẵn sàng kết nối CategoryRepository
-        if (newCategoryName != null && !newCategoryName.trim().isEmpty()) {
-            category = categoryRepository.findByCategoryName(newCategoryName.trim())
+        // 4. Tìm hoặc tạo mới MenuCategory lúc sửa
+        if (newMenuCategoryName != null && !newMenuCategoryName.trim().isEmpty()) {
+            MenuCategory menuCategory = menuCategoryRepository.findByCategoryName(newMenuCategoryName.trim())
                     .orElseGet(() -> {
-                        com.codegym.backend.entity.Category newCat = new com.codegym.backend.entity.Category();
-                        newCat.setCategoryName(newCategoryName.trim());
-                        return categoryRepository.save(newCat);
+                        MenuCategory newCat = new MenuCategory();
+                        newCat.setCategoryName(newMenuCategoryName.trim());
+                        return menuCategoryRepository.save(newCat);
                     });
-            existingItem.setCategory(category);
-        } else if (categoryId != null) {
-            category = categoryRepository.findById(categoryId)
+            existingItem.setCategory(menuCategory);
+        } else if (menuCategoryId != null) {
+            MenuCategory menuCategory = menuCategoryRepository.findById(menuCategoryId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục!"));
-            existingItem.setCategory(category);
+            existingItem.setCategory(menuCategory);
         }
-        */
 
         Item updatedItem = itemRepository.save(existingItem);
         return mapToItemResponse(updatedItem);
@@ -159,8 +164,8 @@ public class ItemServiceImpl implements ItemService {
         return ItemResponse.builder()
                 .itemId(item.getItemId())
                 .itemCode(item.getItemCode())
-                .categoryId(item.getCategory() != null ? item.getCategory().getCategoryId() : null)
-                .categoryName(item.getCategory() != null ? item.getCategory().getCategoryName() : null)
+                .menuCategoryId(item.getCategory() != null ? item.getCategory().getCategoryId() : null)
+                .menuCategoryName(item.getCategory() != null ? item.getCategory().getCategoryName() : null)
                 .itemName(item.getItemName())
                 .price(item.getPrice())
                 .description(item.getDescription())

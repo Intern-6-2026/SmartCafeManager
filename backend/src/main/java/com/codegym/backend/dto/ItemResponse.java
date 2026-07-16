@@ -1,20 +1,20 @@
 package com.codegym.backend.dto;
 
 import java.math.BigDecimal;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder // Phải có annotation này
 public class ItemResponse {
     private Long itemId;
     private String itemCode;
-    private Long categoryId;
-    private String categoryName;
+    
+    // Đảm bảo viết CHÍNH XÁC tên thuộc tính này:
+    private Long menuCategoryId;
+    private String menuCategoryName;
+    
     private String itemName;
     private BigDecimal price;
     private String description;
