@@ -1,5 +1,8 @@
 package com.codegym.backend.security;
 
+import java.util.List;
+
+import org.springframework.boot.autoconfigure.kafka.KafkaProperties.Admin;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,8 +15,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -22,42 +27,63 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
+        private final JwtAuthFilter jwtAuthFilter;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
-            throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
-    }
+        @Bean
+        public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
+                        throws Exception {
+                return authenticationConfiguration.getAuthenticationManager();
+        }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
-                        
-                        // 1. Các API xác thực (Login, Forgot password...) cho phép truy cập tự do
-                        .requestMatchers(
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/reset-password")
-                        .permitAll()
-                        // 2. ĐỒNG BỘ MỚI: Cho phép tất cả các phương thức (GET, POST, PUT...) đến /api/v1/items/** hoạt động công khai
-                        .requestMatchers("/api/v1/items/**").permitAll()
-                        // 3. (Optional) Giữ lại phòng hờ nếu front-end cũ vẫn gọi sang luồng customer
-                        .requestMatchers("/api/v1/customer/**").permitAll()
-                        // Tất cả các request khác (ví dụ: API của Admin, Quản lý) bắt buộc phải xác thực qua JWT
-                        .anyRequest().authenticated())
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .csrf(csrf -> csrf.disable())
+                                .authorizeHttpRequests(auth -> auth
+                                                // 1. Các API xác thực công khai và tài liệu Swagger
+                                                .requestMatchers(
+                                                                "/api/v1/auth/login",
+                                                                "/api/v1/auth/forgot-password",
+                                                                "/api/v1/auth/reset-password",
+                                                                "/v3/api-docs",
+                                                                "/v3/api-docs/**",
+                                                                "/swagger-ui/**",
+                                                                "/swagger-ui.html",
+                                                                "/ws-news/**")
+                                                .permitAll()
 
-        return http.build();
-    }
+                                                // 2. CHO PHÉP TẤT CẢ (Cả GET, POST) các API gọi món/giỏ hàng của Khách tại bàn
+                                                .requestMatchers("/api/v1/items/**", "/api/v1/news")
+                                                .permitAll()
+                                                // 3. CHỈ CHO PHÉP ADMIN truy cập các API quản lý sản phẩm
+                                                // (Lưu ý: "ADMIN" khớp với cấu hình Role trong DB/JWT của anh, ví dụ: ROLE_ADMIN)
+                                                .requestMatchers("/api/v1/admin/**").permitAll()
+
+                                                // 4. Tất cả các request khác (ví dụ: quản lý nhân viên, hóa đơn nội bộ) cần xác thực
+                                                .anyRequest().authenticated())
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+                return http.build();
+        }
+
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
+                configuration.setAllowedOriginPatterns(List.of("*"));
+                configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+                configuration.setAllowCredentials(true);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 }

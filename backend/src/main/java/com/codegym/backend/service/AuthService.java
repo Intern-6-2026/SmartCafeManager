@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.codegym.backend.dto.ForgotPasswordRequest;
 import com.codegym.backend.dto.LoginRequest;
@@ -33,14 +34,14 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("Account does not exist or has been deleted!"));
+                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại hoặc đã bị xóa!"));
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new RuntimeException("Your account is not activated or is temporarily locked!");
+            throw new RuntimeException("Tài khoản của bạn chưa được kích hoạt hoặc đang bị khóa!");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), account.getPassword())) {
-            throw new RuntimeException("Incorrect password!");
+            throw new RuntimeException("Mật khẩu không chính xác!");
         }
 
         Authentication authentication = authenticationManager.authenticate(
@@ -57,15 +58,16 @@ public class AuthService {
             requirePasswordChange = true;
         }
 
-        return new LoginResponse(token, "Login successful!", requirePasswordChange);
+        return new LoginResponse(token, "Đăng nhập thành công!", requirePasswordChange);
     }
 
+    @Transactional
     public String processForgotPassword(ForgotPasswordRequest request) {
         Account account = accountRepository.findByEmailAndDeletedAtIsNull(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("No valid account found for this email!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản hợp lệ với email này!"));
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new RuntimeException("The account is locked or inactive and cannot recover the password!");
+            throw new RuntimeException("Tài khoản đang bị khóa hoặc không hoạt động, không thể khôi phục mật khẩu!");
         }
 
         SecureRandom random = new SecureRandom();
@@ -76,17 +78,19 @@ public class AuthService {
         account.setResetTokenExpiry(new Date(System.currentTimeMillis() + 5 * 60 * 1000));
 
         accountRepository.save(account);
+
         emailService.sendPasswordResetMail(account.getEmail(), otp);
 
-        return "Password recovery OTP has been sent to your email.";
+        return "Mã OTP khôi phục mật khẩu đã được gửi đến email của bạn.";
     }
 
+    @Transactional
     public String processResetPassword(ResetPasswordRequest request) {
         Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
-                .orElseThrow(() -> new RuntimeException("Invalid recovery token or account does not exist!"));
+                .orElseThrow(() -> new RuntimeException("Mã khôi phục không hợp lệ hoặc tài khoản không tồn tại!"));
 
         if (account.getResetTokenExpiry().before(new Date())) {
-            throw new RuntimeException("Recovery token has expired (over 5 minutes)!");
+            throw new RuntimeException("Mã khôi phục đã hết hạn (quá 5 phút)!");
         }
 
         account.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -96,6 +100,6 @@ public class AuthService {
 
         accountRepository.save(account);
 
-        return "New password updated successfully!";
+        return "Cập nhật mật khẩu mới thành công!";
     }
 }
