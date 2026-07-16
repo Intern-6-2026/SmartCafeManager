@@ -67,7 +67,21 @@ export const callService = async (tableName, status = "CALLING_WAITER") => {
     params: { tableName, status },
   });
 };
- 
+
+// API 8: Thay đổi số lượng món 
+export const updateItemQuantity = async (tableName, itemId, newQuantity) => {
+  return await axios.post(`${CUSTOMER_URL}/update-quantity`, null, {
+    params: { tableName, itemId, newQuantity },
+  });
+};
+
+// API 9: Xóa món khỏi giỏ hàng
+export const removeItem = async (tableName, itemId) => {
+  return await axios.post(`${CUSTOMER_URL}/remove-item`, null, {
+    params: { tableName, itemId },
+  });
+};
+
 /* Helper: rút thông báo lỗi từ axios error để hiển thị lên UI */
 export const getApiErrorMessage = (err, fallback = "Đã có lỗi xảy ra.") => {
   return (
