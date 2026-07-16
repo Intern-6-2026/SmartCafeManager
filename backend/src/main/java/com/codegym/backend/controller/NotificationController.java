@@ -1,40 +1,49 @@
 package com.codegym.backend.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody; // Đổi sang import này
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.codegym.backend.service.NotificationService;
 
+import lombok.RequiredArgsConstructor;
+import lombok.Data; // Thêm import này để dùng cho class hứng dữ liệu
+
 @RestController
-@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class NotificationController {
 
-    @Autowired
-    private NotificationService notificationService;
+    private final NotificationService notificationService;
 
-    // 1. API dành cho Header của Nhân viên/Quản lý mở lên để lắng nghe real-time
-    // Link: http://localhost:8080/api/v1/auth/notification/subscribe
-    @GetMapping(value = "/api/v1/items/**", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    /**
+     * API để nhân viên/quản lý lắng nghe thông báo realtime.
+     */
+    @GetMapping(value = "/api/v1/auth/notification/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribe() {
         return notificationService.addEmitter();
     }
 
-    // 2. API dành cho khách hàng ấn nút [Gọi món] hoặc [Gọi phục vụ]
-    // Link: http://localhost:8080/api/v1/auth/notification/send
-    @PostMapping("/api/v1/items/**")
-    public ResponseEntity<String> sendNotification(
-            @RequestParam String tableName,
-            @RequestParam String actionType) { 
-        
-        String message = "Bàn " + tableName + " vừa yêu cầu: [" + actionType + "]";
+    /**
+     * API khách hàng gửi yêu cầu gọi món hoặc gọi nhân viên.
+     * (Đã sửa từ @RequestParam sang @RequestBody để Swagger UI hiển thị ô điền JSON)
+     */
+    @PostMapping("/api/v1/auth/notification/send")
+    public ResponseEntity<String> sendNotification(@RequestBody NotificationDto request) {
+
+        String message = "Bàn " + request.getTableName() + " vừa yêu cầu: [" + request.getActionType() + "]";
         notificationService.sendNotification(message);
+
         return ResponseEntity.ok("Đã gửi thông báo thành công!");
+    }
+
+    // --- Tự định nghĩa một Class nhỏ ngay tại đây để hứng dữ liệu test trên Swagger ---
+    @Data
+    public static class NotificationDto {
+        private String tableName;
+        private String actionType;
     }
 }

@@ -1,28 +1,27 @@
 package com.codegym.backend.dto;
 
 import java.math.BigDecimal;
-
-import lombok.AllArgsConstructor; // Bổ sung import này
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ItemResponse {
     private Long itemId;
     private String itemCode;
+    
+    // Đã đồng bộ chuẩn với JPQL Constructor của Repository:
     private Long categoryId;
     private String categoryName;
+    
     private String itemName;
     private BigDecimal price;
     private String description;
     private String imageUrl;
     private Boolean isAvailable;
-    private Long totalOrderCount;
-
+    private Integer totalOrderCount; // Đã đưa về Integer để khớp Entity và tránh lỗi ép kiểu
 }

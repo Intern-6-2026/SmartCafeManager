@@ -24,5 +24,5 @@ public class TableOrderSummaryDTO {
     private ServiceStatus serviceStatus;
     private LocalDateTime openAt;
     
-    private List<OrderDetailMinDTO> orderDetails; 
+    private List<OrderDetailMinDTO> orderDetails;
 }

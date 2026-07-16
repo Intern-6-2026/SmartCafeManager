@@ -70,6 +70,7 @@ public class UserService {
         throw new RuntimeException("The account has not been set up with personal information (Profile)!");
     }
 
+    @SuppressWarnings("null")
     @Transactional
     public UserProfileResponse updateProfile(UpdateProfileRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -82,7 +83,7 @@ public class UserService {
             if (!newEmail.equalsIgnoreCase(account.getEmail())) {
                 Optional<Account> existingAccount = accountRepository.findByEmailAndDeletedAtIsNull(newEmail);
                 if (existingAccount.isPresent()) {
-                    throw new RuntimeException("Email này đã được đăng ký bởi một tài khoản khác trong hệ thống!");
+                    throw new RuntimeException("This email is already registered by another account in the system!");
                 }
                 account.setEmail(newEmail);
                 accountRepository.save(account);

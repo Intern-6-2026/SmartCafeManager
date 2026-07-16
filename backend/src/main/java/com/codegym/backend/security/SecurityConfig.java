@@ -1,5 +1,7 @@
 package com.codegym.backend.security;
 
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,6 +14,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
@@ -38,26 +43,54 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
                         
-                        // 1. Các API xác thực (Login, Forgot password...) cho phép truy cập tự do
+                        // 1. Các API xác thực công khai và tài liệu Swagger, WebSocket tin tức
                         .requestMatchers(
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/reset-password")
+                                "/api/v1/auth/reset-password",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/ws-news/**")
                         .permitAll()
-                        // 2. ĐỒNG BỘ MỚI: Cho phép tất cả các phương thức (GET, POST, PUT...) đến /api/v1/items/** hoạt động công khai
-                        .requestMatchers("/api/v1/items/**").permitAll()
-                        // 3. (Optional) Giữ lại phòng hờ nếu front-end cũ vẫn gọi sang luồng customer
-                        .requestMatchers("/api/v1/customer/**").permitAll()
-                        // Tất cả các request khác (ví dụ: API của Admin, Quản lý) bắt buộc phải xác thực qua JWT
+
+                        // 2. Cho phép các API menu món ăn công khai cho khách hàng tại bàn
+                        .requestMatchers("/api/v1/items/**", "/api/v1/news")
+                        .permitAll()
+                        
+                        // 3. Giữ phòng hờ luồng API customer cũ (nếu frontend cũ có gọi)
+                        .requestMatchers("/api/v1/customer/**")
+                        .permitAll()
+
+                        // 4. Các API quản lý của Admin (nếu cần phân quyền chặt chẽ hơn, anh thay đổi permitAll() thành .hasRole("ADMIN"))
+                        .requestMatchers("/api/v1/admin/**")
+                        .permitAll()
+
+                        // 5. Tất cả các request nghiệp vụ nội bộ khác bắt buộc phải xác thực qua JWT
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
