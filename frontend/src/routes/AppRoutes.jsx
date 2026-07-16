@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import ClientMenu from "../pages/client-menu/client-menu";
+import ClientMenu from "../pages/client-menu/client-menu.jsx";
 import Login from "../pages/auth/Login";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import Otp from "../pages/auth/Otp";
