@@ -45,6 +45,17 @@ export default function AppRoutes() {
                     path="/change-password"
                     element={<ChangePassword />}
                 />
+                
+                <Route
+                    path="/home"
+                    element={
+                        <>
+                            <header/>
+                            <body/>
+                            <footer/>
+                        </>
+                    }
+                />
 
                 <Route
                     path="/menu/table/:tableName"

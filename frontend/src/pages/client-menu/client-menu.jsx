@@ -4,6 +4,7 @@ import AddDrinkModal from "../../components/add-drink";
 import FeedbackModal from "../../components/feedback";
 import CheckoutModal from "../../components/checkout";
 import { useParams } from "react-router-dom";
+import logo from "../../assets/Logo.svg";
 import {
   getAllItems,
   addItemToCart,
@@ -176,7 +177,6 @@ function ClientMenu() {
     }
   };
 
-
   /* ===== API 10: Gọi nhân viên ===== */
   const handleGoiNhanVien = async () => {
     setLoading(true);
@@ -214,7 +214,7 @@ function ClientMenu() {
       <header>
         <div className="header-row">
           <div className="brand">
-            <img src="/images/Logo.png" alt="Logo" className="brand-logo" />
+            <img src={logo} alt="Logo" className="brand-logo" />
             <h1 className="brand-name-bold">NEO</h1>
             <h1 className="brand-name-not-bold">CAFÉ</h1>
           </div>
