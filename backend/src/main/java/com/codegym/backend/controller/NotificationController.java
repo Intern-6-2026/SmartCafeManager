@@ -4,13 +4,14 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.codegym.backend.service.NotificationService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.Data;
 
 @RestController
 @RequiredArgsConstructor
@@ -42,20 +43,23 @@ public class NotificationController {
      * tới tất cả các màn hình (emitters) của nhân viên đang lắng nghe ở luồng
      * API subscribe phía trên.
      *
-     * Đường dẫn API: POST http://localhost:8080/api/v1/auth/notification/send
+     * (Đã cập nhật nhận @RequestBody bằng DTO để hỗ trợ test tiện lợi trên Swagger UI)
      *
-     * Tham số:
-     * - tableName: Tên/số hiệu bàn gửi yêu cầu.
-     * - actionType: Loại yêu cầu (VD: "Gọi món", "Gọi phục vụ").
+     * Đường dẫn API: POST http://localhost:8080/api/v1/auth/notification/send
      */
     @PostMapping("/api/v1/auth/notification/send")
-    public ResponseEntity<String> sendNotification(
-            @RequestParam String tableName,
-            @RequestParam String actionType) {
+    public ResponseEntity<String> sendNotification(@RequestBody NotificationDto request) {
 
-        String message = "Bàn " + tableName + " vừa yêu cầu: [" + actionType + "]";
+        String message = "Bàn " + request.getTableName() + " vừa yêu cầu: [" + request.getActionType() + "]";
         notificationService.sendNotification(message);
 
         return ResponseEntity.ok("Đã gửi thông báo thành công!");
+    }
+
+    // --- Định nghĩa DTO trực tiếp tại đây để Swagger UI hiển thị form nhập dữ liệu ---
+    @Data
+    public static class NotificationDto {
+        private String tableName;
+        private String actionType;
     }
 }

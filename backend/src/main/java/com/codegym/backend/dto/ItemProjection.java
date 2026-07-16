@@ -20,6 +20,6 @@ public interface ItemProjection {
     String getImageUrl();
 
     Boolean getIsAvailable();
-
+    
     Long getTotalOrderCount();
 }
