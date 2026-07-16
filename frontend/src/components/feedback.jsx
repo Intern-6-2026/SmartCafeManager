@@ -1,14 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "../styles/feedback.css";
 
-/* ================= Modal "Phản Hồi" =================
-   Hiện lên khi khách nhấp nút "Phản hồi" trong phần đơn hàng.
-   Props:
-   - open     : boolean — hiển thị modal hay không
-   - onSubmit : ({ hoten, email, noidung, image }) => void — bấm "Gửi"
-   - onClose  : () => void — bấm "Đóng" / overlay / phím Esc
-====================================================== */
-
 const EMPTY = { hoten: "", email: "", noidung: "", image: null };
 
 function FeedbackModal({ open, onSubmit, onClose }) {
