@@ -54,8 +54,21 @@ public class NewsService {
     @Transactional(rollbackFor = Exception.class)
     public News updateNews(Long id, String title, String summary, String content, MultipartFile image)
             throws Exception {
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream()
+                .anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
+
         News news = newsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tin tức!"));
+
+        String authorName = news.getAuthor().getUsername();
+
+        if (!currentUsername.equals(authorName) && !isAdmin) {
+            throw new RuntimeException("Lỗi phân quyền: Bạn không có quyền sửa bài viết này");
+        }
+
         news.setTitle(title);
         news.setSummary(summary);
         news.setContent(content);
@@ -73,8 +86,21 @@ public class NewsService {
     @SuppressWarnings("null")
     @Transactional(rollbackFor = Exception.class)
     public void deleteNews(Long id) {
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream()
+                .anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
+
         News news = newsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tin tức!"));
+
+        String authorName = news.getAuthor().getUsername();
+
+        if (!currentUsername.equals(authorName) && !isAdmin) {
+            throw new RuntimeException("Lỗi phân quyền: Bạn không có quyền sửa bài viết này");
+        }
+
         news.setDeletedAt(new Date());
         newsRepository.save(news);
 
