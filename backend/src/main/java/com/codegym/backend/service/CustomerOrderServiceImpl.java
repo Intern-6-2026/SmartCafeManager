@@ -3,6 +3,7 @@ package com.codegym.backend.service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -136,33 +137,52 @@ public class CustomerOrderServiceImpl implements CustomerOrderService {
                 .orElseThrow(() -> new RuntimeException("Bàn này không tồn tại trong hệ thống!"));
     }
 
-    // 5. NGHIỆP VỤ: XEM TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM THEO TRẠNG THÁI (Ví dụ: PENDING)
-    @Override
-    @Transactional(readOnly = true)
-    public List<OrderDetail> getCartByStatus(String tableName, StatusOrderDetail status) {
-        Tables table = tablesRepository.findByTableName(tableName)
-                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+   // 5. NGHIỆP VỤ: XEM TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM THEO DTO SẠCH
+   @Override
+   @Transactional(readOnly = true)
+   public List<com.codegym.backend.dto.CartItemResponse> getCartByStatus(String tableName, StatusOrderDetail status) {
+       Tables table = tablesRepository.findByTableName(tableName)
+               .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
 
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào đang mở!"));
+       TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+               .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào đang mở!"));
 
-        return orderDetailRepository.findByOrderTableOrderIdAndStatus(order.getTableOrderId(), status);
-    }
+       List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderIdAndStatus(order.getTableOrderId(), status);
 
-    // 6. NGHIỆP VỤ: XEM TẤT CẢ CÁC MÓN ĐÃ GỌI XUỐNG BẾP (Lấy các món khác PENDING)
-    @Override
-    @Transactional(readOnly = true)
-    public List<OrderDetail> getOrderedItems(String tableName) {
-        Tables table = tablesRepository.findByTableName(tableName)
-                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+       // Map sang DTO sạch sẽ vừa khai báo ở trên để bẻ gãy Hibernate Proxy lỗi
+       return details.stream().map(d -> com.codegym.backend.dto.CartItemResponse.builder()
+               .orderDetailId(d.getOrderDetailId())
+               .itemId(d.getItem() != null ? d.getItem().getItemId() : null)
+               .itemName(d.getItem() != null ? d.getItem().getItemName() : null)
+               .price(d.getUnitPrice())
+               .quantity(d.getQuantity())
+               .tableName(tableName)
+               .build()
+       ).collect(Collectors.toList());
+   }
 
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào đang mở!"));
+   // 6. NGHIỆP VỤ: XEM TẤT CẢ CÁC MÓN ĐÃ GỌI XUỐNG BẾP THEO DTO SẠCH
+   @Override
+   @Transactional(readOnly = true)
+   public List<com.codegym.backend.dto.CartItemResponse> getOrderedItems(String tableName) {
+       Tables table = tablesRepository.findByTableName(tableName)
+               .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
 
+       TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+               .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào đang mở!"));
 
-        return orderDetailRepository.findByOrderTableOrderIdAndStatusNot(order.getTableOrderId(), StatusOrderDetail.PENDING);
-    }
+       List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderIdAndStatusNot(order.getTableOrderId(), StatusOrderDetail.PENDING);
 
+       return details.stream().map(d -> com.codegym.backend.dto.CartItemResponse.builder()
+               .orderDetailId(d.getOrderDetailId())
+               .itemId(d.getItem() != null ? d.getItem().getItemId() : null)
+               .itemName(d.getItem() != null ? d.getItem().getItemName() : null)
+               .price(d.getUnitPrice())
+               .quantity(d.getQuantity())
+               .tableName(tableName)
+               .build()
+       ).collect(Collectors.toList());
+   }
     // 7. NGHIỆP VỤ: XEM CHI TIẾT HÓA ĐƠN LỚN (Để lấy tổng tiền cho khách xem trước khi thanh toán)
     //@Override
     @Transactional(readOnly = true)
