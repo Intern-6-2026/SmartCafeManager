@@ -14,6 +14,8 @@ import {
   getInvoice,
   callService,
   getApiErrorMessage,
+  updateItemQuantity,
+  removeItem
 } from "../../services/apiService";
 
 /* Menu dự phòng khi không kết nối được server (giữ đúng shape đã chuẩn hoá) */
@@ -34,8 +36,8 @@ const normalizeItem = (it) => ({
   id: it.itemId,
   name: it.itemName,
   price: it.price,
-  category: it.categoryName ?? "Khác",
-  img: it.imageUrl || "/images/Logo.png", // ảnh dự phòng khi imageUrl null
+  category: it.categoryName ?? it.categoryId ?? "Khác",
+  img: it.imageUrl || {logo}, // ảnh dự phòng khi imageUrl null
   description: it.description,
   isAvailable: it.isAvailable !== false,
 });
@@ -109,11 +111,12 @@ function ClientMenu() {
     loadCart();
   }, [loadCart]);
 
-  /* Giỏ hàng: response phẳng { orderDetailId, itemName, quantity, unitPrice, status } */
+  /* Giỏ hàng: response phẳng { orderDetailId, itemName, quantity, price, status } */
   const cartRows = cart.map((c) => ({
     orderDetailId: c.orderDetailId,
     name: c.item?.itemName ?? c.itemName ?? "—",
-    price: c.unitPrice,
+    itemId: c.item?.itemId ?? c.itemId,
+    price: c.price,
     qty: c.quantity,
     note: c.note,
     status: c.status,
@@ -190,12 +193,37 @@ function ClientMenu() {
     }
   };
 
-  /* Backend hiện KHÔNG có API sửa/xoá món trong giỏ tạm,
-     nên các nút này chỉ hiển thị thông báo. */
-  const changeQty = () =>
-    notify("Backend chưa hỗ trợ sửa số lượng. Hãy thêm món để cộng dồn.");
-  const removeItem = () =>
-    notify("Backend chưa hỗ trợ xoá món khỏi giỏ tạm.");
+  /* ===== API update-quantity: cập nhật số lượng món ===== */
+  const handleChangeQty = async (itemId, currentQty, delta) => {
+    const newQty = currentQty + delta;
+    if (newQty <= 0) {
+      return handleRemoveItem(itemId);
+    }
+    setLoading(true);
+    try {
+      const res = await updateItemQuantity(tableName, itemId, newQty);
+      notify(res.data);
+      await loadCart();
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Cập nhật số lượng thất bại."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ===== API remove-item: xoá món khỏi giỏ ===== */
+  const handleRemoveItem = async (itemId) => {
+    setLoading(true);
+    try {
+      const res = await removeItem(tableName, itemId);
+      notify(res.data);
+      await loadCart();
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Xoá món thất bại."));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /* Bấm "Gửi" trong modal Phản hồi (chưa có API phản hồi trong tài liệu) */
   const submitFeedback = (data) => {
@@ -301,7 +329,7 @@ function ClientMenu() {
                   <button
                     className="remove-btn"
                     aria-label={`Xoá ${r.name}`}
-                    onClick={removeItem}
+                    onClick={() => handleRemoveItem(r.itemId)}
                   >
                     <img src="/images/Icon Remove.png" alt="" className="remove-icon" />
                   </button>
@@ -310,13 +338,13 @@ function ClientMenu() {
                       <span className="order-name">{r.name}</span>
                       <span className="order-price">{fmt(r.price)}</span>
                     </div>
-                    {r.note && <div className="order-item-note">Ghi chú: {r.note}</div>}
+                    {/*{r.note && <div className="order-item-note">Ghi chú: {r.note}</div>}*/}
                     <div className="order-bottom">
                       <div className="order-qty">
                         <button
                           className="qty-btn"
                           aria-label={`Giảm số lượng ${r.name}`}
-                          onClick={changeQty}
+                          onClick={() => handleChangeQty(r.itemId, r.qty, -1)}
                         >
                           −
                         </button>
@@ -324,7 +352,7 @@ function ClientMenu() {
                         <button
                           className="qty-btn"
                           aria-label={`Tăng số lượng ${r.name}`}
-                          onClick={changeQty}
+                          onClick={() => handleChangeQty(r.itemId, r.qty, 1)}
                         >
                           +
                         </button>
@@ -353,8 +381,7 @@ function ClientMenu() {
               >
                 <option value="CASH">Tiền mặt</option>
                 <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
-                <option value="MOMO">Ví MoMo</option>
-                <option value="VNPAY">VNPay</option>
+                <option value="E_WALLET">Ví điện tử</option>
               </select>
             </div>
 
