@@ -104,13 +104,19 @@ public class UserService {
                 emp.setDateOfBirth(request.getDateOfBirth());
             if (request.getGender() != null)
                 emp.setGender(request.getGender());
-            if (request.getPhoneNumber() != null)
-                emp.setPhoneNumber(request.getPhoneNumber());
+            if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+                String newPhone = request.getPhoneNumber().trim();
+
+                if (employeeRepository.existsByPhoneNumberAndAccountNot(newPhone, account)) {
+                    throw new RuntimeException("Số điện thoại đã tồn tại");
+                }
+
+                emp.setPhoneNumber(newPhone);
+            }
             if (request.getAddress() != null)
                 emp.setAddress(request.getAddress());
             if (request.getImageUrl() != null)
                 emp.setImageUrl(request.getImageUrl());
-
             employeeRepository.save(emp);
             return getCurrentUserProfile();
         }
@@ -124,9 +130,16 @@ public class UserService {
             if (request.getDateOfBirth() != null)
                 cus.setDateOfBirth(request.getDateOfBirth());
             if (request.getGender() != null)
-                cus.setGender(request.getGender());
-            if (request.getPhoneNumber() != null)
-                cus.setPhoneNumber(request.getPhoneNumber());
+                if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+                    String newPhone = request.getPhoneNumber().trim();
+
+                    if (employeeRepository.existsByPhoneNumberAndAccountNot(newPhone, account)) {
+                        throw new RuntimeException("Số điện thoại đã tồn tại");
+                    }
+
+                    cus.setPhoneNumber(newPhone);
+                }
+            cus.setPhoneNumber(request.getPhoneNumber());
             if (request.getAddress() != null)
                 cus.setAddress(request.getAddress());
             if (request.getImageUrl() != null)

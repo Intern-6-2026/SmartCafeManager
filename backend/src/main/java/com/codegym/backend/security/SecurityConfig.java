@@ -47,8 +47,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
-                        
-                        // 1. Các API xác thực công khai và tài liệu Swagger, WebSocket tin tức từ nhánh dev
+
+                        // 1. Các API xác thực công khai và tài liệu Swagger, WebSocket tin tức từ nhánh
+                        // dev
                         .requestMatchers(
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/forgot-password",
@@ -63,7 +64,7 @@ public class SecurityConfig {
                         // 2. Cho phép các API menu món ăn công khai cho khách hàng tại bàn
                         .requestMatchers("/api/v1/items/**", "/api/v1/news")
                         .permitAll()
-                        
+
                         // 3. Giữ phòng hờ luồng API customer cũ
                         .requestMatchers("/api/v1/customer/**")
                         .permitAll()
@@ -84,7 +85,6 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Giữ cấu hình CORS nguyên bản cho phép cổng React dev kết nối đến
         configuration.setAllowedOriginPatterns(List.of("http://localhost:5173"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));

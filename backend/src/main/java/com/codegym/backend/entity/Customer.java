@@ -32,7 +32,7 @@ public class Customer extends BaseEntity {
     @Column(name = "gender")
     private Gender gender;
 
-    @Column(name = "phone_number")
+    @Column(name = "phone_number", unique = true)
     private String phoneNumber;
 
     @Column(name = "address")

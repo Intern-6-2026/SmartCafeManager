@@ -7,4 +7,6 @@ import com.codegym.backend.entity.Customer;
 
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
     Optional<Customer> findByAccount(Account account);
+
+    boolean existsByPhoneNumberAndAccountNot(String phoneNumber, Account account);
 }

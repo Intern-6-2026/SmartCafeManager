@@ -2,7 +2,6 @@ package com.codegym.backend.controller;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,13 +16,15 @@ import com.codegym.backend.enums.ServiceStatus;
 import com.codegym.backend.enums.StatusOrderDetail;
 import com.codegym.backend.service.CustomerOrderService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/v1/items")
 @CrossOrigin("*")
+@RequiredArgsConstructor
 public class CustomerController {
 
-    @Autowired
-    private CustomerOrderService customerOrderService;
+    private final CustomerOrderService customerOrderService;
 
     // 1. NGHIỆP VỤ: THÊM MÓN VÀO GIỎ TẠM THỜI
     @PostMapping("/add-item")
@@ -36,34 +37,40 @@ public class CustomerController {
         return ResponseEntity.ok("Đã thêm món vào giỏ hàng tạm thời!");
     }
 
-// 2. NGHIỆP VỤ: XEM TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM (Chỉ lấy món PENDING)
+    // 2. NGHIỆP VỤ: XEM TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM (Chỉ lấy món PENDING)
     @GetMapping("/cart")
     // Đảm bảo kiểu trả về trong ResponseEntity là List<CartItemResponse>
     public ResponseEntity<List<CartItemResponse>> getTemporaryCart(@RequestParam String tableName) {
-    List<CartItemResponse> cartItems = customerOrderService.getCartByStatus(tableName, StatusOrderDetail.PENDING);
-    return ResponseEntity.ok(cartItems);
+        List<CartItemResponse> cartItems = customerOrderService.getCartByStatus(tableName, StatusOrderDetail.PENDING);
+        return ResponseEntity.ok(cartItems);
     }
-    // 3. NGHIỆP VỤ: BẤM NÚT [GỌI MÓN] ĐỂ XÁC NHẬN GỬI XUỐNG BẾP (Chuyển PENDING -> CONFIRMED)
+
+    // 3. NGHIỆP VỤ: BẤM NÚT [GỌI MÓN] ĐỂ XÁC NHẬN GỬI XUỐNG BẾP (Chuyển PENDING ->
+    // CONFIRMED)
     @PostMapping("/confirm-order")
     public ResponseEntity<String> confirmOrder(@RequestParam String tableName) {
         customerOrderService.confirmOrder(tableName);
         return ResponseEntity.ok("Đã gửi đơn hàng thành công xuống bếp!");
     }
 
-    // 4. ĐÃ SỬA: XEM TẤT CẢ CÁC MÓN ĐÃ GỌI XUỐNG BẾP (Chuyển sang dùng CartItemResponse DTO sạch)
+    // 4. ĐÃ SỬA: XEM TẤT CẢ CÁC MÓN ĐÃ GỌI XUỐNG BẾP (Chuyển sang dùng
+    // CartItemResponse DTO sạch)
     @GetMapping("/order-history")
     public ResponseEntity<List<CartItemResponse>> getOrderHistory(@RequestParam String tableName) {
         List<CartItemResponse> orderedItems = customerOrderService.getOrderedItems(tableName);
         return ResponseEntity.ok(orderedItems);
     }
 
-    // 5. NGHIỆP VỤ: XEM CHI TIẾT HÓA ĐƠN LỚN (Lấy tổng tiền totalAmount trước khi bấm thanh toán)
+    // 5. NGHIỆP VỤ: XEM CHI TIẾT HÓA ĐƠN LỚN (Lấy tổng tiền totalAmount trước khi
+    // bấm thanh toán)
     @GetMapping("/invoice")
-    public ResponseEntity<com.codegym.backend.dto.TableOrderSummaryDTO> getCurrentInvoice(@RequestParam String tableName) {
+    public ResponseEntity<com.codegym.backend.dto.TableOrderSummaryDTO> getCurrentInvoice(
+            @RequestParam String tableName) {
         return ResponseEntity.ok(customerOrderService.getInvoiceSummaryDTO(tableName));
     }
 
-    // 6. NGHIỆP VỤ: KHÁCH ẤN NÚT YÊU CẦU THANH TOÁN (Chọn phương thức CASH, BANK_TRANSFER,...)
+    // 6. NGHIỆP VỤ: KHÁCH ẤN NÚT YÊU CẦU THANH TOÁN (Chọn phương thức CASH,
+    // BANK_TRANSFER,...)
     @PostMapping("/request-checkout")
     public ResponseEntity<String> requestCheckout(
             @RequestParam String tableName,
@@ -87,12 +94,12 @@ public class CustomerController {
             @RequestParam String tableName,
             @RequestParam Long itemId,
             @RequestParam Integer newQuantity) {
-        
+
         if (newQuantity <= 0) {
             customerOrderService.removeItemFromCart(tableName, itemId);
             return ResponseEntity.ok("Số lượng nhỏ hơn hoặc bằng 0. Đã xóa món khỏi giỏ hàng!");
         }
-        
+
         customerOrderService.updateItemQuantityInCart(tableName, itemId, newQuantity);
         return ResponseEntity.ok("Đã cập nhật số lượng món ăn!");
     }
