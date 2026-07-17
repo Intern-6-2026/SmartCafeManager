@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.codegym.backend.dto.ForgotPasswordRequest;
 import com.codegym.backend.dto.LoginRequest;
 import com.codegym.backend.dto.ResetPasswordRequest;
+import com.codegym.backend.dto.VerityOtpRequest;
 import com.codegym.backend.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -71,6 +72,12 @@ public class AuthController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         return ResponseEntity.ok(authService.processResetPassword(request));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOTP(@Valid @RequestBody VerityOtpRequest request) {
+        String message = authService.verityOTP(request);
+        return ResponseEntity.ok(message);
     }
 
 }

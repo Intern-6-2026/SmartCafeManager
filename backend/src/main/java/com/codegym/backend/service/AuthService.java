@@ -15,6 +15,7 @@ import com.codegym.backend.dto.ForgotPasswordRequest;
 import com.codegym.backend.dto.LoginRequest;
 import com.codegym.backend.dto.LoginResponse;
 import com.codegym.backend.dto.ResetPasswordRequest;
+import com.codegym.backend.dto.VerityOtpRequest;
 import com.codegym.backend.entity.Account;
 import com.codegym.backend.enums.AccountStatus;
 import com.codegym.backend.repository.AccountRepository;
@@ -109,5 +110,17 @@ public class AuthService {
         accountRepository.save(account);
 
         return "Cập nhật mật khẩu mới thành công!";
+    }
+
+    @Transactional
+    public String verityOTP(VerityOtpRequest request) {
+        Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
+                .orElseThrow(() -> new RuntimeException("Mã OTP không hợp lệ"));
+
+        if (account.getResetTokenExpiry().before(new Date())) {
+            throw new RuntimeException("Mã khôi phục đã hết hạn(quá 5 phút)");
+        }
+
+        return "Mã OTP hợp lệ";
     }
 }

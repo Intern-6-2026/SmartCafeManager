@@ -48,12 +48,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
 
-                        // 1. Các API xác thực công khai và tài liệu Swagger, WebSocket tin tức từ nhánh
-                        // dev
                         .requestMatchers(
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password",
+                                "/api/v1/auth/verify-otp",
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -61,19 +60,15 @@ public class SecurityConfig {
                                 "/ws-news/**")
                         .permitAll()
 
-                        // 2. Cho phép các API menu món ăn công khai cho khách hàng tại bàn
                         .requestMatchers("/api/v1/items/**", "/api/v1/news")
                         .permitAll()
 
-                        // 3. Giữ phòng hờ luồng API customer cũ
                         .requestMatchers("/api/v1/customer/**")
                         .permitAll()
 
-                        // 4. Các API quản lý của Admin
                         .requestMatchers("/api/v1/admin/**")
                         .permitAll()
 
-                        // 5. Tất cả các request nghiệp vụ nội bộ khác bắt buộc phải xác thực qua JWT
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
