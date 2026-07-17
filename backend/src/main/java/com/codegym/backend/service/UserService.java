@@ -7,6 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.codegym.backend.dto.*;
 import com.codegym.backend.entity.Account;
@@ -26,11 +27,14 @@ public class UserService {
     private final EmployeeRepository employeeRepository;
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CloudinaryService cloudinaryService;
 
     public UserProfileResponse getCurrentUserProfile() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
                 .orElseThrow(() -> new RuntimeException("Account not found or has been deleted!"));
+
         String roleName = account.getRole() != null ? account.getRole().getRoleName() : "USER";
 
         Optional<Employee> empOpt = employeeRepository.findByAccount(account);
@@ -70,6 +74,7 @@ public class UserService {
         throw new RuntimeException("The account has not been set up with personal information (Profile)!");
     }
 
+    @SuppressWarnings("null")
     @Transactional
     public UserProfileResponse updateProfile(UpdateProfileRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -82,7 +87,7 @@ public class UserService {
             if (!newEmail.equalsIgnoreCase(account.getEmail())) {
                 Optional<Account> existingAccount = accountRepository.findByEmailAndDeletedAtIsNull(newEmail);
                 if (existingAccount.isPresent()) {
-                    throw new RuntimeException("Email này đã được đăng ký bởi một tài khoản khác trong hệ thống!");
+                    throw new RuntimeException("This email is already registered by another account in the system!");
                 }
                 account.setEmail(newEmail);
                 accountRepository.save(account);
@@ -151,5 +156,36 @@ public class UserService {
         accountRepository.save(account);
 
         return "Password changed successfully!";
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public UserProfileResponse uploadAvatar(MultipartFile file) throws Exception {
+
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
+                .orElseThrow(() -> new RuntimeException("Account not found!"));
+
+        String newImageUrl = cloudinaryService.uploadImage(file);
+        if (newImageUrl == null) {
+            throw new RuntimeException("Upload ảnh thất bại hoặc file trống!");
+        }
+
+        Optional<Employee> empOpt = employeeRepository.findByAccount(account);
+        if (empOpt.isPresent()) {
+            Employee emp = empOpt.get();
+            emp.setImageUrl(newImageUrl);
+            employeeRepository.save(emp);
+            return getCurrentUserProfile();
+        }
+
+        Optional<Customer> cusOpt = customerRepository.findByAccount(account);
+        if (cusOpt.isPresent()) {
+            Customer cus = cusOpt.get();
+            cus.setImageUrl(newImageUrl);
+            customerRepository.save(cus);
+            return getCurrentUserProfile();
+        }
+
+        throw new RuntimeException("No personal profile was found to update!");
     }
 }

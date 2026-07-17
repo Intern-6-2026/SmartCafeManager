@@ -40,6 +40,6 @@ public class ImpUserDetailsService implements UserDetailsService {
                                 true,
                                 enabled,
                                 Collections.singletonList(
-                                                new SimpleGrantedAuthority("ROLE_" + roleName.toUpperCase())));
+                                                new SimpleGrantedAuthority(roleName.toUpperCase())));
         }
 }
