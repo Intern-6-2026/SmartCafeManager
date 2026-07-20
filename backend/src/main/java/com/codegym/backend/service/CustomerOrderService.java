@@ -25,4 +25,5 @@ public interface CustomerOrderService {
     void clearTemporaryCart(String tableName);// 12. Xóa toàn bộ món trong giỏ tạm
     void markItemAsServed(Long orderDetailId);// 13. [NGHIỆP VỤ BẾP] Đánh dấu món đã làm xong (SERVED)
     void cancelOrderItem(Long orderDetailId, String reason); // 14. [NGHIỆP VỤ BẾP] Bếp báo hủy món do hết hàng (CANCELLED)
+    void completeCheckout(String tableName, PaymentMethod paymentMethod);
 }

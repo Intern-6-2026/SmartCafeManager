@@ -138,4 +138,13 @@ public class CustomerController {
         customerOrderService.cancelOrderItem(orderDetailId, reason);
         return ResponseEntity.ok("Đã hủy món thành công và tính lại tổng tiền hóa đơn!");
     }
+    // 14. HOÀN TẤT THANH TOÁN HÓA ĐƠN (Chuyển trạng thái hóa đơn -> PAID, Bàn -> EMPTY/AVAILABLE)
+    @PostMapping("/complete-checkout")
+    public ResponseEntity<String> completeCheckout(
+        @RequestParam String tableName,
+        @RequestParam PaymentMethod paymentMethod) {
+    
+    customerOrderService.completeCheckout(tableName, paymentMethod);
+    return ResponseEntity.ok("Thanh toán thành công cho " + tableName + "! Hóa đơn đã chốt và bàn đã giải phóng.");
+}
 }

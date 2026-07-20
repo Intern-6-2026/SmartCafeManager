@@ -346,5 +346,32 @@ public class CustomerOrderServiceImpl implements CustomerOrderService {
 
         order.setTotalAmount(newTotal);
         tableOrderRepository.save(order);
-    }
+// 15. HOÀN TẤT THANH TOÁN, DỌN GIỎ HÀNG TẠM & GIẢI PHÓNG BÀN
+//     @Override
+//     @Transactional
+//     public void completeCheckout(String tableName, PaymentMethod paymentMethod) {
+//         Tables table = tablesRepository.findByTableName(tableName)
+//                 .orElseThrow(() -> new RuntimeException("Bàn không tồn tại: " + tableName));
+
+//         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+//                 .orElseThrow(() -> new RuntimeException("Bàn " + tableName + " hiện không có hóa đơn nào cần thanh toán!"));
+
+//         // Xóa giỏ hàng tạm chưa gửi bếp (PENDING)
+//         List<OrderDetail> pendingDetails = orderDetailRepository
+//                 .findByOrderTableOrderIdAndStatus(order.getTableOrderId(), StatusOrderDetail.PENDING);
+//         if (!pendingDetails.isEmpty()) {
+//             orderDetailRepository.deleteAll(pendingDetails);
+//         }
+
+//         // Chốt hóa đơn -> PAID
+//         order.setPaymentMethod(paymentMethod);
+//         order.setStatus(StatusTableOrder.PAID);
+//         order.setCloseAt(LocalDateTime.now());
+//         tableOrderRepository.save(order);
+
+//         // Giải phóng bàn -> Trả về trạng thái bàn trống (Đổi AVAILABLE thành đúng tên trong Enum của anh)
+//         table.setIsOccupied(false);
+//         table.setServiceStatus(ServiceStatus.AVAILABLE); // 👈 Sửa EMPTY thành AVAILABLE (hoặc READY, FREE)
+//         tablesRepository.save(table);
+  }
 }

@@ -622,4 +622,287 @@ Frontend nên hiển thị trạng thái như sau:
       +----------+   +-------------+
       | SERVED   |   | CANCELLED   |
       +----------+   +-------------+
+---
+
+# 16. Checkout & QR Payment Update
+
+## 16.1 Backend Update
+
+Đã bổ sung quy trình **Hoàn tất thanh toán (Complete Checkout)** nhằm hỗ trợ nghiệp vụ thanh toán tại quán.
+
+### Endpoint
+
+```http
+POST /api/v1/items/complete-checkout
+```
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| tableName | String | Yes | Tên bàn |
+| paymentMethod | PaymentMethod | Yes | `CASH` hoặc `BANK_TRANSFER` |
+
+Ví dụ:
+
+```http
+POST /api/v1/items/complete-checkout?tableName=Ban01&paymentMethod=BANK_TRANSFER
+```
+
+---
+
+## 16.2 Backend Processing
+
+Khi API được gọi thành công, Backend sẽ thực hiện toàn bộ các bước sau trong một transaction:
+
+### 1. Cập nhật hóa đơn (`TableOrder`)
+
+- Chuyển trạng thái:
+
+```text
+OPEN
+        │
+        ▼
+PAID (hoặc CLOSED)
+```
+
+- Lưu phương thức thanh toán (`PaymentMethod`)
+- Cập nhật thời gian thanh toán (`closeAt`)
+
+---
+
+### 2. Xóa giỏ hàng tạm
+
+Toàn bộ các món đang ở trạng thái:
+
+```text
+PENDING
+```
+
+sẽ được xóa khỏi `order_detail`.
+
+Các món đã:
+
+- CONFIRMED
+- SERVED
+- CANCELLED
+
+vẫn được giữ để lưu lịch sử hóa đơn.
+
+---
+
+### 3. Giải phóng bàn
+
+Backend cập nhật:
+
+```text
+Tables.isOccupied = false
+Tables.serviceStatus = NONE
+```
+
+Bàn sẽ sẵn sàng phục vụ lượt khách tiếp theo.
+
+---
+
+## 16.3 Frontend Integration Flow
+
+```text
+Khách chọn Thanh toán
+        │
+        ▼
+GET /api/v1/items/invoice
+        │
+        ▼
+Hiển thị QR Code
+        │
+        ▼
+Khách chuyển khoản
+        │
+        ▼
+POST /api/v1/items/complete-checkout
+        │
+        ▼
+Backend cập nhật hóa đơn
+        │
+        ▼
+Giải phóng bàn
+        │
+        ▼
+Frontend chuyển về màn hình chọn bàn
+```
+
+---
+
+## 16.4 API Lấy Hóa đơn
+
+### Endpoint
+
+```http
+GET /api/v1/items/invoice?tableName=Ban01
+```
+
+### Response
+
+```json
+{
+  "tableOrderId": 3,
+  "tableName": "Ban01",
+  "totalAmount": 170000,
+  "orderStatus": "OPEN",
+  "serviceStatus": "WAITING_FOOD",
+  "openAt": "2026-07-13T13:57:54",
+  "orderDetails": [
+    {
+      "orderDetailId": 4,
+      "status": "CONFIRMED",
+      "itemName": "Cà phê Đen Đá",
+      "quantity": 2,
+      "unitPrice": 25000
+    }
+  ]
+}
+```
+
+Frontend sử dụng:
+
+- `tableOrderId`
+- `totalAmount`
+
+để hiển thị thông tin thanh toán và tạo QR Code.
+
+---
+
+## 16.5 QR Payment (VietQR)
+
+Frontend có thể sử dụng VietQR để sinh mã QR thanh toán.
+
+Mẫu URL:
+
+```text
+https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-compact2.png?amount=<TOTAL_AMOUNT>&addInfo=<ORDER_INFO>&accountName=<ACCOUNT_NAME>
+```
+
+Ví dụ:
+
+```javascript
+const bankId = "MB";
+const accountNo = "0123456789";
+
+const amount = invoice.totalAmount;
+
+const addInfo =
+`Thanh toan ban ${tableName} HD ${invoice.tableOrderId}`;
+
+const qrUrl =
+`https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(addInfo)}&accountName=NHA%20HANG`;
+```
+
+Sau đó hiển thị:
+
+```html
+<img src="{qrUrl}" />
+```
+
+---
+
+## 16.6 Complete Checkout
+
+Sau khi khách thanh toán thành công hoặc thu ngân xác nhận đã nhận tiền:
+
+Frontend gọi:
+
+```http
+POST /api/v1/items/complete-checkout
+```
+
+Ví dụ sử dụng Axios:
+
+```javascript
+async function handleCompletePayment(tableName) {
+
+    try {
+
+        const response = await axios.post(
+            "/api/v1/items/complete-checkout",
+            null,
+            {
+                params: {
+                    tableName,
+                    paymentMethod: "BANK_TRANSFER"
+                }
+            }
+        );
+
+        alert(response.data);
+
+        localStorage.removeItem("cart");
+
+        navigate("/tables");
+
+    } catch (error) {
+
+        alert(
+            error.response?.data?.message ||
+            "Thanh toán thất bại!"
+        );
+
+    }
+
+}
+```
+
+---
+
+## 16.7 PaymentMethod
+
+| Enum |
+|------|
+| CASH |
+| BANK_TRANSFER |
+
+---
+
+## 16.8 Business Rules
+
+- Chỉ hóa đơn có trạng thái `OPEN` mới được phép thanh toán.
+- Sau khi thanh toán:
+  - Hóa đơn chuyển sang `PAID`.
+  - Lưu phương thức thanh toán.
+  - Xóa toàn bộ món `PENDING`.
+  - Giải phóng bàn.
+- Không thể thanh toán lại hóa đơn đã `PAID`.
+- `totalAmount` chỉ tính các món chưa bị `CANCELLED`.
+
+---
+
+## 16.9 Frontend Checklist
+
+Sau khi `complete-checkout` thành công:
+
+- [ ] Xóa giỏ hàng trong Redux/Context/LocalStorage.
+- [ ] Đóng màn hình thanh toán.
+- [ ] Điều hướng về màn hình chọn bàn.
+- [ ] Cập nhật trạng thái bàn nếu sử dụng WebSocket hoặc Polling.
+- [ ] Hiển thị thông báo **Thanh toán thành công**.
+
+---
+
+## 16.10 State Transition
+
+```text
+                OPEN
+                  │
+          Complete Checkout
+                  │
+                  ▼
+                PAID
+                  │
+                  ▼
+      Clear Pending Order Details
+                  │
+                  ▼
+      Table.isOccupied = false
+                  │
+                  ▼
+     ServiceStatus = NONE
 ```
