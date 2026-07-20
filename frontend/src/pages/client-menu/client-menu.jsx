@@ -3,7 +3,7 @@ import "../../styles/client-menu.css";
 import AddDrinkModal from "../../components/add-drink";
 import FeedbackModal from "../../components/feedback";
 import CheckoutModal from "../../components/checkout";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import logo from "../../assets/Logo.svg";
 import {
   getAllItems,
@@ -45,7 +45,6 @@ const normalizeItem = (it) => ({
 function ClientMenu() {
   /* Route: /menu/table/:tableName — tableName chính là tên bàn gửi lên API (vd: ban01) */
   const { tableName } = useParams();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [menuItems, setMenuItems] = useState([]); // menu lấy từ server
   const [category, setCategory] = useState("");
   const [cart, setCart] = useState([]); // giỏ tạm PENDING lấy từ server
@@ -234,7 +233,6 @@ function ClientMenu() {
 
   const pickCategory = (c) => {
     setCategory(c);
-    setMenuOpen(false);
   };
 
   return (
@@ -242,40 +240,15 @@ function ClientMenu() {
       <header>
         <div className="header-row">
           <div className="brand">
-            <img src={logo} alt="Logo" className="brand-logo" />
+            <Link to="/home">
+              <img src={logo} alt="Logo" className="brand-logo" to="/home"/>
+            </Link>
             <h1 className="brand-name-bold">NEO</h1>
             <h1 className="brand-name-not-bold">CAFÉ</h1>
           </div>
           <div className="header-title">THÔNG TIN BÀN</div>
-          <button
-            className="menu-btn"
-            aria-label="Mở danh sách loại dịch vụ"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
-          >
-            <span className="menu-bar" />
-            <span className="menu-bar" />
-            <span className="menu-bar" />
-          </button>
         </div>
       </header>
-
-      {/* Danh mục sinh từ menu server */}
-      <div
-        className={`drawer-overlay ${menuOpen ? "show" : ""}`}
-        onClick={() => setMenuOpen(false)}
-      />
-      <nav className={`category-nav ${menuOpen ? "open" : ""}`} aria-label="Loại dịch vụ">
-        {categories.map((c) => (
-          <button
-            key={c}
-            className={`category-btn ${category === c ? "active" : ""}`}
-            onClick={() => pickCategory(c)}
-          >
-            {c}
-          </button>
-        ))}
-      </nav>
 
       {/* Thông báo kết quả API */}
       {message && <div className="api-message" role="status">{message}</div>}
@@ -283,6 +256,18 @@ function ClientMenu() {
       <main>
         <div className="main-content">
           <div className="menu">
+            {/* Thanh loại món nằm ngang, dính phía trên vùng cuộn menu */}
+            <nav className="category-nav" aria-label="Loại dịch vụ">
+              {categories.map((c) => (
+                <button
+                  key={c}
+                  className={`category-btn ${category === c ? "active" : ""}`}
+                  onClick={() => pickCategory(c)}
+                >
+                  {c}
+                </button>
+              ))}
+            </nav>
             <div className="grid-menu">
               {filtered.map((m) => (
                 <button
