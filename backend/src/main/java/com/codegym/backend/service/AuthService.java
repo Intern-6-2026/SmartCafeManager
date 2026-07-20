@@ -94,12 +94,32 @@ public class AuthService {
     }
 
     @Transactional
-    public String processResetPassword(ResetPasswordRequest request) {
+    public String verityOTP(VerityOtpRequest request) {
         Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
-                .orElseThrow(() -> new RuntimeException("Mã OTP không hợp lệ."));
+                .orElseThrow(() -> new RuntimeException("Mã OTP không hợp lệ"));
 
         if (account.getResetTokenExpiry().before(new Date())) {
-            throw new RuntimeException("Mã khôi phục đã hết hạn (quá 5 phút)!");
+            throw new RuntimeException("Mã khôi phục đã hết hạn(quá 5 phút)");
+        }
+
+        String resetTokenUuid = java.util.UUID.randomUUID().toString();
+        account.setResetToken(resetTokenUuid);
+        account.setResetTokenExpiry(new Date(System.currentTimeMillis() + 5 * 60 * 1000));
+        accountRepository.save(account);
+
+        return resetTokenUuid;
+    }
+
+    @Transactional
+    public String processResetPassword(ResetPasswordRequest request) {
+        Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
+                .orElseThrow(() -> new RuntimeException("Phiên đổi mật khẩu không hợp lệ hoặc đã bị hủy."));
+
+        if (account.getResetTokenExpiry().before(new Date())) {
+            account.setResetToken(null);
+            account.setResetTokenExpiry(null);
+            accountRepository.save(account);
+            throw new RuntimeException("Phiên đổi mật khẩu đã hết hạn (quá 5 phút)!");
         }
 
         account.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -110,17 +130,5 @@ public class AuthService {
         accountRepository.save(account);
 
         return "Cập nhật mật khẩu mới thành công!";
-    }
-
-    @Transactional
-    public String verityOTP(VerityOtpRequest request) {
-        Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
-                .orElseThrow(() -> new RuntimeException("Mã OTP không hợp lệ"));
-
-        if (account.getResetTokenExpiry().before(new Date())) {
-            throw new RuntimeException("Mã khôi phục đã hết hạn(quá 5 phút)");
-        }
-
-        return "Mã OTP hợp lệ";
     }
 }
