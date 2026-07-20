@@ -23,6 +23,7 @@ function AddDrinkModal({ item, onConfirm, onClose }) {
     const handleConfirm = () => {
         const n = Math.max(1, Number(qty) || 1);
         onConfirm(item, n, orderNote);
+        setOrderNote(""); // Reset ghi chú sau khi thêm món
     };
 
     return (
