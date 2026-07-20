@@ -1,52 +1,9 @@
-import Logo from "../components/Logo";
+import AuthCard from "../components/AuthCard";
 
-export default function AuthLayout({
-    title,
-    subtitle,
-    image,
-    children,
-}) {
+export default function AuthLayout({ title, subtitle, children }) {
     return (
-        <div className="min-h-screen bg-[#F7F2ED] flex items-center justify-center p-6">
-
-            <div className="bg-white w-full max-w-6xl rounded-[28px] overflow-hidden shadow-2xl grid lg:grid-cols-2">
-
-                {/* Left */}
-
-                <div className="bg-[#E7D6C4] flex flex-col justify-center items-center p-10">
-
-                    <Logo showText iconClassName="h-28 w-28" />
-
-                    <img
-                        src={image}
-                        className="w-[420px]"
-                        alt=""
-                    />
-
-                </div>
-
-                {/* Right */}
-
-                <div className="flex justify-center items-center">
-
-                    <div className="w-full max-w-md">
-
-                        <h1 className="text-4xl font-bold text-center text-[#5D4037]">
-                            {title}
-                        </h1>
-
-                        <p className="text-center text-gray-500 mt-3 mb-10">
-                            {subtitle}
-                        </p>
-
-                        {children}
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
+        <AuthCard title={title} subtitle={subtitle}>
+            {children}
+        </AuthCard>
     );
 }

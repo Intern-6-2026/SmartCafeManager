@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaUser, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { loginApi, getApiErrorMessage } from "../../services/apiService";
-import Logo from "../../components/Logo";
+import AuthCard from "../../components/AuthCard";
 
 /** Trang đăng nhập Smart Cafe */
 export default function Login() {
@@ -40,25 +40,14 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#F8F4EF] to-[#EFE2D3] flex items-center justify-center p-6">
-            <div className="w-full max-w-md bg-white rounded-[36px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] overflow-hidden px-10 py-12">
-                <div className="flex justify-center mb-8">
-                    <Logo showText iconClassName="h-24 w-24" />
+        <AuthCard title="Đăng nhập" subtitle="Chào mừng bạn quay trở lại SmartCafe">
+            {errorMsg && (
+                <div className="mb-4 p-3 bg-red-100 text-red-600 rounded-xl text-sm">
+                    {errorMsg}
                 </div>
+            )}
 
-                <div className="w-full">
-                    <h1 className="text-3xl font-bold text-[#5A3726] text-center">Đăng nhập</h1>
-                    <p className="text-gray-400 mt-2 mb-6 text-center">
-                        Chào mừng bạn quay trở lại SmartCafe
-                    </p>
-
-                    {errorMsg && (
-                        <div className="mb-4 p-3 bg-red-100 text-red-600 rounded-xl text-sm">
-                            {errorMsg}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleLogin}>
+            <form onSubmit={handleLogin}>
                                 {/* Username */}
                                 <div className="mb-6">
                                     <label className="block mb-2 font-semibold text-[#5A3726]">
@@ -119,8 +108,6 @@ export default function Login() {
                                     {loading ? "Đang xử lý..." : "Đăng nhập"}
                                 </button>
                             </form>
-                </div>
-            </div>
-        </div>
+        </AuthCard>
     );
 }
