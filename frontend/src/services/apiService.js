@@ -32,6 +32,12 @@ export const getCurrentUserProfile = async () => {
   return await axios.get(`${API_BASE_URL}/users/profile`);
 };
 
+export const checkPhoneAvailable = async (phoneNumber) => {
+  return await axios.get(`${API_BASE_URL}/users/check-phone`, {
+    params: { phoneNumber },
+  });
+};
+
 export const updateProfile = async (profileData) => {
   return await axios.put(`${API_BASE_URL}/users/profile`, profileData);
 };
@@ -126,12 +132,28 @@ export const removeItem = async (tableName, itemId) => {
 };
 
 /* Helper: rút thông báo lỗi từ axios error để hiển thị lên UI */
+const ERROR_MESSAGE_MAP = {
+  "Old password is incorrect!": "Mật khẩu hiện tại không đúng.",
+  "New password cannot be the same as the old password!": "Mật khẩu mới không được trùng mật khẩu cũ.",
+  "Account does not exist!": "Tài khoản không tồn tại.",
+  "Invalid input data, please check again.": "Dữ liệu không hợp lệ, vui lòng kiểm tra lại.",
+  "Mã OTP không hợp lệ.": "Mã OTP không hợp lệ.",
+  "Mã khôi phục đã hết hạn (quá 5 phút)!": "Mã OTP đã hết hạn (quá 5 phút). Vui lòng gửi lại mã mới.",
+};
+
 export const getApiErrorMessage = (err, fallback = "Đã có lỗi xảy ra.") => {
-  return (
-    err?.response?.data?.message ||
-    err?.response?.data?.error ||
-    (typeof err?.response?.data === "string" ? err.response.data : null) ||
+  const data = err?.response?.data;
+  if (data?.validationErrors && typeof data.validationErrors === "object") {
+    const fieldMessages = Object.values(data.validationErrors).filter(Boolean);
+    if (fieldMessages.length > 0) {
+      return fieldMessages.join(". ");
+    }
+  }
+  const raw =
+    data?.message ||
+    data?.error ||
+    (typeof data === "string" ? data : null) ||
     err?.message ||
-    fallback
-  );
+    fallback;
+  return ERROR_MESSAGE_MAP[raw] || raw;
 };

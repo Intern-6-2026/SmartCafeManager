@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaEnvelope, FaArrowLeft } from "react-icons/fa";
 import { forgotPassword, getApiErrorMessage } from "../../services/apiService";
+import Logo from "../../components/Logo";
 
 export default function ForgotPassword() {
     const [email, setEmail] = useState("");
@@ -31,7 +32,7 @@ export default function ForgotPassword() {
         <div className="min-h-screen bg-gradient-to-br from-[#F8F4EF] to-[#EFE2D3] flex items-center justify-center p-6">
             <div className="w-full max-w-6xl bg-white rounded-[36px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] overflow-hidden">
                 <div className="flex justify-center pt-8">
-                    <img src="/images/logo.jpg" alt="Logo" className="w-20 h-20 object-contain" />
+                    <Logo showText iconClassName="h-24 w-24" />
                 </div>
                 <div className="grid lg:grid-cols-[55%_45%]">
                     <div className="flex items-center justify-center px-10 pb-10">

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom"; // Nhớ import Link
-import logo from "../assets/logo.svg";
+import Logo from "./Logo";
 
 function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -20,7 +20,7 @@ function Header() {
   return (
     <nav className="relative w-full bg-[#D2A97B] p-4 flex items-center justify-between shadow-md z-50">
       <div className="flex items-center gap-2">
-        <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
+        <Logo className="h-10 w-10" />
         <div className="text-[20px] font-['Inter']">
           <span className="font-bold text-[#000]">NEO</span>
           <span className="font-normal text-[#000]">CAFÉ</span>

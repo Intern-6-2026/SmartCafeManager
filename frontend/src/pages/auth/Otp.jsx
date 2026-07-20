@@ -1,13 +1,25 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import Popup from "../../components/Popup";
+import Logo from "../../components/Logo";
+
+const RESET_OTP_KEY = "resetOtpToken";
+const RESET_EMAIL_KEY = "resetEmail";
 
 export default function Otp() {
     const inputRefs = useRef([]);
     const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
+    const [popup, setPopup] = useState({ open: false, type: "info", title: "", message: "" });
     const navigate = useNavigate();
     const location = useLocation();
-    const email = location.state?.email || "email của bạn";
+    const email = location.state?.email || sessionStorage.getItem(RESET_EMAIL_KEY) || "email của bạn";
+
+    useEffect(() => {
+        if (location.state?.email) {
+            sessionStorage.setItem(RESET_EMAIL_KEY, location.state.email);
+        }
+    }, [location.state?.email]);
 
     const handleChange = (e, index) => {
         const val = e.target.value;
@@ -31,17 +43,23 @@ export default function Otp() {
     const handleConfirmOtp = () => {
         const fullOtp = otpValues.join("");
         if (fullOtp.length < 6) {
-            alert("Vui lòng nhập đủ 6 số OTP.");
+            setPopup({
+                open: true,
+                type: "warning",
+                title: "Thiếu mã OTP",
+                message: "Vui lòng nhập đủ 6 số OTP.",
+            });
             return;
         }
-        navigate("/new-password", { state: { token: fullOtp } });
+        sessionStorage.setItem(RESET_OTP_KEY, fullOtp);
+        navigate("/new-password", { state: { token: fullOtp, email } });
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#F8F4EF] to-[#EFE2D3] flex items-center justify-center p-6">
             <div className="w-full max-w-6xl bg-white rounded-[36px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] overflow-hidden">
                 <div className="flex justify-center pt-8">
-                    <img src="/images/logo.jpg" alt="" className="w-20 h-20 object-contain" />
+                    <Logo showText iconClassName="h-24 w-24" />
                 </div>
                 <div className="grid lg:grid-cols-[55%_45%]">
                     <div className="flex items-center justify-center px-10 pb-10">
@@ -84,6 +102,14 @@ export default function Otp() {
                     </div>
                 </div>
             </div>
+
+            <Popup
+                open={popup.open}
+                type={popup.type}
+                title={popup.title}
+                message={popup.message}
+                onClose={() => setPopup((prev) => ({ ...prev, open: false }))}
+            />
         </div>
     );
 }

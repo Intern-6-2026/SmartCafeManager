@@ -1,3 +1,5 @@
+import Logo from "../components/Logo";
+
 export default function AuthLayout({
     title,
     subtitle,
@@ -13,11 +15,7 @@ export default function AuthLayout({
 
                 <div className="bg-[#E7D6C4] flex flex-col justify-center items-center p-10">
 
-                    <img
-                        src="/images/logo.jpg"
-                        alt="SmartCafe Logo"
-                        className="w-64 h-64 object-contain mix-blend-multiply"
-                    />
+                    <Logo showText iconClassName="h-28 w-28" />
 
                     <img
                         src={image}

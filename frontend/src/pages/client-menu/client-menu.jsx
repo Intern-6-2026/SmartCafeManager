@@ -4,7 +4,8 @@ import AddDrinkModal from "../../components/add-drink";
 import FeedbackModal from "../../components/feedback";
 import CheckoutModal from "../../components/checkout";
 import { Link, useParams } from "react-router-dom";
-import logo from "../../assets/Logo.svg";
+import { logo } from "../../constants/assets";
+import Logo from "../../components/Logo";
 import {
   getAllItems,
   addItemToCart,
@@ -37,7 +38,7 @@ const normalizeItem = (it) => ({
   name: it.itemName,
   price: it.price,
   category: it.categoryName ?? it.categoryId ?? "Khác",
-  img: it.imageUrl || {logo}, // ảnh dự phòng khi imageUrl null
+  img: it.imageUrl || logo,
   description: it.description,
   isAvailable: it.isAvailable !== false,
 });
@@ -241,7 +242,7 @@ function ClientMenu() {
         <div className="header-row">
           <div className="brand">
             <Link to="/home">
-              <img src={logo} alt="Logo" className="brand-logo" to="/home"/>
+              <Logo className="brand-logo" />
             </Link>
             <h1 className="brand-name-bold">NEO</h1>
             <h1 className="brand-name-not-bold">CAFÉ</h1>
@@ -388,7 +389,7 @@ function ClientMenu() {
         </div>
 
         <footer>
-          <img src="/images/Logo.png" alt="Logo" className="brand-logo" />
+          <Logo className="brand-logo" />
           <p className="contact-infor">
             Chấp nhận : Visa, MasterCard, Vouchers <br />
             Phí giao dịch áp dụng cho thẻ tín dụng <br />
