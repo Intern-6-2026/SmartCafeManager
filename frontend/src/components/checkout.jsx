@@ -71,7 +71,7 @@ function CheckoutModal({
             >
                 <option value="CASH">Tiền mặt</option>
                 <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
-                <option value="E-WALLET">Ví điện tử</option>
+                <option value="E_WALLET">Ví điện tử</option>
             </select>
             </div>
 
