@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import coffeeBeans from "../assets/coffee-beans.jpg";
 import { getLatestItems, getBestSellerItems } from "../services/apiService";
-
+import { useNavigate } from "react-router-dom";
 function Body() {
   const [latestItems, setLatestItems] = useState([]);
   const [bestSellerItems, setBestSellerItems] = useState([]);
+  const navigate = useNavigate();
 
+  const [showFloatingButton, setShowFloatingButton] = useState(false);
   useEffect(() => {
     getLatestItems().then((res) => {
       console.log("Dữ liệu món mới:", res.data);
@@ -17,6 +19,20 @@ function Body() {
     });
   }, []);
 
+  // Thêm logic theo dõi cuộn trang
+  useEffect(() => {
+    const handleScroll = () => {
+      // Nếu cuộn xuống quá 300px thì hiện nút, ngược lại thì ẩn
+      if (window.scrollY > 300) {
+        setShowFloatingButton(true);
+      } else {
+        setShowFloatingButton(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
   return (
     <main className="w-full">
       {/* 1. Phần Hero */}
@@ -32,7 +48,10 @@ function Body() {
           <h1 className="text-[24px] font-bold my-2">
             Trải nghiệm cà phê thông minh
           </h1>
-          <button className="bg-white text-black px-6 py-2 rounded-full font-medium">
+          <button
+            onClick={() => navigate("/menu/table/TB001")}
+            className="bg-white text-black px-6 py-2 rounded-full font-medium"
+          >
             Đặt món
           </button>
         </div>
@@ -51,7 +70,8 @@ function Body() {
           {latestItems.map((item) => (
             <div
               key={item.itemId || item.id}
-              className="flex flex-col items-center text-center"
+              onClick={() => navigate("/menu/table/TB001")} // Thêm sự kiện này
+              className="flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-all" // Thêm style để biết là có thể nhấn
             >
               <img
                 src={
@@ -89,7 +109,8 @@ function Body() {
           {bestSellerItems.map((item) => (
             <div
               key={item.itemId || item.id}
-              className="flex flex-col items-center text-center"
+              onClick={() => navigate("/menu/table/TB001")} // Thêm sự kiện này
+              className="flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-all" // Thêm style để biết là có thể nhấn
             >
               <img
                 src={
@@ -147,6 +168,15 @@ function Body() {
           </button>
         </div>
       </section>
+      {showFloatingButton && (
+        <button
+          onClick={() => navigate("/menu/table/TB001")}
+          className="fixed bottom-6 right-6 z-50 bg-[#5C4D3F] text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-all duration-300 animate-bounce"
+        >
+          {/* Bạn có thể để chữ hoặc icon */}
+          <span className="font-bold">Đặt món</span>
+        </button>
+      )}
     </main>
   );
 }
