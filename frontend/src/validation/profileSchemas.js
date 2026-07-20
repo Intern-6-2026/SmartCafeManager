@@ -31,9 +31,8 @@ export const editProfileSchema = (originalPhone = "") =>
                         const res = await checkPhoneAvailable(value.trim());
                         return res.data.available;
                     } catch {
-                        return this.createError({
-                            message: "Không thể kiểm tra số điện thoại. Vui lòng thử lại.",
-                        });
+                        // Backend chưa có API check-phone → bỏ qua, backend sẽ validate khi lưu
+                        return true;
                     }
                 }
             ),

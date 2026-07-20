@@ -49,9 +49,7 @@ export const changePassword = async (oldPassword, newPassword) => {
 export const uploadAvatar = async (file) => {
   const formData = new FormData();
   formData.append("image", file);
-  return await axios.post(`${API_BASE_URL}/users/profile/avatar`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  return await axios.post(`${API_BASE_URL}/users/profile/avatar`, formData);
 };
 
 // Gọi API lấy toàn bộ món ăn (menu đầy đủ, kèm danh mục + ảnh)

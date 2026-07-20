@@ -77,6 +77,28 @@ export default function EditProfile() {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        if (!file.type.startsWith("image/")) {
+            setPopup({
+                open: true,
+                type: "warning",
+                title: "File không hợp lệ",
+                message: "Vui lòng chọn file ảnh (JPG, PNG, GIF, ...).",
+            });
+            e.target.value = "";
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            setPopup({
+                open: true,
+                type: "warning",
+                title: "Ảnh quá lớn",
+                message: "Kích thước ảnh tối đa 5MB.",
+            });
+            e.target.value = "";
+            return;
+        }
+
         if (previewUrlRef.current) {
             URL.revokeObjectURL(previewUrlRef.current);
         }
@@ -88,21 +110,26 @@ export default function EditProfile() {
     };
 
     const handleSubmit = async (values, { setSubmitting, setFieldError }) => {
+        setSubmitting(true);
         try {
             let currentImageUrl = savedImageUrl;
             if (avatarFile) {
                 const uploadRes = await uploadAvatar(avatarFile);
-                currentImageUrl = uploadRes.data.imageUrl;
+                currentImageUrl = uploadRes.data?.imageUrl || savedImageUrl;
+                if (!uploadRes.data?.imageUrl) {
+                    throw new Error("Upload ảnh thất bại. Vui lòng thử lại.");
+                }
             }
 
+            const phone = values.phoneNumber.trim();
             const updateData = {
                 fullName: values.fullName.trim(),
                 email: values.email.trim(),
-                phoneNumber: values.phoneNumber.trim(),
+                phoneNumber: phone || null,
                 dateOfBirth: values.dateOfBirth || null,
                 gender: values.gender,
                 address: values.address?.trim() || "",
-                imageUrl: currentImageUrl,
+                imageUrl: currentImageUrl || null,
             };
 
             await updateProfile(updateData);
@@ -171,7 +198,10 @@ export default function EditProfile() {
                                             open: true,
                                             type: "warning",
                                             title: "Vui lòng kiểm tra lại",
-                                            message: Object.values(formErrors)[0],
+                                            message:
+                                                formErrors.phoneNumber && !values.phoneNumber?.trim()
+                                                    ? "Bạn cần nhập số điện thoại hợp lệ trước khi lưu (VD: 0901234567)."
+                                                    : Object.values(formErrors)[0],
                                         });
                                         return;
                                     }
