@@ -49,7 +49,7 @@ function Body() {
             Trải nghiệm cà phê thông minh
           </h1>
           <button
-            onClick={() => navigate("/menu/table/TB001")}
+            onClick={() => navigate("/menu/table/ban01")}
             className="bg-white text-black px-6 py-2 rounded-full font-medium"
           >
             Đặt món
@@ -70,7 +70,7 @@ function Body() {
           {latestItems.map((item) => (
             <div
               key={item.itemId || item.id}
-              onClick={() => navigate("/menu/table/TB001")} // Thêm sự kiện này
+              onClick={() => navigate("/menu/table/ban01")} // Thêm sự kiện này
               className="flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-all" // Thêm style để biết là có thể nhấn
             >
               <img
@@ -109,7 +109,7 @@ function Body() {
           {bestSellerItems.map((item) => (
             <div
               key={item.itemId || item.id}
-              onClick={() => navigate("/menu/table/TB001")} // Thêm sự kiện này
+              onClick={() => navigate("/menu/table/ban01")} // Thêm sự kiện này
               className="flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-all" // Thêm style để biết là có thể nhấn
             >
               <img
@@ -170,7 +170,7 @@ function Body() {
       </section>
       {showFloatingButton && (
         <button
-          onClick={() => navigate("/menu/table/TB001")}
+          onClick={() => navigate("/menu/table/ban01")}
           className="fixed bottom-6 right-6 z-50 bg-[#5C4D3F] text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-all duration-300 animate-bounce"
         >
           {/* Bạn có thể để chữ hoặc icon */}
