@@ -3,6 +3,51 @@ import axios from "axios";
 // Đường dẫn cơ sở của Backend Spring Boot
 const API_BASE_URL = "/api/v1";
 
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+export const loginApi = async (username, password) => {
+  return await axios.post(`${API_BASE_URL}/auth/login`, { username, password });
+};
+
+export const forgotPassword = async (email) => {
+  return await axios.post(`${API_BASE_URL}/auth/forgot-password`, { email });
+};
+
+export const resetPassword = async (token, newPassword) => {
+  return await axios.post(`${API_BASE_URL}/auth/reset-password`, { token, newPassword });
+};
+
+export const getCurrentUserProfile = async () => {
+  return await axios.get(`${API_BASE_URL}/users/profile`);
+};
+
+export const updateProfile = async (profileData) => {
+  return await axios.put(`${API_BASE_URL}/users/profile`, profileData);
+};
+
+export const changePassword = async (oldPassword, newPassword) => {
+  return await axios.put(`${API_BASE_URL}/users/change-password`, { oldPassword, newPassword });
+};
+
+export const uploadAvatar = async (file) => {
+  const formData = new FormData();
+  formData.append("image", file);
+  return await axios.post(`${API_BASE_URL}/users/profile/avatar`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
+
 // Gọi API lấy toàn bộ món ăn (menu đầy đủ, kèm danh mục + ảnh)
 export const getAllItems = async () => {
   return await axios.get(`${API_BASE_URL}/items`);

@@ -240,15 +240,30 @@ function ClientMenu() {
       <header>
         <div className="header-row">
           <div className="brand">
-            <Link to="/home">
-              <img src={logo} alt="Logo" className="brand-logo" to="/home"/>
-            </Link>
+            <img src={logo} alt="Logo" className="brand-logo" />
             <h1 className="brand-name-bold">NEO</h1>
             <h1 className="brand-name-not-bold">CAFÉ</h1>
           </div>
           <div className="header-title">THÔNG TIN BÀN</div>
         </div>
       </header>
+
+      {/* Danh mục sinh từ menu server */}
+      <div
+        className={`drawer-overlay ${menuOpen ? "show" : ""}`}
+        onClick={() => setMenuOpen(false)}
+      />
+      <nav className={`category-nav ${menuOpen ? "open" : ""}`} aria-label="Loại dịch vụ">
+        {categories.map((c) => (
+          <button
+            key={c}
+            className={`category-btn ${category === c ? "active" : ""}`}
+            onClick={() => pickCategory(c)}
+          >
+            {c}
+          </button>
+        ))}
+      </nav>
 
       {/* Thông báo kết quả API */}
       {message && <div className="api-message" role="status">{message}</div>}
