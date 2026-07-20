@@ -129,7 +129,6 @@ public class ItemServiceImpl implements ItemService {
         if (isAvailable != null) {
             existingItem.setIsAvailable(isAvailable);
         }
-
         // 3. Xử lý ảnh: Upload ảnh thật lên Cloudinary nếu có file mới gửi lên
         if (image != null && !image.isEmpty()) {
             try {
@@ -159,21 +158,17 @@ public class ItemServiceImpl implements ItemService {
         return mapToItemResponse(updatedItem);
     }
 
-    // ==========================================
     // --- 4. XÓA MÓN ĂN ---
-    // ==========================================
     @Override
     @Transactional
     public void deleteItem(Long itemId) {
         Item existingItem = itemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn với ID: " + itemId));
-        existingItem.setIsAvailable(false); // Xóa mềm: đánh dấu không còn hoạt động
+        existingItem.setIsAvailable(false);
         itemRepository.save(existingItem);
     }
 
-    // ==========================================
     // --- 5. HÀM MAPPING SẠCH (Item -> ItemResponse) ---
-    // ==========================================
     private ItemResponse mapToItemResponse(Item item) {
         return ItemResponse.builder()
                 .itemId(item.getItemId())

@@ -1,607 +1,625 @@
-<<<<<<< HEAD
-# 🛒 TÀI LIỆU TÍCH HỢP HỆ THỐNG SMART CAFE
+# 📢 Update - Liquibase Integration & API Update
 
-Tài liệu này mô tả cách Front-end giao tiếp với Backend của hệ thống Smart Cafe.
-=======
-# ☕ Smart Cafe Management - API Testing Guide (Postman)
-
-Tài liệu này cung cấp hướng dẫn chi tiết về cách thiết lập môi trường và thực hiện kiểm thử các API của hệ thống **Smart Cafe Management** bằng công cụ Postman. Dự án hiện tại hỗ trợ các tính năng về **Xác thực người dùng (Authentication)** và **Quản lý hồ sơ (User Profile)** dành cho 3 phân quyền: `ADMIN`, `STAFF`, và `CUSTOMER`.
-
----
-
-## 📑 Mục lục
-1. [Yêu cầu chuẩn bị](#1-yêu-cầu-chuẩn-bị)
-2. [Thiết lập môi trường Postman](#2-thiết-lập-môi-trường-postman)
-3. [Danh sách tài khoản Test](#3-danh-sách-tài-khoản-test)
-4. [Danh sách API & Test Cases](#4-danh-sách-api--test-cases)
-   - [Module Authentication](#module-1-authentication)
-   - [Module User Profile](#module-2-user-profile)
-5. [Quy trình Test thực tế (Workflow)](#5-quy-trình-test-thực-tế-khuyến-nghị)
+> **Update by:** Lê Tấn Thống
+>
+> Từ phiên bản này dự án đã tích hợp **Liquibase** để quản lý Database Migration.
+>
+> **Lưu ý:** Tất cả thành viên trong nhóm vui lòng đọc kỹ hướng dẫn bên dưới trước khi chạy project.
 
 ---
 
-## 1. Yêu cầu chuẩn bị
+# 1. Liquibase là gì?
 
-Để bắt đầu kiểm thử, vui lòng đảm bảo hệ thống của bạn đã đáp ứng các điều kiện sau:
-* **Postman:** Đã cài đặt phiên bản mới nhất.
-* **Server Backend:** Đang chạy ở môi trường local tại port `8080`.
-* **Cơ sở dữ liệu:** Đã import thành công file `smart_cafe_management.sql` vào MySQL.
+Liquibase là công cụ giúp quản lý lịch sử thay đổi của Database.
 
----
+Thay vì mỗi người tự sửa Database bằng MySQL Workbench rồi gửi file `.sql` cho nhau, từ bây giờ mọi thay đổi Database sẽ được quản lý bằng Migration.
 
-## 2. Thiết lập môi trường Postman
+Ưu điểm:
 
-Để quá trình kiểm thử diễn ra trơn tru (đặc biệt là việc tự động xử lý JWT Token), hãy tạo một **Environment** mới trong Postman (ví dụ: `Smart Cafe Local`) và cấu hình các biến sau:
-
-| Tên biến (VARIABLE) | Value mặc định (INITIAL VALUE) | Mô tả |
-| :--- | :--- | :--- |
-| `baseUrl` | `http://localhost:8080/api/v1` | URL gốc của toàn bộ API |
-| `token` | *(Để trống)* | Token JWT sẽ được tự động lưu vào đây |
-
-### ⚡ Tự động lưu JWT Token
-Tại request **`POST /auth/login`**, hãy chuyển sang tab **Tests** trong Postman và dán đoạn mã script sau. Đoạn mã này sẽ tự động bắt token từ Response và lưu vào môi trường:
-
-```javascript
-var jsonData = pm.response.json();
-if (jsonData.token) {
-    pm.environment.set("token", jsonData.token);
-    console.log("Đã lưu JWT Token vào môi trường!");
-}
-
-```
->>>>>>> 6f367d9e48f4cbd30c14a9e766cc61f749f977ed
+- Đồng bộ Database cho tất cả thành viên.
+- Không cần gửi file SQL qua Zalo.
+- Không bị thiếu bảng.
+- Không bị khác cấu trúc Database.
+- Theo dõi được lịch sử thay đổi.
 
 ---
 
-## 3. Danh sách tài khoản Test
+# 2. Cài đặt
 
-<<<<<<< HEAD
-| Thuộc tính | Giá trị |
-|------------|----------|
-| Base URL | `http://localhost:8080/api/v1` |
-| Authentication | JWT Bearer Token (đối với API yêu cầu đăng nhập) |
-| Content-Type | `application/json` |
-| Response | JSON |
+Trong `pom.xml` đã được thêm
+
+```xml
+<dependency>
+    <groupId>org.liquibase</groupId>
+    <artifactId>liquibase-core</artifactId>
+</dependency>
+```
+
+Không cần cài thêm gì.
+
+Chỉ cần Maven tải dependency.
 
 ---
 
-# I. API AUTHENTICATION
+# 3. Cấu trúc thư mục
 
-## 1. Đăng nhập
-
-**Method**
+Sau khi pull code sẽ có
 
 ```
-POST
+src
+└── main
+    └── resources
+        └── db
+            └── changelog
+                ├── db.changelog-master.yaml
+                ├── 001-create-news-table.sql
+                ├── 002-add-item-image.sql
+                └── ...
 ```
 
-**Endpoint**
+Toàn bộ migration đều nằm trong
 
 ```
-/auth/login
-```
-
-**Request**
-
-```json
-{
-  "username": "admin",
-  "password": "your_password_here"
-}
-```
-
-**Response**
-
-```json
-{
-    "token": "...",
-    "message": "Login successful",
-    "requirePasswordChange": false
-}
+src/main/resources/db/changelog
 ```
 
 ---
 
-## 2. Quên mật khẩu
+# 4. Cấu hình
 
-**Method**
-
-```
-POST
-```
-
-**Endpoint**
+Trong
 
 ```
-/auth/forgot-password
+application.properties
 ```
 
-**Request**
+đã cấu hình
 
-```json
-{
-    "email":"admin@gmail.com"
-}
+```properties
+spring.liquibase.enabled=true
+spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.yaml
 ```
+
+Không chỉnh sửa nếu không cần thiết.
 
 ---
 
-## 3. Đặt lại mật khẩu
+# 5. Tạo Database
 
-**Method**
+Nếu chưa có Database hãy tạo
 
-```
-POST
-```
-
-**Endpoint**
-
-```
-/auth/reset-password
-```
-
-**Request**
-
-```json
-{
-    "token":"123456",
-    "newPassword":"NewPassword123!"
-}
-```
-
----
-
-# II. API USER
-
-## 1. Xem thông tin cá nhân
-
-**Method**
-
-```
-GET
-```
-
-**Endpoint**
-
-```
-/users/profile
-```
-
-> Header
-
-```
-Authorization: Bearer {token}
-```
-
----
-
-## 2. Cập nhật thông tin
-
-**Method**
-
-```
-PUT
-```
-
-**Endpoint**
-
-```
-/users/profile
-```
-
----
-
-## 3. Đổi mật khẩu
-
-**Method**
-
-```
-PUT
-```
-
-**Endpoint**
-
-```
-/users/change-password
-```
-
----
-
-# III. QUY TRÌNH GỌI MÓN TẠI BÀN
-=======
-Dữ liệu gốc trong DB đã cung cấp sẵn các tài khoản dưới đây (trạng thái `ACTIVE`). Sử dụng các tài khoản này để kiểm tra tính phân quyền của hệ thống:
-
-| Username | Email | Vai trò (Role) | Mô tả |
-| --- | --- | --- | --- |
-| `admin` | codegymintern@gmail.com | **ADMIN** | Quản trị viên hệ thống |
-| `thungan01` | thungan1@smartcafe.vn | **STAFF** | Thu ngân (Nhân viên) |
-| `phabep01` | phabep1@smartcafe.vn | **STAFF** | Pha chế / Bếp (Nhân viên) |
-| `khach_vip01` | khachvip1@gmail.com | **CUSTOMER** | Khách hàng VIP |
-| `khach_thuong01` | khachthuong1@gmail.com | **CUSTOMER** | Khách hàng thường |
-
-> **💡 Lưu ý:** Mật khẩu trong DB được mã hóa bằng Bcrypt. Khi test thực tế, hãy sử dụng mật khẩu mặc định được quy định lúc tạo dữ liệu mẫu (thường là `123456`).
-
----
-
-## 4. Danh sách API & Test Cases
->>>>>>> 6f367d9e48f4cbd30c14a9e766cc61f749f977ed
-
-### MODULE 1: AUTHENTICATION
-
-<<<<<<< HEAD
-- Món mới
-
-```
-GET /items/latest
-```
-
-- Món bán chạy
-
-```
-GET /items/best-sellers
-```
-
-↓
-
-## 2. Chọn món
-
-Khách chọn món.
-
-Backend tạo Order Detail với trạng thái
-=======
-> **Base Path:** `/api/v1/auth` *(Công khai, không yêu cầu Token)*
-
-#### 1.1. Đăng nhập hệ thống (Login)
-* **Mô tả chuyên sâu về chức năng:**
-* Đây là cổng an ninh đầu tiên của hệ thống. API thực hiện đối chiếu thông tin `username` và `password` với cơ sở dữ liệu (mật khẩu được kiểm tra qua thuật toán mã hóa Bcrypt).
-* Kiểm tra cờ trạng thái tài khoản: Nếu tài khoản bị khóa (`INACTIVE`) hoặc đã bị xóa mềm (`deleted_at is not null`), hệ thống sẽ từ chối truy cập ngay lập tức.
-* Nếu hợp lệ, Backend sẽ sinh ra một chuỗi **JWT (JSON Web Token)** có thời hạn để Frontend sử dụng cho các request bảo mật sau này.
-* **Đặc biệt:** API có tính toán thời gian `password_changed_at`. Nếu mật khẩu đã quá hạn 30 ngày chưa đổi, cờ `requirePasswordChange: true` sẽ được trả về.
-* Nếu là **`true`**: Frontend **chặn không cho vào Trang chủ**, buộc chuyển hướng (Redirect) ngay sang màn hình *Đổi mật khẩu bắt buộc*, kèm thông báo: *"Mật khẩu của bạn đã hết hạn 30 ngày, vui lòng đổi mật khẩu mới để tiếp tục"*.
-  
-* **Phương thức:** `POST`
-* **URL:** `{{baseUrl}}/auth/login`
-* **Headers:** `Content-Type: application/json`
-* **Body:**
-```json
-{
-  "username": "admin",
-  "password": "your_password_here"
-}
->>>>>>> 6f367d9e48f4cbd30c14a9e766cc61f749f977ed
-
-```
-
-* **Kỳ vọng (Expected Responses):**
-* **`200 OK`**:
-```json
-{
-  "token": "eyJhbGciOiJlUzI1NiJ9...",
-  "message": "Login successful!",
-  "requirePasswordChange": false
-}
-
-```
-
-* **`400 Bad Request`**: `"Incorrect password!"` hoặc `"Account does not exist or has been deleted!"`.
-
-<<<<<<< HEAD
-## 3. Xem giỏ hàng
-
-Hiển thị toàn bộ món có trạng thái
-
-```
-PENDING
-```
-
-↓
-
-## 4. Gọi món
-
-Khách bấm
-
-```
-[GỌI MÓN]
-```
-
-Backend chuyển trạng thái
-
-```
-PENDING
-↓
-
-CONFIRMED
-```
-
-↓
-
-## 5. Theo dõi món
-
-Hiển thị
-
-```
-CONFIRMED
-SERVED
-```
-
-↓
-
-## 6. Thanh toán
-
-Khách xem hóa đơn
-
-↓
-
-Gửi yêu cầu thanh toán.
-
----
-
-# IV. API MENU
-=======
-#### 1.2. Yêu cầu khôi phục mật khẩu (Forgot Password)
-* **Mô tả chuyên sâu về chức năng:**
-* Khởi tạo quy trình lấy lại mật khẩu cho người dùng khi họ quên.
-* Kiểm tra `email` có tồn tại trong hệ thống và tài khoản gắn liền có đang `ACTIVE` hay không.
-* Nếu hợp lệ, hệ thống tự động sinh ra một **mã OTP 6 chữ số ngẫu nhiên**, lưu vào database kèm thời hạn sử dụng (thuộc tính `reset_token_expiry`, quy định là **5 phút** kể từ lúc tạo).
-* Gọi service gửi Email chứa mã OTP này tới hòm thư của người dùng.
-
-* **Phương thức:** `POST`
-* **URL:** `{{baseUrl}}/auth/forgot-password`
-* **Headers:** `Content-Type: application/json`
-* **Body:**
-```json
-{
-  "email": "thungan1@smartcafe.vn"
-}
-
-```
-
-* **Kỳ vọng:**
-* **`200 OK`**: `"Password recovery OTP has been sent to your email."`
-* **`400 Bad Request`**: `"No valid account found for this email!"`
-
-#### 1.3. Đặt lại mật khẩu mới (Reset Password)
-* **Mô tả chuyên sâu về chức năng:**
-* Bước cuối cùng của quy trình khôi phục mật khẩu.
-* Đối chiếu `token` (mã OTP 6 số) người dùng gửi lên với cột `reset_token` trong database.
-* Kiểm tra tính hợp lệ của thời gian: Nếu thời điểm hiện tại đã vượt quá `reset_token_expiry` (quá 5 phút), yêu cầu sẽ bị từ chối.
-* Nếu hợp lệ, mã hóa Bcrypt mật khẩu mới (`newPassword`), cập nhật vào database, reset cột `password_changed_at` về thời điểm hiện tại và xóa bỏ chuỗi OTP (set null) để không ai dùng lại được mã này nữa.
-  
-* **Phương thức:** `POST`
-* **URL:** `{{baseUrl}}/auth/reset-password`
-* **Headers:** `Content-Type: application/json`
-* **Body:**
-```json
-{
-  "token": "123456",
-  "newPassword": "NewPassword123!"
-}
-
-```
-
-* **Kỳ vọng:**
-* **`200 OK`**: `"New password updated successfully!"`
-* **`400 Bad Request`**: `"Invalid recovery token or account does not exist!"`
-
----
-
-### MODULE 2: USER PROFILE
-
-> **Base Path:** `/api/v1/users` *(Bắt buộc truyền Token)* > **Header chung cho toàn module:** `Authorization: Bearer {{token}}`
-
-#### 2.1. Xem thông tin cá nhân (Get Profile)
-* **Mô tả chuyên sâu về chức năng:**
-* API lấy thông tin định danh và chi tiết của tài khoản đang đăng nhập. Không cần truyền ID trên URL vì Backend sẽ tự động trích xuất `username` từ **JWT Token** nằm trong Header `Authorization`.
-* Dựa vào Role của tài khoản, Backend sẽ query vào bảng `employee` (nếu là ADMIN/STAFF) hoặc bảng `customer` (nếu là CUSTOMER) để trả về DTO phù hợp nhất.
-* Hệ thống tự động lọc và xử lý dữ liệu: Nhân viên thì trả về `salary` (lương) và ẩn điểm tích lũy; Khách hàng thì trả về `loyaltyPoints` (điểm thưởng) và set lương bằng `null`.
-* Hiện tại đã thực hiện đưa salary và loyaltyPoints vào phần output, admin mới có thể xem qua thông tin về hai nội dung này (sẽ điều chỉnh sau)
-
-* **Phương thức:** `GET`
-* **URL:** `{{baseUrl}}/users/profile`
-* **Kỳ vọng (Với tài khoản `STAFF`):**
-```json
-{
-  "username": "thungan01",
-  "email": "thungan1@smartcafe.vn",
-  "fullName": "Trần Thu Ngân",
-  "dateOfBirth": "1998-10-20T00:00:00.000+00:00",
-  "gender": "FEMALE",
-  "phone": "0905333444",
-  "address": "45 Hùng Vương, Đà Nẵng",
-  "salary": 8500000.00,
-  "loyaltyPoints": null,
-  "roleName": "STAFF",
-  "imageUrl": "[https://cdn-icons-png.flaticon.com/512/3135/3135789.png](https://cdn-icons-png.flaticon.com/512/3135/3135789.png)"
-}
-
-```
-
-*(**Lưu ý:** Với tài khoản `CUSTOMER`: Thuộc tính `salary` sẽ là `null`, trong khi `loyaltyPoints` sẽ có giá trị).*
-
-#### 2.2. Cập nhật thông tin cá nhân (Update Profile)
-* **Mô tả chuyên sâu về chức năng:**
-* Cho phép người dùng tự chỉnh sửa thông tin cá nhân của mình.
-* API hỗ trợ cơ chế **Partial Update (Cập nhật từng phần)**: Người dùng muốn sửa trường nào thì gửi trường đó, các trường không gửi hoặc gửi `null` sẽ được Backend giữ nguyên dữ liệu cũ trong DB.
-* Có xử lý logic kiểm tra ràng buộc (Validation): Nếu người dùng đổi Email sang một chuỗi Email mới, Backend sẽ query kiểm tra xem Email mới này đã bị tài khoản khác chiếm dụng hay chưa.
-  
-* **Phương thức:** `PUT`
-* **URL:** `{{baseUrl}}/users/profile`
-* **Body:**
-```json
-{
-  "fullName": "Trần Thu Ngân (Đã sửa)",
-  "dateOfBirth": "1998-10-20",
-  "gender": "FEMALE",
-  "phoneNumber": "0905999888",
-  "address": "123 Bạch Đằng, Đà Nẵng",
-  "email": "thungan_new@smartcafe.vn",
-  "imageUrl": "[https://cdn-icons-png.flaticon.com/512/3135/new-avatar.png](https://cdn-icons-png.flaticon.com/512/3135/new-avatar.png)"
-}
-
-```
-
-*(**Lưu ý:** Chỉ chấp nhận `gender` là `MALE` hoặc `FEMALE`. Trường nào không truyền hoặc truyền `null` sẽ được giữ nguyên).*
-* **Kỳ vọng:** Trả về HTTP **`200 OK`** kèm đối tượng Profile đã được cập nhật.
-
-#### 2.3. Đổi mật khẩu (Change Password)
-* **Mô tả chuyên sâu về chức năng:**
-* Dành cho người dùng **đã đăng nhập vào hệ thống** muốn đổi mật khẩu mới (khác với luồng Quên mật khẩu ở Module 1).
-* Xác thực kép: Yêu cầu người dùng phải nhập đúng Mật khẩu hiện tại (`oldPassword`). Backend sẽ Bcrypt match mật khẩu cũ này trong DB, nếu sai sẽ từ chối ngay.
-* Kiểm tra ràng buộc logic: Mật khẩu mới (`newPassword`) không được phép trùng với mật khẩu cũ.
-* Cập nhật mật khẩu mới đã mã hóa và tự động gia hạn thời gian `password_changed_at`.
-  
-* **Phương thức:** `PUT`
-* **URL:** `{{baseUrl}}/users/change-password`
-* **Body:**
-```json
-{
-  "oldPassword": "your_current_password",
-  "newPassword": "NewStrongPassword456!"
-}
-
-```
-
-* **Kỳ vọng:**
-* **`200 OK`**: `"Password changed successfully!"`
-* **`400 Bad Request`**: `"Old password is incorrect!"`
-
----
->>>>>>> 6f367d9e48f4cbd30c14a9e766cc61f749f977ed
-
-## 5. Quy trình Test thực tế khuyến nghị
-
-<<<<<<< HEAD
-```
-GET /api/v1/items
-```
-
----
-
-## 2. Lấy món mới
-
-```
-GET /api/v1/items/latest
-```
-
----
-
-## 3. Lấy món bán chạy
-
-```
-GET /api/v1/items/best-sellers
-```
-
----
-
-# V. API GIỎ HÀNG
-
-## 1. Thêm món vào giỏ
-
-```
-POST /api/v1/items/add-item
-```
-
-Query Parameters
-
-- tableName
-- itemId
-- quantity
-- note
-
----
-
-## 2. Xem giỏ hàng
-
-```
-GET /api/v1/items/cart
-```
-
----
-
-## 3. Gọi món
-
-```
-POST /api/v1/items/confirm-order
-```
-
----
-
-## 4. Lịch sử gọi món
-
-```
-GET /api/v1/items/order-history
-```
-=======
-Tester nên thực hiện bài test theo luồng (**End-to-End Flow**) dưới đây để đảm bảo logic nghiệp vụ chặt chẽ:
-
-1. **Test Xác thực:** Gọi `POST /auth/login` với tài khoản `thungan01`. Kiểm tra xem biến `token` đã được tự động lưu vào *Environment Variable* hay chưa.
-2. **Test Xem Profile:** Gọi `GET /users/profile`. Đảm bảo dữ liệu trả về đúng với role `STAFF` (có hiển thị `salary`, `loyaltyPoints` là null).
-3. **Test Cập nhật Profile:** Gọi `PUT /users/profile`, thay đổi số điện thoại hoặc địa chỉ thành số mới. Sau đó gọi lại `GET /users/profile` để kiểm tra dữ liệu đã thực sự được lưu xuống DB chưa.
-4. **Test Luồng Quên Mật Khẩu (Đặc biệt):** - Gọi `POST /auth/forgot-password` với email `thungan1@smartcafe.vn`.
-* *Mẹo test nhanh:* Nếu không tiện check Email, hãy query trực tiếp xuống DB bằng lệnh SQL sau để lấy mã OTP:
 ```sql
-SELECT reset_token FROM account WHERE username = 'thungan01';
-
+CREATE DATABASE smart_cafe_manager
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
 ```
 
-* Gọi `POST /auth/reset-password` bằng mã OTP vừa lấy được.
->>>>>>> 6f367d9e48f4cbd30c14a9e766cc61f749f977ed
-
-5. **Xác nhận đổi mật khẩu:** Gọi lại `POST /auth/login` với mật khẩu cũ *(phải thất bại với status 400)* và sau đó login bằng mật khẩu mới *(phải thành công với status 200)*.
-
-<<<<<<< HEAD
-# VI. API HÓA ĐƠN
-
-## 1. Xem hóa đơn
+Sau đó sửa
 
 ```
+application.properties
+```
+
+Ví dụ
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/smart_cafe_manager
+spring.datasource.username=root
+spring.datasource.password=
+```
+
+---
+
+# 6. Import Database ban đầu
+
+Import file SQL của dự án bằng MySQL Workbench.
+
+Sau khi import sẽ có các bảng:
+
+```
+role
+users
+item
+menu_category
+table_order
+order_detail
+notification
+news
+...
+```
+
+Không cần tự tạo từng bảng.
+
+Database hiện tại chính là **Baseline** của dự án.
+
+---
+
+# 7. Chạy Project
+
+```
+mvn spring-boot:run
+```
+
+Liquibase sẽ tự kiểm tra migration.
+
+Nếu có migration mới sẽ tự chạy.
+
+---
+
+# 8. Sau này nếu cần sửa Database
+
+Ví dụ muốn thêm bảng
+
+```
+news
+```
+
+Tạo file mới
+
+```
+src/main/resources/db/changelog/001-create-news-table.sql
+```
+
+Ví dụ
+
+```sql
+--liquibase formatted sql
+
+--changeset thong:001
+
+CREATE TABLE news
+(
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255),
+    content TEXT
+);
+```
+
+Sau đó mở
+
+```
+db.changelog-master.yaml
+```
+
+thêm
+
+```yaml
+databaseChangeLog:
+
+  - include:
+      file: db/changelog/001-create-news-table.sql
+```
+
+Chạy lại project.
+
+Liquibase sẽ tự tạo bảng.
+
+---
+
+# 9. Thêm cột mới
+
+Ví dụ
+
+```
+002-add-item-image.sql
+```
+
+```sql
+--liquibase formatted sql
+
+--changeset thong:002
+
+ALTER TABLE item
+ADD COLUMN image_url VARCHAR(255);
+```
+
+Thêm vào
+
+```
+db.changelog-master.yaml
+```
+
+```yaml
+databaseChangeLog:
+
+  - include:
+      file: db/changelog/001-create-news-table.sql
+
+  - include:
+      file: db/changelog/002-add-item-image.sql
+```
+
+Chạy project.
+
+Liquibase sẽ tự cập nhật.
+
+---
+
+# 10. Quy tắc làm việc nhóm
+
+## Không được sửa
+
+```
+001-create-news-table.sql
+```
+
+sau khi đã merge.
+
+Nếu cần sửa
+
+Tạo file mới
+
+```
+002-update-news-table.sql
+```
+
+Không được sửa migration cũ.
+
+---
+
+## Mỗi thay đổi Database = Một migration mới
+
+Ví dụ
+
+```
+003-add-discount-column.sql
+004-create-voucher-table.sql
+005-create-payment-table.sql
+```
+
+---
+
+## Đặt tên migration
+
+| Chức năng | Ví dụ |
+|-----------|----------------------------|
+| Tạo bảng | 005-create-news-table.sql |
+| Thêm cột | 006-add-image-column.sql |
+| Xóa cột | 007-drop-phone-column.sql |
+| Thêm FK | 008-add-user-role-fk.sql |
+
+---
+
+# 11. Sau khi Pull Code
+
+```
+git pull origin develop
+```
+
+Sau đó
+
+```
+mvn spring-boot:run
+```
+
+Liquibase sẽ tự cập nhật Database.
+
+Không cần chạy file SQL bằng Workbench.
+
+---
+
+# 12. Không được làm
+
+❌ Không sửa migration đã merge.
+
+❌ Không đổi tên migration.
+
+❌ Không xóa migration.
+
+❌ Không chỉnh sửa DATABASECHANGELOG.
+
+❌ Không chỉnh sửa DATABASECHANGELOGLOCK.
+
+---
+
+# 13. Hai bảng Liquibase
+
+Liquibase sẽ tự tạo
+
+```
+DATABASECHANGELOG
+
+DATABASECHANGELOGLOCK
+```
+
+Đây là hai bảng hệ thống.
+
+Không được xóa.
+
+Không được sửa dữ liệu.
+
+---
+
+# 14. API Update
+
+## API Giỏ hàng tạm thời
+
+### Endpoint
+
+```
+GET /api/v1/items/cart?tableName=Ban01
+```
+
+### Mục đích
+
+API này chỉ trả về các món đang ở trạng thái **PENDING** (đã thêm vào giỏ nhưng chưa gửi xuống bếp).
+
+### Response
+
+```json
+[
+  {
+    "orderDetailId": 7,
+    "itemId": 1,
+    "itemName": "Cà phê Đen Đá",
+    "price": 25000,
+    "quantity": 2,
+    "tableName": "Ban01"
+  }
+]
+```
+
+### Hướng xử lý Frontend
+
+- Hiển thị số lượng món đang nằm trong giỏ hàng.
+- Cho phép chỉnh sửa số lượng hoặc xóa món.
+- Khi người dùng nhấn **[Gọi món]**, gửi request cập nhật các `orderDetailId` này sang trạng thái `CONFIRMED`.
+
+---
+
+## API Hóa đơn / Tiến trình gọi món nhóm
+
+### Endpoint
+
+```
+GET /api/v1/items/invoice?tableName=Ban01
+```
+
+### Mục đích
+
+API trả về toàn bộ món của một bàn trong lượt ngồi hiện tại, bao gồm:
+
+- Món đã gửi bếp (`CONFIRMED`)
+- Món đã phục vụ (`SERVED`)
+- Món đang nằm trong giỏ (`PENDING`)
+
+Phù hợp với nghiệp vụ nhiều khách cùng quét QR và gọi món trên cùng một bàn.
+
+### Response
+
+```json
+{
+  "tableOrderId": 3,
+  "tableName": "Ban01",
+  "totalAmount": 170000,
+  "orderStatus": "OPEN",
+  "serviceStatus": "WAITING_FOOD",
+  "openAt": "2026-07-13T13:57:54",
+  "orderDetails": [
+    {
+      "orderDetailId": 4,
+      "quantity": 2,
+      "unitPrice": 25000,
+      "note": "",
+      "status": "CONFIRMED",
+      "itemId": 1,
+      "itemName": "Cà phê Đen Đá",
+      "imageUrl": "https://..."
+    },
+    {
+      "orderDetailId": 7,
+      "quantity": 2,
+      "unitPrice": 25000,
+      "note": "Không đá",
+      "status": "PENDING",
+      "itemId": 1,
+      "itemName": "Cà phê Đen Đá",
+      "imageUrl": "https://..."
+    }
+  ]
+}
+```
+
+### Hướng xử lý Frontend
+
+- `PENDING`
+  - Hiển thị nhãn **"Chờ gọi"** hoặc **"Trong giỏ hàng"**.
+  - Cho phép chỉnh sửa số lượng.
+  - Cho phép xóa món.
+  - Hiển thị nút **"Gửi bếp các món đang chờ"**.
+
+- `CONFIRMED`
+  - Hiển thị nhãn **"Đã gửi bếp"**.
+  - Không cho khách chỉnh sửa.
+
+- `SERVED`
+  - Hiển thị nhãn **"Đã phục vụ"**.
+  - Không cho chỉnh sửa.
+
+- `totalAmount`
+  - Luôn hiển thị tổng tiền tạm tính theo thời gian thực.
+  - Bao gồm cả món đã gửi bếp và món đang trong giỏ.
+
+Swagger đã được cập nhật theo cấu trúc DTO mới. Có thể kiểm tra trực tiếp bằng Swagger UI hoặc Postman.
+---
+
+# 15. Kitchen Service Update
+
+## 15.1 Order Item Lifecycle (`StatusOrderDetail`)
+
+Hệ thống đã mở rộng vòng đời của từng món ăn trong `order_detail` nhằm hỗ trợ quy trình gọi món theo thời gian thực giữa Khách hàng, Bếp/Bar và Nhân viên phục vụ.
+
+```text
+Khách chọn món
+      │
+      ▼
+   PENDING
+      │
+      │ Khách nhấn [Gọi món]
+      ▼
+  CONFIRMED
+      │
+      ├───────────────┐
+      ▼               ▼
+   SERVED        CANCELLED
+ (Đã phục vụ)   (Hết món/Hủy món)
+```
+
+### Các trạng thái
+
+| Status | Thao tác bởi | Ý nghĩa |
+|---------|--------------|----------|
+| `PENDING` | Khách hàng | Món đang nằm trong giỏ hàng. Có thể sửa số lượng hoặc xóa khỏi đơn. |
+| `CONFIRMED` | Khách hàng | Đã gửi món xuống Bếp/Bar. Không thể chỉnh sửa. |
+| `SERVED` | Kitchen / Staff | Món đã chế biến và phục vụ thành công. |
+| `CANCELLED` | Kitchen / Manager | Món bị hủy hoặc hết hàng. Hệ thống tự động loại món khỏi tổng tiền hóa đơn. |
+
+---
+
+## 15.2 Kitchen APIs
+
+### Phục vụ món
+
+```http
+PUT /api/v1/items/kitchen/serve-item
+```
+
+#### Query Parameters
+
+| Parameter | Type | Required |
+|-----------|------|----------|
+| orderDetailId | Long | Yes |
+
+**Chức năng**
+
+```
+CONFIRMED → SERVED
+```
+
+Khi bếp hoàn thành món và nhân viên đã phục vụ cho khách.
+
+---
+
+### Hủy món
+
+```http
+PUT /api/v1/items/kitchen/cancel-item
+```
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| orderDetailId | Long | Yes | ID của món cần hủy |
+| reason | String | No | Mặc định: `"Hết món"` |
+
+**Chức năng**
+
+```
+CONFIRMED → CANCELLED
+```
+
+Khi món bị hủy:
+
+- Không tính vào `totalAmount`.
+- Tổng tiền hóa đơn được tính lại tự động.
+- Frontend hiển thị trạng thái **Đã hủy**.
+
+---
+
+## 15.3 Liquibase Migration
+
+Thêm migration mới:
+
+```
+src/main/resources/db/changelog/003-update-order-detail-status.sql
+```
+
+```sql
+--liquibase formatted sql
+
+--changeset backend:003-update-order-detail-status
+
+ALTER TABLE order_detail
+MODIFY COLUMN status
+ENUM(
+    'PENDING',
+    'CONFIRMED',
+    'SERVED',
+    'CANCELLED'
+)
+NOT NULL DEFAULT 'PENDING';
+```
+
+Sau đó khai báo trong:
+
+```yaml
+databaseChangeLog:
+
+  - include:
+      file: db/changelog/001-create-news-table.sql
+
+  - include:
+      file: db/changelog/002-add-item-image.sql
+
+  - include:
+      file: db/changelog/003-update-order-detail-status.sql
+```
+
+---
+
+## 15.4 Frontend Integration
+
+Khi gọi API
+
+```http
 GET /api/v1/items/invoice
 ```
 
----
+Frontend nên hiển thị trạng thái như sau:
 
-## 2. Yêu cầu thanh toán
-
-```
-POST /api/v1/items/request-checkout
-```
-
----
-
-## 3. Gọi nhân viên
-
-```
-POST /api/v1/items/call-service
-```
+| Status | UI | Mô tả |
+|---------|----|--------|
+| `PENDING` | Trong giỏ hàng | Cho phép sửa và xóa món |
+| `CONFIRMED` | Đã gửi bếp | Không cho chỉnh sửa |
+| `SERVED` | Đã phục vụ | Hiển thị hoàn thành |
+| `CANCELLED` | Đã hủy (Hết món) | Gạch ngang món và không cộng vào tổng tiền |
 
 ---
 
-# VII. ENUM
+## 15.5 Business Rules
 
-## PaymentMethod
-
-- CASH
-- BANK_TRANSFER
-- MOMO
-- VNPAY
-
----
-
-## ServiceStatus
-
-- NORMAL
-- WAITING_FOOD
-- CALLING_WAITER
-- REQUESTING_BILL
+- Chỉ món ở trạng thái **PENDING** mới được chỉnh sửa hoặc xóa.
+- Khi khách nhấn **Gọi món**, toàn bộ món sẽ chuyển sang **CONFIRMED**.
+- Kitchen chỉ xử lý các món **CONFIRMED**.
+- Kitchen có thể:
+  - Chuyển sang **SERVED**.
+  - Chuyển sang **CANCELLED**.
+- Khi món bị hủy:
+  - Không tính vào `totalAmount`.
+  - Tổng tiền được cập nhật ngay.
+  - Frontend hiển thị trạng thái **Đã hủy**.
+- Món đã **SERVED** hoặc **CANCELLED** không được phép quay lại trạng thái trước.
 
 ---
 
-## OrderDetailStatus
+## 15.6 State Transition
 
-- PENDING
-- CONFIRMED
-- SERVED
-- CANCELLED
-=======
+```text
+             +-----------+
+             | PENDING   |
+             +-----------+
+                    |
+            Customer Order
+                    |
+                    ▼
+             +-------------+
+             | CONFIRMED   |
+             +-------------+
+               /         \
+              /           \
+             ▼             ▼
+      +----------+   +-------------+
+      | SERVED   |   | CANCELLED   |
+      +----------+   +-------------+
 ```
->>>>>>> 6f367d9e48f4cbd30c14a9e766cc61f749f977ed

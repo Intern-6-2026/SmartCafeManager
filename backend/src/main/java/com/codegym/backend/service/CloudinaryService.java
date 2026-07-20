@@ -20,9 +20,7 @@ public class CloudinaryService {
         if (file == null || file.isEmpty()) {
             return null;
         }
-
         Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
-
         return uploadResult.get("secure_url").toString();
     }
 }

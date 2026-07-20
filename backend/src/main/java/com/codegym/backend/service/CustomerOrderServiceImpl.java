@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.codegym.backend.dto.TableOrderSummaryDTO;
 import com.codegym.backend.entity.Item;
 import com.codegym.backend.entity.OrderDetail;
 import com.codegym.backend.entity.TableOrder;
@@ -39,6 +40,7 @@ public class CustomerOrderServiceImpl implements CustomerOrderService {
 
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Món ăn không tồn tại!"));
+
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
                 .orElseGet(() -> {
                     table.setIsOccupied(true);
@@ -47,12 +49,13 @@ public class CustomerOrderServiceImpl implements CustomerOrderService {
                     TableOrder newOrder = TableOrder.builder()
                             .table(table)
                             .openAt(LocalDateTime.now())
-                            .closeAt(null) // Cho phép NULL dưới DB theo lệnh ALTER TABLE chúng ta vừa chạy
+                            .closeAt(null)
                             .totalAmount(BigDecimal.ZERO)
                             .status(StatusTableOrder.OPEN)
                             .build();
                     return tableOrderRepository.save(newOrder);
                 });
+
         List<OrderDetail> existingDetails = orderDetailRepository
                 .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
 
@@ -103,18 +106,16 @@ public class CustomerOrderServiceImpl implements CustomerOrderService {
                 itemRepository.save(item);
             }
             
-            // Tính tổng tiền chuẩn xác cho TOÀN BỘ các món đã được bếp xác nhận hoặc đã phục vụ tại bàn
+            // Tính tổng tiền cho các món đã được bếp xác nhận hoặc đã phục vụ
             if (detail.getStatus() == StatusOrderDetail.CONFIRMED || detail.getStatus() == StatusOrderDetail.SERVED) {
                 BigDecimal itemTotal = detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity()));
                 totalAmount = totalAmount.add(itemTotal);
             }
         }
 
-        // Cập nhật lại tổng tiền chính xác của hóa đơn
         order.setTotalAmount(totalAmount);
         tableOrderRepository.save(order);
 
-        // Chuyển trạng thái phục vụ của bàn sang "Đang chờ món"
         table.setServiceStatus(ServiceStatus.WAITING_FOOD);
         tablesRepository.save(table);
     }
@@ -137,54 +138,54 @@ public class CustomerOrderServiceImpl implements CustomerOrderService {
                 .orElseThrow(() -> new RuntimeException("Bàn này không tồn tại trong hệ thống!"));
     }
 
-   // 5. NGHIỆP VỤ: XEM TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM THEO DTO SẠCH
-   @Override
-   @Transactional(readOnly = true)
-   public List<com.codegym.backend.dto.CartItemResponse> getCartByStatus(String tableName, StatusOrderDetail status) {
-       Tables table = tablesRepository.findByTableName(tableName)
-               .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+    // 5. NGHIỆP VỤ: XEM TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM THEO DTO SẠCH
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.codegym.backend.dto.CartItemResponse> getCartByStatus(String tableName, StatusOrderDetail status) {
+        Tables table = tablesRepository.findByTableName(tableName)
+                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
 
-       TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-               .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào đang mở!"));
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+                .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào đang mở!"));
 
-       List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderIdAndStatus(order.getTableOrderId(), status);
+        List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderIdAndStatus(order.getTableOrderId(), status);
 
-       // Map sang DTO sạch sẽ vừa khai báo ở trên để bẻ gãy Hibernate Proxy lỗi
-       return details.stream().map(d -> com.codegym.backend.dto.CartItemResponse.builder()
-               .orderDetailId(d.getOrderDetailId())
-               .itemId(d.getItem() != null ? d.getItem().getItemId() : null)
-               .itemName(d.getItem() != null ? d.getItem().getItemName() : null)
-               .price(d.getUnitPrice())
-               .quantity(d.getQuantity())
-               .tableName(tableName)
-               .build()
-       ).collect(Collectors.toList());
-   }
+        return details.stream().map(d -> com.codegym.backend.dto.CartItemResponse.builder()
+                .orderDetailId(d.getOrderDetailId())
+                .itemId(d.getItem() != null ? d.getItem().getItemId() : null)
+                .itemName(d.getItem() != null ? d.getItem().getItemName() : null)
+                .price(d.getUnitPrice())
+                .quantity(d.getQuantity())
+                .tableName(tableName)
+                .build()
+        ).collect(Collectors.toList());
+    }
 
-   // 6. NGHIỆP VỤ: XEM TẤT CẢ CÁC MÓN ĐÃ GỌI XUỐNG BẾP THEO DTO SẠCH
-   @Override
-   @Transactional(readOnly = true)
-   public List<com.codegym.backend.dto.CartItemResponse> getOrderedItems(String tableName) {
-       Tables table = tablesRepository.findByTableName(tableName)
-               .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+    // 6. NGHIỆP VỤ: XEM TẤT CẢ CÁC MÓN ĐÃ GỌI XUỐNG BẾP THEO DTO SẠCH
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.codegym.backend.dto.CartItemResponse> getOrderedItems(String tableName) {
+        Tables table = tablesRepository.findByTableName(tableName)
+                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
 
-       TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-               .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào đang mở!"));
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+                .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào đang mở!"));
 
-       List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderIdAndStatusNot(order.getTableOrderId(), StatusOrderDetail.PENDING);
+        List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderIdAndStatusNot(order.getTableOrderId(), StatusOrderDetail.PENDING);
 
-       return details.stream().map(d -> com.codegym.backend.dto.CartItemResponse.builder()
-               .orderDetailId(d.getOrderDetailId())
-               .itemId(d.getItem() != null ? d.getItem().getItemId() : null)
-               .itemName(d.getItem() != null ? d.getItem().getItemName() : null)
-               .price(d.getUnitPrice())
-               .quantity(d.getQuantity())
-               .tableName(tableName)
-               .build()
-       ).collect(Collectors.toList());
-   }
-    // 7. NGHIỆP VỤ: XEM CHI TIẾT HÓA ĐƠN LỚN (Để lấy tổng tiền cho khách xem trước khi thanh toán)
-    //@Override
+        return details.stream().map(d -> com.codegym.backend.dto.CartItemResponse.builder()
+                .orderDetailId(d.getOrderDetailId())
+                .itemId(d.getItem() != null ? d.getItem().getItemId() : null)
+                .itemName(d.getItem() != null ? d.getItem().getItemName() : null)
+                .price(d.getUnitPrice())
+                .quantity(d.getQuantity())
+                .tableName(tableName)
+                .build()
+        ).collect(Collectors.toList());
+    }
+
+    // 7. NGHIỆP VỤ: XEM CHI TIẾT HÓA ĐƠN LỚN
+    @Override
     @Transactional(readOnly = true)
     public TableOrder getCurrentInvoice(String tableName) {
         Tables table = tablesRepository.findByTableName(tableName)
@@ -194,7 +195,7 @@ public class CustomerOrderServiceImpl implements CustomerOrderService {
                 .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào chưa thanh toán!"));
     }
 
-    // 8. NGHIỆP VỤ: KHÁCH ẤN NÚT YÊU CẦU THANH TOÁN (Chọn hình thức CASH, BANK_TRANSFER,...)
+    // 8. NGHIỆP VỤ: KHÁCH ẤN NÚT YÊU CẦU THANH TOÁN
     @Override
     @Transactional
     public void requestCheckout(String tableName, PaymentMethod paymentMethod) {
@@ -204,114 +205,146 @@ public class CustomerOrderServiceImpl implements CustomerOrderService {
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn cần thanh toán!"));
 
-        // Thiết lập phương thức thanh toán khách chọn
         order.setPaymentMethod(paymentMethod);
         tableOrderRepository.save(order);
 
-        // Chuyển trạng thái bàn sang "Yêu cầu tính tiền" khớp 100% với Enum ServiceStatus của bạn
         table.setServiceStatus(ServiceStatus.REQUESTING_BILL);
         tablesRepository.save(table);
     }
-    // 9. NGHIỆP VỤ MỚI: LẤY TỔNG QUAN HÓA ĐƠN ĐÃ ĐƯỢC CHUYỂN ĐỔI SANG DTO SẠCH SẼ
-// 9. NGHIỆP VỤ MỚI: LẤY TỔNG QUAN HÓA ĐƠN ĐÃ ĐƯỢC CHUYỂN ĐỔI SANG DTO SẠCH SẼ
-@Override
-@Transactional(readOnly = true)
-public com.codegym.backend.dto.TableOrderSummaryDTO getInvoiceSummaryDTO(String tableName) {
-    // BƯỚC 1: Tìm kiếm thông tin bàn
-    Tables table = tablesRepository.findByTableName(tableName)
-            .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
 
-    // BƯỚC 2: Tìm kiếm hóa đơn đang OPEN của bàn đó
-    TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-            .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào chưa thanh toán!"));
+    // 9. NGHIỆP VỤ: XEM CHI TIẾT HÓA ĐƠN TẠM TÍNH (ĐÃ DÙNG REPOSITORY TRUY VẤN - FIX TRIỆT ĐỂ LỖI GETTER)
+    @Override
+    @Transactional(readOnly = true)
+    public TableOrderSummaryDTO getInvoiceSummaryDTO(String tableName) {
+        Tables table = tablesRepository.findByTableName(tableName)
+                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
 
-    // BƯỚC 3: Lấy toàn bộ danh sách món ăn thuộc hóa đơn này
-    List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+                .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có hóa đơn nào đang mở!"));
 
-    // BƯỚC 4: Tự động tính toán tổng tiền thực tế thời gian thực (Bao gồm cả PENDING, CONFIRMED, SERVED)
-    BigDecimal calculatedTotal = details.stream()
-            .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 🔥 FIX TẠI ĐÂY: Dùng orderDetailRepository lấy danh sách trực tiếp
+        List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
 
-    // BƯỚC 5: Đưa vào Builder của TableOrderSummaryDTO và map sang list con phẳng
-    return com.codegym.backend.dto.TableOrderSummaryDTO.builder()
-            .tableOrderId(order.getTableOrderId())
-            .tableName(table.getTableName())
-            .totalAmount(calculatedTotal)
-            .orderStatus(order.getStatus())
-            .serviceStatus(table.getServiceStatus())
-            .openAt(order.getOpenAt())
-            .orderDetails(details.stream().map(d -> {
-                return com.codegym.backend.dto.OrderDetailMinDTO.builder()
-                        .orderDetailId(d.getOrderDetailId())
-                        .quantity(d.getQuantity())
-                        .unitPrice(d.getUnitPrice())
-                        .note(d.getNote())
-                        .status(d.getStatus().toString())
-                        .itemId(d.getItem() != null ? d.getItem().getItemId() : null)
-                        .itemName(d.getItem() != null ? d.getItem().getItemName() : null)
-                        .imageUrl(d.getItem() != null ? d.getItem().getImageUrl() : null)
-                        .build();
-            }).collect(java.util.stream.Collectors.toList()))
-            .build();
-}
-// 10. NGHIỆP VỤ MỚI: CẬP NHẬT SỐ LƯỢNG MÓN ĂN TRONG GIỎ HÀNG TẠM (PENDING)
-@Override
-@Transactional
-public void updateItemQuantityInCart(String tableName, Long itemId, Integer newQuantity) {
-    Tables table = tablesRepository.findByTableName(tableName)
-            .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+        BigDecimal calculatedTotal = details.stream()
+                .filter(d -> d.getStatus() != StatusOrderDetail.CANCELLED)
+                .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-    TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở cho bàn này!"));
+        List<TableOrderSummaryDTO.OrderDetailDTO> detailDTOs = details.stream().map(d -> {
+            TableOrderSummaryDTO.OrderDetailDTO dto = new TableOrderSummaryDTO.OrderDetailDTO();
+            dto.setOrderDetailId(d.getOrderDetailId());
+            dto.setQuantity(d.getQuantity());
+            dto.setUnitPrice(d.getUnitPrice().longValue());
+            dto.setNote(d.getNote());
+            dto.setStatus(d.getStatus().name());
+            dto.setItemId(d.getItem() != null ? d.getItem().getItemId() : null);
+            dto.setItemName(d.getItem() != null ? d.getItem().getItemName() : null);
+            dto.setImageUrl(d.getItem() != null ? d.getItem().getImageUrl() : null);
+            return dto;
+        }).collect(Collectors.toList());
 
-    List<OrderDetail> existingDetails = orderDetailRepository
-            .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
+        TableOrderSummaryDTO summary = new TableOrderSummaryDTO();
+        summary.setTableOrderId(order.getTableOrderId());
+        summary.setTableName(tableName);
+        summary.setTotalAmount(calculatedTotal);
+        summary.setOrderStatus(order.getStatus().name());
+        summary.setServiceStatus(table.getServiceStatus().name());
+        summary.setOpenAt(order.getOpenAt());
+        summary.setOrderDetails(detailDTOs);
 
-    if (existingDetails.isEmpty()) {
-        throw new RuntimeException("Món ăn không tồn tại trong giỏ hàng tạm thời!");
+        return summary;
     }
 
-    // Cập nhật số lượng mới cứng do Front-end truyền xuống
-    OrderDetail detail = existingDetails.get(0);
-    detail.setQuantity(newQuantity);
-    orderDetailRepository.save(detail);
-}
+    // 10. NGHIỆP VỤ: CẬP NHẬT SỐ LƯỢNG MÓN ĂN TRONG GIỎ HÀNG TẠM (PENDING)
+    @Override
+    @Transactional
+    public void updateItemQuantityInCart(String tableName, Long itemId, Integer newQuantity) {
+        Tables table = tablesRepository.findByTableName(tableName)
+                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
 
-// 11. NGHIỆP VỤ MỚI: XÓA MỘT MÓN CỤ THỂ KHỎI GIỎ HÀNG TẠM (PENDING)
-@Override
-@Transactional
-public void removeItemFromCart(String tableName, Long itemId) {
-    Tables table = tablesRepository.findByTableName(tableName)
-            .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở cho bàn này!"));
 
-    TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở cho bàn này!"));
+        List<OrderDetail> existingDetails = orderDetailRepository
+                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
 
-    List<OrderDetail> existingDetails = orderDetailRepository
-            .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
+        if (existingDetails.isEmpty()) {
+            throw new RuntimeException("Món ăn không tồn tại trong giỏ hàng tạm thời!");
+        }
 
-    if (!existingDetails.isEmpty()) {
-        orderDetailRepository.delete(existingDetails.get(0));
+        OrderDetail detail = existingDetails.get(0);
+        detail.setQuantity(newQuantity);
+        orderDetailRepository.save(detail);
     }
-}
 
-// 12. NGHIỆP VỤ MỚI: XÓA SẠCH TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM (PENDING)
-@Override
-@Transactional
-public void clearTemporaryCart(String tableName) {
-    Tables table = tablesRepository.findByTableName(tableName)
-            .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+    // 11. NGHIỆP VỤ: XÓA MỘT MÓN CỤ THỂ KHỎI GIỎ HÀNG TẠM (PENDING)
+    @Override
+    @Transactional
+    public void removeItemFromCart(String tableName, Long itemId) {
+        Tables table = tablesRepository.findByTableName(tableName)
+                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
 
-    TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở cho bàn này!"));
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở cho bàn này!"));
 
-    // Tìm tất cả các món đang PENDING của bàn này
-    List<OrderDetail> pendingDetails = orderDetailRepository
-            .findByOrderTableOrderIdAndStatus(order.getTableOrderId(), StatusOrderDetail.PENDING);
+        List<OrderDetail> existingDetails = orderDetailRepository
+                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
 
-    if (!pendingDetails.isEmpty()) {
-        orderDetailRepository.deleteAll(pendingDetails);
+        if (!existingDetails.isEmpty()) {
+            orderDetailRepository.delete(existingDetails.get(0));
+        }
     }
-}
+
+    // 12. NGHIỆP VỤ: XÓA SẠCH TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM (PENDING)
+    @Override
+    @Transactional
+    public void clearTemporaryCart(String tableName) {
+        Tables table = tablesRepository.findByTableName(tableName)
+                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở cho bàn này!"));
+
+        List<OrderDetail> pendingDetails = orderDetailRepository
+                .findByOrderTableOrderIdAndStatus(order.getTableOrderId(), StatusOrderDetail.PENDING);
+
+        if (!pendingDetails.isEmpty()) {
+            orderDetailRepository.deleteAll(pendingDetails);
+        }
+    }
+
+    // 13. NGHIỆP VỤ MỚI: BẾP CHẾ BIẾN XONG -> CHUYỂN TRẠNG THÁI SANG SERVED
+    @Override
+    @Transactional
+    public void markItemAsServed(Long orderDetailId) {
+        OrderDetail detail = orderDetailRepository.findById(orderDetailId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng với ID: " + orderDetailId));
+
+        detail.setStatus(StatusOrderDetail.SERVED);
+        orderDetailRepository.save(detail);
+    }
+
+    // 14. NGHIỆP VỤ MỚI: BẾP HẾT MÓN -> CHUYỂN TRẠNG THÁI SANG CANCELLED (TỰ ĐỘNG CẬP NHẬT TỔNG TIỀN)
+    @Override
+    @Transactional
+    public void cancelOrderItem(Long orderDetailId, String reason) {
+        OrderDetail detail = orderDetailRepository.findById(orderDetailId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng với ID: " + orderDetailId));
+
+        detail.setStatus(StatusOrderDetail.CANCELLED);
+        detail.setNote("Bếp hủy: " + (reason != null && !reason.trim().isEmpty() ? reason : "Hết món"));
+        orderDetailRepository.save(detail);
+
+        // Cập nhật lại tổng tiền Hóa đơn sau khi bếp hủy món
+        TableOrder order = detail.getOrder();
+        List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
+
+        BigDecimal newTotal = details.stream()
+                .filter(d -> d.getStatus() == StatusOrderDetail.CONFIRMED || d.getStatus() == StatusOrderDetail.SERVED)
+                .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        order.setTotalAmount(newTotal);
+        tableOrderRepository.save(order);
+    }
 }
