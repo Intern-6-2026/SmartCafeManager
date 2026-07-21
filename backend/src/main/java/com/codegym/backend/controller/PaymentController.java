@@ -20,14 +20,14 @@ public class PaymentController {
     private final CustomerOrderService customerOrderService;
     private final PayPalService payPalService;
 
-    // 1. API tạo thanh toán PayPal
+    // 1. API tạo thanh toán PayPal (Sửa String tableName -> Long tableId)
     @PostMapping("/paypal")
-    public ResponseEntity<?> createPayPalPayment(@RequestParam String tableName) {
+    public ResponseEntity<?> createPayPalPayment(@RequestParam Long tableId) {
         try {
-            TableOrderSummaryDTO invoice = customerOrderService.getInvoiceSummaryDTO(tableName);
+            TableOrderSummaryDTO invoice = customerOrderService.getInvoiceSummaryDTO(tableId);
 
-            String returnUrl = "http://localhost:3000/payment-success?tableName=" + tableName;
-            String cancelUrl = "http://localhost:3000/payment-cancel?tableName=" + tableName;
+            String returnUrl = "http://localhost:3000/payment-success?tableId=" + tableId;
+            String cancelUrl = "http://localhost:3000/payment-cancel?tableId=" + tableId;
 
             String approvalUrl = payPalService.createPayPalOrder(invoice.getTotalAmount(), returnUrl, cancelUrl);
             String qrCodeImageUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + approvalUrl;
@@ -43,17 +43,17 @@ public class PaymentController {
         }
     }
 
-    // 2. API Callback sau khi khách bấm thanh toán xong ở PayPal
+    // 2. API Callback sau khi khách bấm thanh toán xong ở PayPal (Sửa String tableName -> Long tableId)
     @GetMapping("/paypal/success")
     public ResponseEntity<?> paymentSuccess(
             @RequestParam("paymentId") String paymentId,
             @RequestParam("PayerID") String payerId,
-            @RequestParam("tableName") String tableName) {
+            @RequestParam("tableId") Long tableId) {
         try {
             boolean isExecuted = payPalService.executePayment(paymentId, payerId);
             if (isExecuted) {
                 // TỰ ĐỘNG ĐÓNG HÓA ĐƠN & RESET BÀN VỀ TRỐNG
-                customerOrderService.completeCheckout(tableName, PaymentMethod.E_WALLET);
+                customerOrderService.completeCheckout(tableId, PaymentMethod.E_WALLET);
                 return ResponseEntity.ok("Thanh toán thành công! Bàn đã được dọn sạch.");
             }
             return ResponseEntity.badRequest().body("Thanh toán thất bại!");

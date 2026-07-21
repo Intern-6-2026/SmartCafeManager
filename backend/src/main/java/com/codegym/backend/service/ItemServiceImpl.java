@@ -1,6 +1,6 @@
 package com.codegym.backend.service;
 
-import java.io.IOException; // Xử lý lỗi upload file
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -25,10 +25,7 @@ public class ItemServiceImpl implements ItemService {
     private final MenuCategoryRepository menuCategoryRepository;
     private final CloudinaryService cloudinaryService; // Inject CloudinaryService thật
 
-    // ==========================================
     // --- 1. LẤY DANH SÁCH MÓN ĂN ---
-    // ==========================================
-
     @Override
     @Transactional(readOnly = true)
     public List<ItemResponse> getAllItems() {
@@ -57,9 +54,7 @@ public class ItemServiceImpl implements ItemService {
         return mapToItemResponse(item);
     }
 
-    // ==========================================
     // --- 2. THÊM MỚI MÓN ĂN ---
-    // ==========================================
     @Override
     @Transactional
     public ItemResponse createItem(String itemCode, String itemName, BigDecimal price, String description, Long menuCategoryId, String newMenuCategoryName, MultipartFile image) {
@@ -103,9 +98,7 @@ public class ItemServiceImpl implements ItemService {
         return mapToItemResponse(savedItem);
     }
 
-    // ==========================================
     // --- 3. CẬP NHẬT MÓN ĂN ---
-    // ==========================================
     @Override
     @Transactional
     public ItemResponse updateItem(Long itemId, String itemCode, String itemName, BigDecimal price, String description, Long menuCategoryId, String newMenuCategoryName, Boolean isAvailable, MultipartFile image) {
