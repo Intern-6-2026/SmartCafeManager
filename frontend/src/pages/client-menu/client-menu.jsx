@@ -12,6 +12,7 @@ import {
   confirmOrder,
   requestCheckout,
   getInvoice,
+  getOrderHistory,
   callService,
   getApiErrorMessage,
   updateItemQuantity,
@@ -45,9 +46,11 @@ const normalizeItem = (it) => ({
 function ClientMenu() {
   /* Route: /menu/table/:tableName — tableName chính là tên bàn gửi lên API (vd: ban01) */
   const { tableName } = useParams();
+  const displayTableName = tableName.replace(/^ban(\d+)$/i, "Bàn $1");; // hiển thị cho khách, không dùng để gửi API
   const [menuItems, setMenuItems] = useState([]); // menu lấy từ server
   const [category, setCategory] = useState("");
   const [cart, setCart] = useState([]); // giỏ tạm PENDING lấy từ server
+  const [history, setHistory] = useState([]); // món đã gọi (CONFIRMED/SERVED) — chỉ xem
   const [selectedItem, setSelectedItem] = useState(null); // món đang mở modal Thêm món
   const [feedbackOpen, setFeedbackOpen] = useState(false); // modal Phản hồi
   const [checkoutOpen, setCheckoutOpen] = useState(false); // modal Thanh toán
@@ -106,9 +109,21 @@ function ClientMenu() {
     }
   }, [tableName]);
 
+  /* ===== API 7: Lịch sử món đã gọi xuống bếp (CONFIRMED / SERVED) ===== */
+  const loadHistory = useCallback(async () => {
+    try {
+      const res = await getOrderHistory(tableName);
+      setHistory(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      // Bàn chưa có hóa đơn mở => chưa gọi món nào, không phải lỗi thật
+      setHistory([]);
+    }
+  }, [tableName]);
+
   useEffect(() => {
     loadCart();
-  }, [loadCart]);
+    loadHistory();
+  }, [loadCart, loadHistory]);
 
   /* Giỏ hàng: response phẳng { orderDetailId, itemName, quantity, price, status } */
   const cartRows = cart.map((c) => ({
@@ -121,6 +136,20 @@ function ClientMenu() {
     status: c.status,
   }));
   const total = cartRows.reduce((s, r) => s + r.price * r.qty, 0);
+
+  /* Món đã gọi — chỉ hiển thị, không cho sửa/xoá */
+  const historyRows = history.map((h) => ({
+    orderDetailId: h.orderDetailId,
+    name: h.item?.itemName ?? h.itemName ?? "—",
+    price: h.price ?? h.unitPrice ?? 0,
+    qty: h.quantity,
+  }));
+
+  const STATUS_LABEL = {
+    CONFIRMED: "Đang pha chế",
+    SERVED: "Đã phục vụ",
+    CANCELLED: "Đã huỷ",
+  };
 
   /* ===== API 4: Thêm món vào giỏ — bấm "Thêm" trong modal ===== */
   const confirmAddItem = async (item, qty, note) => {
@@ -144,6 +173,7 @@ function ClientMenu() {
       const res = await confirmOrder(tableName);
       notify(res.data);
       await loadCart(); // giỏ tạm sẽ trống sau khi chốt
+      await loadHistory(); // món vừa chốt chuyển sang danh sách đã gọi
     } catch (err) {
       notify(getApiErrorMessage(err, "Gọi món thất bại."));
     } finally {
@@ -297,11 +327,33 @@ function ClientMenu() {
 
           {/* Chi tiết đơn hàng (giỏ tạm PENDING từ server) */}
           <section className="order-detail">
-            <h3>{tableName}</h3>
+            <h3>{displayTableName}</h3>
             <div className="order-header">
               <span className="order-header-title">Tên món</span>
               <span className="order-header-title">Giá</span>
             </div>
+
+            {/* Một khung cuộn chung: món đã gọi ở trên, giỏ hàng ở dưới */}
+            <div className="order-scroll">
+              {/* Món đã gọi xuống bếp — chỉ xem, không sửa/xoá được */}
+              {historyRows.length > 0 && (
+              <div className="ordered-list" aria-label="Món đã gọi">
+                <div className="ordered-label">Món đã gọi</div>
+                {historyRows.map((r) => (
+                  <div className="ordered-row" key={r.orderDetailId}>
+                    <div className="ordered-info">
+                      <div className="ordered-top">
+                        <span className="ordered-name">{r.name}</span>
+                        <span className="ordered-price">{fmt(r.price)}</span>
+                      </div>
+                      <div className="ordered-bottom">
+                        <span className="ordered-qty">x {r.qty}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="order-list">
               {cartRows.length === 0 && (
@@ -346,6 +398,7 @@ function ClientMenu() {
                   </div>
                 </div>
               ))}
+            </div>
             </div>
 
             <div className="order-total">
