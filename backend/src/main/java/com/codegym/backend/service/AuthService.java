@@ -41,10 +41,6 @@ public class AuthService {
             throw new RuntimeException("Tài khoản của bạn chưa được kích hoạt hoặc đang bị khóa!");
         }
 
-        if (!passwordEncoder.matches(request.getPassword(), account.getPassword())) {
-            throw new RuntimeException("Mật khẩu không chính xác!");
-        }
-
         if (account.getRole() == null || account.getRole().getRoleName() == null) {
             throw new RuntimeException("Tài khoản chưa được phân quyền trên hệ thống");
         }
@@ -72,11 +68,11 @@ public class AuthService {
 
     @Transactional
     public String processForgotPassword(ForgotPasswordRequest request) {
-        Account account = accountRepository.findByEmailAndDeletedAtIsNull(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản hợp lệ với email này!"));
+        String neutralMessage = "Nếu email hợp lệ, hệ thống sẽ gửi mã OTP khôi phục mật khẩu đến email của bạn.";
 
-        if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new RuntimeException("Tài khoản đang bị khóa hoặc không hoạt động, không thể khôi phục mật khẩu!");
+        Account account = accountRepository.findByEmailAndDeletedAtIsNull(request.getEmail()).orElse(null);
+        if (account == null || account.getStatus() != AccountStatus.ACTIVE) {
+            return neutralMessage;
         }
 
         SecureRandom random = new SecureRandom();
@@ -90,7 +86,7 @@ public class AuthService {
 
         emailService.sendPasswordResetMail(account.getEmail(), otp);
 
-        return "Mã OTP khôi phục mật khẩu đã được gửi đến email của bạn.";
+        return neutralMessage;
     }
 
     @Transactional
@@ -114,6 +110,10 @@ public class AuthService {
     public String processResetPassword(ResetPasswordRequest request) {
         Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
                 .orElseThrow(() -> new RuntimeException("Phiên đổi mật khẩu không hợp lệ hoặc đã bị hủy."));
+
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new RuntimeException("Tài khoản đang bị khóa hoặc không hoạt động, không thể đổi mật khẩu!");
+        }
 
         if (account.getResetTokenExpiry().before(new Date())) {
             account.setResetToken(null);
