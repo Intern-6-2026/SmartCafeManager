@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaUser, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { loginApi, getApiErrorMessage } from "../../services/apiService";
+import AuthCard from "../../components/AuthCard";
 
+/** Trang đăng nhập Smart Cafe */
 export default function Login() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -38,40 +40,14 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#F8F4EF] to-[#EFE2D3] flex items-center justify-center p-6">
-            <div className="w-full max-w-6xl bg-white rounded-[36px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] overflow-hidden">
-                {/* Logo */}
-                <div className="flex justify-center pt-8">
-                    <img src="/images/logo.jpg" alt="Logo" className="w-20 h-20 object-contain" />
+        <AuthCard title="Đăng nhập" subtitle="Chào mừng bạn quay trở lại SmartCafe">
+            {errorMsg && (
+                <div className="mb-4 p-3 bg-red-100 text-red-600 rounded-xl text-sm">
+                    {errorMsg}
                 </div>
+            )}
 
-                {/* Content */}
-                <div className="grid lg:grid-cols-[55%_45%]">
-                    {/* Left */}
-                    <div className="flex items-center justify-center px-10 pb-10">
-                        <img
-                            src="/images/login-illustration.png"
-                            alt="Login"
-                            className="w-full max-w-[430px] object-contain transition duration-500 hover:scale-105"
-                        />
-                    </div>
-
-                    {/* Right */}
-                    <div className="flex items-center justify-center px-12 pb-12">
-                        <div className="w-full max-w-md">
-                            <h1 className="text-4xl font-bold text-[#5A3726]">Đăng nhập</h1>
-                            <p className="text-gray-400 mt-2 mb-6">
-                                Chào mừng bạn quay trở lại SmartCafe
-                            </p>
-
-                            {/* Hiển thị lỗi nếu có */}
-                            {errorMsg && (
-                                <div className="mb-4 p-3 bg-red-100 text-red-600 rounded-xl text-sm">
-                                    {errorMsg}
-                                </div>
-                            )}
-
-                            <form onSubmit={handleLogin}>
+            <form onSubmit={handleLogin}>
                                 {/* Username */}
                                 <div className="mb-6">
                                     <label className="block mb-2 font-semibold text-[#5A3726]">
@@ -132,10 +108,6 @@ export default function Login() {
                                     {loading ? "Đang xử lý..." : "Đăng nhập"}
                                 </button>
                             </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </AuthCard>
     );
 }

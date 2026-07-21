@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
     FaEnvelope,
     FaPhone,
@@ -11,12 +11,28 @@ import {
     FaSignOutAlt
 } from "react-icons/fa";
 import { getCurrentUserProfile, getApiErrorMessage } from "../../services/apiService";
+import Logo from "../../components/Logo";
+import AvatarImage from "../../components/AvatarImage";
+import Popup from "../../components/Popup";
 
 export default function Profile() {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [errorMsg, setErrorMsg] = useState("");
+    const [popup, setPopup] = useState({ open: false, type: "info", title: "", message: "" });
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        if (location.state?.successMsg) {
+            setPopup({
+                open: true,
+                type: "success",
+                title: "Thành công",
+                message: location.state.successMsg,
+            });
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, location.pathname, navigate]);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -24,7 +40,12 @@ export default function Profile() {
                 const res = await getCurrentUserProfile();
                 setProfile(res.data);
             } catch (err) {
-                setErrorMsg(getApiErrorMessage(err, "Không tải được thông tin tài khoản."));
+                setPopup({
+                    open: true,
+                    type: "error",
+                    title: "Lỗi",
+                    message: getApiErrorMessage(err, "Không tải được thông tin tài khoản."),
+                });
                 if (err?.response?.status === 401 || err?.response?.status === 403) {
                     localStorage.clear();
                     navigate("/");
@@ -51,28 +72,34 @@ export default function Profile() {
         return <div className="min-h-screen flex items-center justify-center">Đang tải thông tin...</div>;
     }
 
-    if (errorMsg && !profile) {
+    if (!profile && popup.type === "error") {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center">
-                <p className="text-red-500 mb-4">{errorMsg}</p>
-                <Link to="/" className="text-[#C89A63] underline">Quay lại đăng nhập</Link>
-            </div>
+            <>
+                <div className="min-h-screen flex flex-col items-center justify-center">
+                    <Link to="/" className="text-[#C89A63] underline">Quay lại đăng nhập</Link>
+                </div>
+                <Popup
+                    open={popup.open}
+                    type={popup.type}
+                    title={popup.title}
+                    message={popup.message}
+                    onClose={() => setPopup((prev) => ({ ...prev, open: false }))}
+                />
+            </>
         );
     }
 
-    const defaultAvatar = "/images/avatar.png";
-
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#F8F4EF] to-[#EFE2D3]">
-            {/* Header */}
             <header className="bg-white shadow-sm">
                 <div className="max-w-7xl mx-auto h-20 flex items-center justify-between px-8">
-                    <img src="/images/logo.jpg" alt="Logo" className="w-14" />
+                    <Logo className="h-14 w-14" />
                     <div className="flex items-center gap-4">
-                        <img
-                            src={profile?.imageUrl || defaultAvatar}
+                        <AvatarImage
+                            src={profile?.imageUrl}
                             alt="Avatar"
                             className="w-12 h-12 rounded-full object-cover border-2 border-[#C89A63]"
+                            size="sm"
                         />
                         <div>
                             <h3 className="font-semibold text-[#5A3726]">
@@ -89,15 +116,14 @@ export default function Profile() {
                 </div>
             </header>
 
-            {/* Body */}
             <div className="max-w-5xl mx-auto py-12 px-6">
                 <div className="bg-white rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-10">
-                    {/* Avatar */}
                     <div className="flex flex-col items-center">
-                        <img
-                            src={profile?.imageUrl || defaultAvatar}
-                            alt="Avatar Big"
+                        <AvatarImage
+                            src={profile?.imageUrl}
+                            alt="Avatar"
                             className="w-40 h-40 rounded-full border-4 border-[#C89A63] object-cover"
+                            size="lg"
                         />
                         <h2 className="text-3xl font-bold text-[#5A3726] mt-5">
                             {profile?.fullName || profile?.username}
@@ -107,7 +133,6 @@ export default function Profile() {
                         </p>
                     </div>
 
-                    {/* Info */}
                     <div className="grid md:grid-cols-2 gap-6 mt-12">
                         <div className="flex items-center gap-4 bg-[#FAFAFA] rounded-2xl p-5">
                             <FaEnvelope className="text-[#C89A63] text-xl" />
@@ -143,7 +168,6 @@ export default function Profile() {
                             </div>
                         </div>
 
-                        {/* Tuỳ chọn hiển thị theo ROLE */}
                         {profile?.roleName === "CUSTOMER" && (
                             <div className="flex items-center gap-4 bg-[#FAFAFA] rounded-2xl p-5 md:col-span-2">
                                 <FaUser className="text-[#C89A63] text-xl" />
@@ -155,7 +179,6 @@ export default function Profile() {
                         )}
                     </div>
 
-                    {/* Button */}
                     <div className="grid md:grid-cols-2 gap-5 mt-12">
                         <Link
                             to="/edit-profile"
@@ -175,6 +198,14 @@ export default function Profile() {
                     </div>
                 </div>
             </div>
+
+            <Popup
+                open={popup.open}
+                type={popup.type}
+                title={popup.title}
+                message={popup.message}
+                onClose={() => setPopup((prev) => ({ ...prev, open: false }))}
+            />
         </div>
     );
 }

@@ -1,15 +1,11 @@
 import React from "react";
-import logo from "../assets/logo.svg";
+import Logo from "./Logo";
 
 const Footer = () => {
   return (
     <footer className="bg-[#333333] text-gray-300 py-10">
       <div className="container mx-auto px-6">
-        <img
-          src={logo}
-          alt="Logo"
-          className="w-16 h-16 mb-6 rounded-full object-cover"
-        />
+        <Logo className="h-16 w-16" />
 
         <div className="space-y-3">
           <p>Chấp nhận : Visa, MasterCard, Vouchers</p>
