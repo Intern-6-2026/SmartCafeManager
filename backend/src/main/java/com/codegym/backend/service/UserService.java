@@ -130,16 +130,16 @@ public class UserService {
             if (request.getDateOfBirth() != null)
                 cus.setDateOfBirth(request.getDateOfBirth());
             if (request.getGender() != null)
-                if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
-                    String newPhone = request.getPhoneNumber().trim();
+                cus.setGender(request.getGender());
+            if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+                String newPhone = request.getPhoneNumber().trim();
 
-                    if (employeeRepository.existsByPhoneNumberAndAccountNot(newPhone, account)) {
-                        throw new RuntimeException("Số điện thoại đã tồn tại");
-                    }
-
-                    cus.setPhoneNumber(newPhone);
+                if (customerRepository.existsByPhoneNumberAndAccountNot(newPhone, account)) {
+                    throw new RuntimeException("Số điện thoại đã tồn tại");
                 }
-            cus.setPhoneNumber(request.getPhoneNumber());
+
+                cus.setPhoneNumber(newPhone);
+            }
             if (request.getAddress() != null)
                 cus.setAddress(request.getAddress());
             if (request.getImageUrl() != null)
