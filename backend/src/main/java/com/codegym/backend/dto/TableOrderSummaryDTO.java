@@ -1,4 +1,4 @@
-package com.codegym.backend.dto; // Đổi lại package cho đúng với project của anh
+package com.codegym.backend.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -35,7 +35,7 @@ public class TableOrderSummaryDTO {
     public List<OrderDetailDTO> getOrderDetails() { return orderDetails; }
     public void setOrderDetails(List<OrderDetailDTO> orderDetails) { this.orderDetails = orderDetails; }
 
-
+        
     // QUAN TRỌNG: Phải có chữ "static" ở đây để Java hiểu và map mượt mà!
     public static class OrderDetailDTO {
         private Long orderDetailId;
@@ -73,4 +73,5 @@ public class TableOrderSummaryDTO {
         public String getImageUrl() { return imageUrl; }
         public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
     }
+    
 }

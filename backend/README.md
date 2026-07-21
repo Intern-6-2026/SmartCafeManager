@@ -1,908 +1,749 @@
-# 📢 Update - Liquibase Integration & API Update
+# 🍽️ Smart Cafe Manager - Customer & Payment API
 
-> **Update by:** Lê Tấn Thống
->
-> Từ phiên bản này dự án đã tích hợp **Liquibase** để quản lý Database Migration.
->
-> **Lưu ý:** Tất cả thành viên trong nhóm vui lòng đọc kỹ hướng dẫn bên dưới trước khi chạy project.
+> Tài liệu tích hợp API dành cho Frontend (React / Vue / Angular)
 
 ---
 
-# 1. Liquibase là gì?
+# 1. Tổng quan
 
-Liquibase là công cụ giúp quản lý lịch sử thay đổi của Database.
+## Base URL
 
-Thay vì mỗi người tự sửa Database bằng MySQL Workbench rồi gửi file `.sql` cho nhau, từ bây giờ mọi thay đổi Database sẽ được quản lý bằng Migration.
-
-Ưu điểm:
-
-- Đồng bộ Database cho tất cả thành viên.
-- Không cần gửi file SQL qua Zalo.
-- Không bị thiếu bảng.
-- Không bị khác cấu trúc Database.
-- Theo dõi được lịch sử thay đổi.
-
----
-
-# 2. Cài đặt
-
-Trong `pom.xml` đã được thêm
-
-```xml
-<dependency>
-    <groupId>org.liquibase</groupId>
-    <artifactId>liquibase-core</artifactId>
-</dependency>
+```text
+http://localhost:8080
 ```
 
-Không cần cài thêm gì.
-
-Chỉ cần Maven tải dependency.
+> Thay đổi theo từng môi trường (Development / Staging / Production).
 
 ---
 
-# 3. Cấu trúc thư mục
+## Content Type
 
-Sau khi pull code sẽ có
+```http
+Content-Type: application/json
+```
+
+---
+
+## CORS
+
+Backend đã cấu hình:
+
+```java
+@CrossOrigin("*")
+```
+
+Frontend có thể gọi trực tiếp từ bất kỳ domain nào.
+
+---
+
+## Định danh bàn
+
+Toàn bộ API sử dụng
+
+```text
+tableId (Long)
+```
+
+để xác định bàn.
+
+Ví dụ:
+
+```text
+tableId = 1
+```
+
+Không truyền tên bàn như:
+
+```text
+Ban01
+```
+
+---
+
+# 2. Axios Setup
+
+Tạo một file:
+
+```
+src/services/api.js
+```
+
+```javascript
+import axios from "axios";
+
+const api = axios.create({
+    baseURL: "http://localhost:8080",
+    headers: {
+        "Content-Type": "application/json",
+    },
+});
+
+export default api;
+```
+
+Sau đó chỉ cần
+
+```javascript
+import api from "../services/api";
+```
+
+---
+
+# 3. API Danh Sách
+
+---
+
+# 3.1 Quản lý bàn
+
+Base Path
+
+```
+/api/v1/customer
+```
+
+---
+
+## 1. Lấy thông tin bàn
+
+### Endpoint
+
+```http
+GET /api/v1/customer/table-info
+```
+
+### Query Params
+
+|Tên|Kiểu|Bắt buộc|
+|----|--------|------|
+|tableId|Long|✅|
+
+### Axios
+
+```javascript
+api.get("/api/v1/customer/table-info", {
+    params: {
+        tableId: 1,
+    },
+});
+```
+
+---
+
+## 2. Gọi phục vụ
+
+### Endpoint
+
+```http
+POST /api/v1/customer/call-service
+```
+
+### Query Params
+
+|Tên|Kiểu|
+|------|------|
+|tableId|Long|
+|status|ServiceStatus|
+
+### Enum
+
+```
+CALL_STAFF
+REQUEST_PAYMENT
+NEED_WATER
+```
+
+### Axios
+
+```javascript
+api.post("/api/v1/customer/call-service", null, {
+    params: {
+        tableId: 1,
+        status: "CALL_STAFF",
+    },
+});
+```
+
+---
+
+# 3.2 Giỏ hàng (PENDING)
+
+---
+
+## 3. Xem giỏ hàng
+
+### Endpoint
+
+```http
+GET /api/v1/customer/cart/{tableId}
+```
+
+### Axios
+
+```javascript
+api.get(`/api/v1/customer/cart/${tableId}`);
+```
+
+### Response
+
+```json
+{
+    "tableId":1,
+    "tableName":"Bàn 01",
+    "totalAmount":150000,
+    "cartItems":[
+        {
+            "orderDetailId":10,
+            "itemId":5,
+            "itemName":"Cà phê sữa",
+            "price":30000,
+            "quantity":2,
+            "note":"Ít đường",
+            "status":"PENDING"
+        }
+    ]
+}
+```
+
+---
+
+## 4. Thêm món
+
+### Endpoint
+
+```http
+POST /api/v1/customer/cart/add
+```
+
+### Query Params
+
+|Tên|Kiểu|
+|------|------|
+|tableId|Long|
+|itemId|Long|
+|quantity|Integer|
+|note|String|
+
+### Axios
+
+```javascript
+api.post("/api/v1/customer/cart/add", null, {
+    params: {
+        tableId: 1,
+        itemId: 5,
+        quantity: 2,
+        note: "Không đá",
+    },
+});
+```
+
+---
+
+## 5. Cập nhật món
+
+### Endpoint
+
+```http
+PUT /api/v1/customer/cart/items/{itemId}
+```
+
+### Axios
+
+```javascript
+api.put(`/api/v1/customer/cart/items/${itemId}`, null, {
+    params: {
+        tableId: 1,
+        quantity: 3,
+        note: "Thêm đá",
+    },
+});
+```
+
+> quantity <= 0 sẽ tự động xóa món.
+
+---
+
+## 6. Xóa món
+
+### Endpoint
+
+```http
+DELETE /api/v1/customer/cart/remove
+```
+
+### Axios
+
+```javascript
+api.delete("/api/v1/customer/cart/remove", {
+    params: {
+        tableId: 1,
+        itemId: 5,
+    },
+});
+```
+
+---
+
+## 7. Xóa toàn bộ giỏ
+
+### Endpoint
+
+```http
+DELETE /api/v1/customer/cart/clear
+```
+
+### Axios
+
+```javascript
+api.delete("/api/v1/customer/cart/clear", {
+    params: {
+        tableId: 1,
+    },
+});
+```
+
+---
+
+# 3.3 Đặt món
+
+---
+
+## 8. Gửi món xuống bếp
+
+### Endpoint
+
+```http
+POST /api/v1/customer/confirm-order
+```
+
+### Axios
+
+```javascript
+api.post("/api/v1/customer/confirm-order", null, {
+    params: {
+        tableId: 1,
+    },
+});
+```
+
+Sau khi gọi:
+
+```
+PENDING
+↓
+
+CONFIRMED
+```
+
+---
+
+# 3.4 Bếp
+
+---
+
+## 9. Phục vụ món
+
+```http
+PUT /api/v1/customer/kitchen/serve-item
+```
+
+### Axios
+
+```javascript
+api.put("/api/v1/customer/kitchen/serve-item", null, {
+    params: {
+        orderDetailId: 10,
+    },
+});
+```
+
+---
+
+## 10. Hủy món
+
+```http
+PUT /api/v1/customer/kitchen/cancel-item
+```
+
+### Axios
+
+```javascript
+api.put("/api/v1/customer/kitchen/cancel-item", null, {
+    params: {
+        orderDetailId: 10,
+        reason: "Hết nguyên liệu",
+    },
+});
+```
+
+---
+
+# 3.5 Thanh toán
+
+---
+
+## 11. Khách yêu cầu thanh toán
+
+```http
+POST /api/v1/customer/request-checkout
+```
+
+### PaymentMethod
+
+```
+CASH
+
+BANK_TRANSFER
+
+E_WALLET
+
+PAYPAL
+```
+
+### Axios
+
+```javascript
+api.post("/api/v1/customer/request-checkout", null, {
+    params: {
+        tableId: 1,
+        paymentMethod: "CASH",
+    },
+});
+```
+
+---
+
+## 12. Xem hóa đơn
+
+```http
+GET /api/v1/customer/invoice-summary/{tableId}
+```
+
+### Axios
+
+```javascript
+api.get(`/api/v1/customer/invoice-summary/${tableId}`);
+```
+
+### Response
+
+```json
+{
+    "tableOrderId":100,
+    "tableName":"Bàn 01",
+    "totalAmount":250000,
+    "status":"UNPAID"
+}
+```
+
+---
+
+## 13. Chi tiết hóa đơn
+
+```http
+GET /api/v1/customer/invoice
+```
+
+### Query Params
+
+```
+tableId
+
+tableOrderId
+```
+
+---
+
+## 14. Thu ngân xác nhận thanh toán
+
+```http
+POST /api/v1/customer/complete-checkout
+```
+
+### Query Params
+
+```
+tableId
+
+paymentMethod
+```
+
+Sau khi thành công
+
+- Hóa đơn chuyển PAID
+
+- Reset bàn
+
+- Xóa giỏ hàng
+
+---
+
+# 3.6 Thanh toán PayPal
+
+Base Path
+
+```
+/api/v1/items/payment
+```
+
+---
+
+## 15. Tạo giao dịch
+
+```http
+POST /api/v1/items/payment/paypal
+```
+
+### Query Params
+
+```
+tableId
+```
+
+### Response
+
+```json
+{
+    "approvalUrl":"https://www.sandbox.paypal.com/...",
+    "qrCodeUrl":"https://api.qrserver.com/..."
+}
+```
+
+Frontend có thể:
+
+### Mobile
+
+```text
+window.location = approvalUrl;
+```
+
+hoặc
+
+### QR
+
+```jsx
+<img src={qrCodeUrl} alt="PayPal QR"/>
+```
+
+---
+
+## 16. Callback thành công
+
+```http
+GET /api/v1/items/payment/paypal/success
+```
+
+### Query Params
+
+```
+paymentId
+
+PayerID
+
+tableId
+```
+
+Sau khi PayPal redirect về Frontend
+
+Ví dụ
+
+```
+http://localhost:3000/payment-success?tableId=1&paymentId=xxx&PayerID=yyy
+```
+
+Frontend cần lấy các Query Parameter rồi gọi API này.
+
+Backend sẽ:
+
+- Xác nhận thanh toán
+
+- Hoàn tất hóa đơn
+
+- Reset bàn
+
+---
+
+# 4. Luồng hoạt động
+
+```text
+Khách quét QR
+      │
+      ▼
+Lấy thông tin bàn
+GET /table-info
+      │
+      ▼
+Chọn món
+POST /cart/add
+      │
+      ▼
+Xem giỏ hàng
+GET /cart/{tableId}
+      │
+      ▼
+Nhấn Gọi món
+POST /confirm-order
+      │
+      ▼
+Bếp nhận đơn
+      │
+      ├─────────────► Serve Item
+      │
+      └─────────────► Cancel Item
+      │
+      ▼
+Thanh toán
+      │
+      ├────────── Tiền mặt
+      │          POST /request-checkout
+      │
+      └────────── PayPal
+                 │
+                 ▼
+          POST /payment/paypal
+                 │
+                 ▼
+          approvalUrl / QRCode
+                 │
+                 ▼
+      payment-success
+                 │
+                 ▼
+GET /payment/paypal/success
+                 │
+                 ▼
+Hoàn tất hóa đơn
+```
+
+---
+
+# 5. Trạng thái món
+
+|Status|Ý nghĩa|Frontend|
+|--------|-----------|-------------|
+|PENDING|Trong giỏ hàng|Cho phép sửa/xóa|
+|CONFIRMED|Đã gửi bếp|Khóa chỉnh sửa|
+|SERVED|Đã phục vụ|Hiển thị hoàn thành|
+|CANCELLED|Đã hủy|Gạch ngang + giá 0|
+
+---
+
+# 6. Lưu ý quan trọng
+
+## 1. tableId
+
+Luôn truyền kiểu Number.
+
+Ví dụ:
+
+```javascript
+tableId: 1
+```
+
+Không dùng
+
+```javascript
+tableId: "Ban01"
+```
+
+---
+
+## 2. RequestParam
+
+Backend đang dùng
+
+```java
+@RequestParam
+```
+
+Do đó với Axios cần viết:
+
+```javascript
+api.post(url, null, {
+    params: {
+        ...
+    }
+});
+```
+
+không gửi JSON Body.
+
+---
+
+## 3. Quy tắc UI
+
+### PENDING
+
+✅ Cho sửa
+
+✅ Cho tăng giảm
+
+✅ Cho ghi chú
+
+---
+
+### CONFIRMED
+
+❌ Không cho sửa
+
+---
+
+### SERVED
+
+Hiển thị đã phục vụ.
+
+---
+
+### CANCELLED
+
+Hiển thị:
+
+- gạch ngang tên món
+
+- giá = 0
+
+- lý do hủy nếu có
+
+---
+
+# 7. Gợi ý cấu trúc Frontend
 
 ```
 src
-└── main
-    └── resources
-        └── db
-            └── changelog
-                ├── db.changelog-master.yaml
-                ├── 001-create-news-table.sql
-                ├── 002-add-item-image.sql
-                └── ...
-```
-
-Toàn bộ migration đều nằm trong
-
-```
-src/main/resources/db/changelog
-```
-
----
-
-# 4. Cấu hình
-
-Trong
-
-```
-application.properties
-```
-
-đã cấu hình
-
-```properties
-spring.liquibase.enabled=true
-spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.yaml
-```
-
-Không chỉnh sửa nếu không cần thiết.
-
----
-
-# 5. Tạo Database
-
-Nếu chưa có Database hãy tạo
-
-```sql
-CREATE DATABASE smart_cafe_manager
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
-```
-
-Sau đó sửa
-
-```
-application.properties
-```
-
-Ví dụ
-
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/smart_cafe_manager
-spring.datasource.username=root
-spring.datasource.password=
+│
+├── services
+│     api.js
+│     customerApi.js
+│     paymentApi.js
+│
+├── pages
+│     MenuPage.jsx
+│     CartPage.jsx
+│     CheckoutPage.jsx
+│     PaymentSuccess.jsx
+│
+├── components
+│     CartItem.jsx
+│     BillSummary.jsx
+│     PaymentQRCode.jsx
+│
+└── hooks
+      useCart.js
+      useTable.js
 ```
 
 ---
 
-# 6. Import Database ban đầu
-
-Import file SQL của dự án bằng MySQL Workbench.
-
-Sau khi import sẽ có các bảng:
-
-```
-role
-users
-item
-menu_category
-table_order
-order_detail
-notification
-news
-...
-```
-
-Không cần tự tạo từng bảng.
-
-Database hiện tại chính là **Baseline** của dự án.
-
----
-
-# 7. Chạy Project
-
-```
-mvn spring-boot:run
-```
-
-Liquibase sẽ tự kiểm tra migration.
-
-Nếu có migration mới sẽ tự chạy.
-
----
-
-# 8. Sau này nếu cần sửa Database
-
-Ví dụ muốn thêm bảng
-
-```
-news
-```
-
-Tạo file mới
-
-```
-src/main/resources/db/changelog/001-create-news-table.sql
-```
-
-Ví dụ
-
-```sql
---liquibase formatted sql
-
---changeset thong:001
-
-CREATE TABLE news
-(
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255),
-    content TEXT
-);
-```
-
-Sau đó mở
-
-```
-db.changelog-master.yaml
-```
-
-thêm
-
-```yaml
-databaseChangeLog:
-
-  - include:
-      file: db/changelog/001-create-news-table.sql
-```
-
-Chạy lại project.
-
-Liquibase sẽ tự tạo bảng.
-
----
-
-# 9. Thêm cột mới
-
-Ví dụ
-
-```
-002-add-item-image.sql
-```
-
-```sql
---liquibase formatted sql
-
---changeset thong:002
-
-ALTER TABLE item
-ADD COLUMN image_url VARCHAR(255);
-```
-
-Thêm vào
-
-```
-db.changelog-master.yaml
-```
-
-```yaml
-databaseChangeLog:
-
-  - include:
-      file: db/changelog/001-create-news-table.sql
-
-  - include:
-      file: db/changelog/002-add-item-image.sql
-```
-
-Chạy project.
-
-Liquibase sẽ tự cập nhật.
-
----
-
-# 10. Quy tắc làm việc nhóm
-
-## Không được sửa
-
-```
-001-create-news-table.sql
-```
-
-sau khi đã merge.
-
-Nếu cần sửa
-
-Tạo file mới
-
-```
-002-update-news-table.sql
-```
-
-Không được sửa migration cũ.
-
----
-
-## Mỗi thay đổi Database = Một migration mới
-
-Ví dụ
-
-```
-003-add-discount-column.sql
-004-create-voucher-table.sql
-005-create-payment-table.sql
-```
-
----
-
-## Đặt tên migration
-
-| Chức năng | Ví dụ |
-|-----------|----------------------------|
-| Tạo bảng | 005-create-news-table.sql |
-| Thêm cột | 006-add-image-column.sql |
-| Xóa cột | 007-drop-phone-column.sql |
-| Thêm FK | 008-add-user-role-fk.sql |
-
----
-
-# 11. Sau khi Pull Code
-
-```
-git pull origin develop
-```
-
-Sau đó
-
-```
-mvn spring-boot:run
-```
-
-Liquibase sẽ tự cập nhật Database.
-
-Không cần chạy file SQL bằng Workbench.
-
----
-
-# 12. Không được làm
-
-❌ Không sửa migration đã merge.
-
-❌ Không đổi tên migration.
-
-❌ Không xóa migration.
-
-❌ Không chỉnh sửa DATABASECHANGELOG.
-
-❌ Không chỉnh sửa DATABASECHANGELOGLOCK.
-
----
-
-# 13. Hai bảng Liquibase
-
-Liquibase sẽ tự tạo
-
-```
-DATABASECHANGELOG
-
-DATABASECHANGELOGLOCK
-```
-
-Đây là hai bảng hệ thống.
-
-Không được xóa.
-
-Không được sửa dữ liệu.
-
----
-
-# 14. API Update
-
-## API Giỏ hàng tạm thời
-
-### Endpoint
-
-```
-GET /api/v1/items/cart?tableName=Ban01
-```
-
-### Mục đích
-
-API này chỉ trả về các món đang ở trạng thái **PENDING** (đã thêm vào giỏ nhưng chưa gửi xuống bếp).
-
-### Response
-
-```json
-[
-  {
-    "orderDetailId": 7,
-    "itemId": 1,
-    "itemName": "Cà phê Đen Đá",
-    "price": 25000,
-    "quantity": 2,
-    "tableName": "Ban01"
-  }
-]
-```
-
-### Hướng xử lý Frontend
-
-- Hiển thị số lượng món đang nằm trong giỏ hàng.
-- Cho phép chỉnh sửa số lượng hoặc xóa món.
-- Khi người dùng nhấn **[Gọi món]**, gửi request cập nhật các `orderDetailId` này sang trạng thái `CONFIRMED`.
-
----
-
-## API Hóa đơn / Tiến trình gọi món nhóm
-
-### Endpoint
-
-```
-GET /api/v1/items/invoice?tableName=Ban01
-```
-
-### Mục đích
-
-API trả về toàn bộ món của một bàn trong lượt ngồi hiện tại, bao gồm:
-
-- Món đã gửi bếp (`CONFIRMED`)
-- Món đã phục vụ (`SERVED`)
-- Món đang nằm trong giỏ (`PENDING`)
-
-Phù hợp với nghiệp vụ nhiều khách cùng quét QR và gọi món trên cùng một bàn.
-
-### Response
-
-```json
-{
-  "tableOrderId": 3,
-  "tableName": "Ban01",
-  "totalAmount": 170000,
-  "orderStatus": "OPEN",
-  "serviceStatus": "WAITING_FOOD",
-  "openAt": "2026-07-13T13:57:54",
-  "orderDetails": [
-    {
-      "orderDetailId": 4,
-      "quantity": 2,
-      "unitPrice": 25000,
-      "note": "",
-      "status": "CONFIRMED",
-      "itemId": 1,
-      "itemName": "Cà phê Đen Đá",
-      "imageUrl": "https://..."
-    },
-    {
-      "orderDetailId": 7,
-      "quantity": 2,
-      "unitPrice": 25000,
-      "note": "Không đá",
-      "status": "PENDING",
-      "itemId": 1,
-      "itemName": "Cà phê Đen Đá",
-      "imageUrl": "https://..."
-    }
-  ]
-}
-```
-
-### Hướng xử lý Frontend
-
-- `PENDING`
-  - Hiển thị nhãn **"Chờ gọi"** hoặc **"Trong giỏ hàng"**.
-  - Cho phép chỉnh sửa số lượng.
-  - Cho phép xóa món.
-  - Hiển thị nút **"Gửi bếp các món đang chờ"**.
-
-- `CONFIRMED`
-  - Hiển thị nhãn **"Đã gửi bếp"**.
-  - Không cho khách chỉnh sửa.
-
-- `SERVED`
-  - Hiển thị nhãn **"Đã phục vụ"**.
-  - Không cho chỉnh sửa.
-
-- `totalAmount`
-  - Luôn hiển thị tổng tiền tạm tính theo thời gian thực.
-  - Bao gồm cả món đã gửi bếp và món đang trong giỏ.
-
-Swagger đã được cập nhật theo cấu trúc DTO mới. Có thể kiểm tra trực tiếp bằng Swagger UI hoặc Postman.
----
-
-# 15. Kitchen Service Update
-
-## 15.1 Order Item Lifecycle (`StatusOrderDetail`)
-
-Hệ thống đã mở rộng vòng đời của từng món ăn trong `order_detail` nhằm hỗ trợ quy trình gọi món theo thời gian thực giữa Khách hàng, Bếp/Bar và Nhân viên phục vụ.
-
-```text
-Khách chọn món
-      │
-      ▼
-   PENDING
-      │
-      │ Khách nhấn [Gọi món]
-      ▼
-  CONFIRMED
-      │
-      ├───────────────┐
-      ▼               ▼
-   SERVED        CANCELLED
- (Đã phục vụ)   (Hết món/Hủy món)
-```
-
-### Các trạng thái
-
-| Status | Thao tác bởi | Ý nghĩa |
-|---------|--------------|----------|
-| `PENDING` | Khách hàng | Món đang nằm trong giỏ hàng. Có thể sửa số lượng hoặc xóa khỏi đơn. |
-| `CONFIRMED` | Khách hàng | Đã gửi món xuống Bếp/Bar. Không thể chỉnh sửa. |
-| `SERVED` | Kitchen / Staff | Món đã chế biến và phục vụ thành công. |
-| `CANCELLED` | Kitchen / Manager | Món bị hủy hoặc hết hàng. Hệ thống tự động loại món khỏi tổng tiền hóa đơn. |
-
----
-
-## 15.2 Kitchen APIs
-
-### Phục vụ món
-
-```http
-PUT /api/v1/items/kitchen/serve-item
-```
-
-#### Query Parameters
-
-| Parameter | Type | Required |
-|-----------|------|----------|
-| orderDetailId | Long | Yes |
-
-**Chức năng**
-
-```
-CONFIRMED → SERVED
-```
-
-Khi bếp hoàn thành món và nhân viên đã phục vụ cho khách.
-
----
-
-### Hủy món
-
-```http
-PUT /api/v1/items/kitchen/cancel-item
-```
-
-#### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| orderDetailId | Long | Yes | ID của món cần hủy |
-| reason | String | No | Mặc định: `"Hết món"` |
-
-**Chức năng**
-
-```
-CONFIRMED → CANCELLED
-```
-
-Khi món bị hủy:
-
-- Không tính vào `totalAmount`.
-- Tổng tiền hóa đơn được tính lại tự động.
-- Frontend hiển thị trạng thái **Đã hủy**.
-
----
-
-## 15.3 Liquibase Migration
-
-Thêm migration mới:
-
-```
-src/main/resources/db/changelog/003-update-order-detail-status.sql
-```
-
-```sql
---liquibase formatted sql
-
---changeset backend:003-update-order-detail-status
-
-ALTER TABLE order_detail
-MODIFY COLUMN status
-ENUM(
-    'PENDING',
-    'CONFIRMED',
-    'SERVED',
-    'CANCELLED'
-)
-NOT NULL DEFAULT 'PENDING';
-```
-
-Sau đó khai báo trong:
-
-```yaml
-databaseChangeLog:
-
-  - include:
-      file: db/changelog/001-create-news-table.sql
-
-  - include:
-      file: db/changelog/002-add-item-image.sql
-
-  - include:
-      file: db/changelog/003-update-order-detail-status.sql
-```
-
----
-
-## 15.4 Frontend Integration
-
-Khi gọi API
-
-```http
-GET /api/v1/items/invoice
-```
-
-Frontend nên hiển thị trạng thái như sau:
-
-| Status | UI | Mô tả |
-|---------|----|--------|
-| `PENDING` | Trong giỏ hàng | Cho phép sửa và xóa món |
-| `CONFIRMED` | Đã gửi bếp | Không cho chỉnh sửa |
-| `SERVED` | Đã phục vụ | Hiển thị hoàn thành |
-| `CANCELLED` | Đã hủy (Hết món) | Gạch ngang món và không cộng vào tổng tiền |
-
----
-
-## 15.5 Business Rules
-
-- Chỉ món ở trạng thái **PENDING** mới được chỉnh sửa hoặc xóa.
-- Khi khách nhấn **Gọi món**, toàn bộ món sẽ chuyển sang **CONFIRMED**.
-- Kitchen chỉ xử lý các món **CONFIRMED**.
-- Kitchen có thể:
-  - Chuyển sang **SERVED**.
-  - Chuyển sang **CANCELLED**.
-- Khi món bị hủy:
-  - Không tính vào `totalAmount`.
-  - Tổng tiền được cập nhật ngay.
-  - Frontend hiển thị trạng thái **Đã hủy**.
-- Món đã **SERVED** hoặc **CANCELLED** không được phép quay lại trạng thái trước.
-
----
-
-## 15.6 State Transition
-
-```text
-             +-----------+
-             | PENDING   |
-             +-----------+
-                    |
-            Customer Order
-                    |
-                    ▼
-             +-------------+
-             | CONFIRMED   |
-             +-------------+
-               /         \
-              /           \
-             ▼             ▼
-      +----------+   +-------------+
-      | SERVED   |   | CANCELLED   |
-      +----------+   +-------------+
----
-
-# 16. Checkout & QR Payment Update
-
-## 16.1 Backend Update
-
-Đã bổ sung quy trình **Hoàn tất thanh toán (Complete Checkout)** nhằm hỗ trợ nghiệp vụ thanh toán tại quán.
-
-### Endpoint
-
-```http
-POST /api/v1/items/complete-checkout
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| tableName | String | Yes | Tên bàn |
-| paymentMethod | PaymentMethod | Yes | `CASH` hoặc `BANK_TRANSFER` |
-
-Ví dụ:
-
-```http
-POST /api/v1/items/complete-checkout?tableName=Ban01&paymentMethod=BANK_TRANSFER
-```
-
----
-
-## 16.2 Backend Processing
-
-Khi API được gọi thành công, Backend sẽ thực hiện toàn bộ các bước sau trong một transaction:
-
-### 1. Cập nhật hóa đơn (`TableOrder`)
-
-- Chuyển trạng thái:
-
-```text
-OPEN
-        │
-        ▼
-PAID (hoặc CLOSED)
-```
-
-- Lưu phương thức thanh toán (`PaymentMethod`)
-- Cập nhật thời gian thanh toán (`closeAt`)
-
----
-
-### 2. Xóa giỏ hàng tạm
-
-Toàn bộ các món đang ở trạng thái:
-
-```text
-PENDING
-```
-
-sẽ được xóa khỏi `order_detail`.
-
-Các món đã:
-
-- CONFIRMED
-- SERVED
-- CANCELLED
-
-vẫn được giữ để lưu lịch sử hóa đơn.
-
----
-
-### 3. Giải phóng bàn
-
-Backend cập nhật:
-
-```text
-Tables.isOccupied = false
-Tables.serviceStatus = NONE
-```
-
-Bàn sẽ sẵn sàng phục vụ lượt khách tiếp theo.
-
----
-
-## 16.3 Frontend Integration Flow
-
-```text
-Khách chọn Thanh toán
-        │
-        ▼
-GET /api/v1/items/invoice
-        │
-        ▼
-Hiển thị QR Code
-        │
-        ▼
-Khách chuyển khoản
-        │
-        ▼
-POST /api/v1/items/complete-checkout
-        │
-        ▼
-Backend cập nhật hóa đơn
-        │
-        ▼
-Giải phóng bàn
-        │
-        ▼
-Frontend chuyển về màn hình chọn bàn
-```
-
----
-
-## 16.4 API Lấy Hóa đơn
-
-### Endpoint
-
-```http
-GET /api/v1/items/invoice?tableName=Ban01
-```
-
-### Response
-
-```json
-{
-  "tableOrderId": 3,
-  "tableName": "Ban01",
-  "totalAmount": 170000,
-  "orderStatus": "OPEN",
-  "serviceStatus": "WAITING_FOOD",
-  "openAt": "2026-07-13T13:57:54",
-  "orderDetails": [
-    {
-      "orderDetailId": 4,
-      "status": "CONFIRMED",
-      "itemName": "Cà phê Đen Đá",
-      "quantity": 2,
-      "unitPrice": 25000
-    }
-  ]
-}
-```
-
-Frontend sử dụng:
-
-- `tableOrderId`
-- `totalAmount`
-
-để hiển thị thông tin thanh toán và tạo QR Code.
-
----
-
-## 16.5 QR Payment (VietQR)
-
-Frontend có thể sử dụng VietQR để sinh mã QR thanh toán.
-
-Mẫu URL:
-
-```text
-https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-compact2.png?amount=<TOTAL_AMOUNT>&addInfo=<ORDER_INFO>&accountName=<ACCOUNT_NAME>
-```
-
-Ví dụ:
-
-```javascript
-const bankId = "MB";
-const accountNo = "0123456789";
-
-const amount = invoice.totalAmount;
-
-const addInfo =
-`Thanh toan ban ${tableName} HD ${invoice.tableOrderId}`;
-
-const qrUrl =
-`https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(addInfo)}&accountName=NHA%20HANG`;
-```
-
-Sau đó hiển thị:
-
-```html
-<img src="{qrUrl}" />
-```
-
----
-
-## 16.6 Complete Checkout
-
-Sau khi khách thanh toán thành công hoặc thu ngân xác nhận đã nhận tiền:
-
-Frontend gọi:
-
-```http
-POST /api/v1/items/complete-checkout
-```
-
-Ví dụ sử dụng Axios:
-
-```javascript
-async function handleCompletePayment(tableName) {
-
-    try {
-
-        const response = await axios.post(
-            "/api/v1/items/complete-checkout",
-            null,
-            {
-                params: {
-                    tableName,
-                    paymentMethod: "BANK_TRANSFER"
-                }
-            }
-        );
-
-        alert(response.data);
-
-        localStorage.removeItem("cart");
-
-        navigate("/tables");
-
-    } catch (error) {
-
-        alert(
-            error.response?.data?.message ||
-            "Thanh toán thất bại!"
-        );
-
-    }
-
-}
-```
-
----
-
-## 16.7 PaymentMethod
-
-| Enum |
-|------|
-| CASH |
-| BANK_TRANSFER |
-
----
-
-## 16.8 Business Rules
-
-- Chỉ hóa đơn có trạng thái `OPEN` mới được phép thanh toán.
-- Sau khi thanh toán:
-  - Hóa đơn chuyển sang `PAID`.
-  - Lưu phương thức thanh toán.
-  - Xóa toàn bộ món `PENDING`.
-  - Giải phóng bàn.
-- Không thể thanh toán lại hóa đơn đã `PAID`.
-- `totalAmount` chỉ tính các món chưa bị `CANCELLED`.
-
----
-
-## 16.9 Frontend Checklist
-
-Sau khi `complete-checkout` thành công:
-
-- [ ] Xóa giỏ hàng trong Redux/Context/LocalStorage.
-- [ ] Đóng màn hình thanh toán.
-- [ ] Điều hướng về màn hình chọn bàn.
-- [ ] Cập nhật trạng thái bàn nếu sử dụng WebSocket hoặc Polling.
-- [ ] Hiển thị thông báo **Thanh toán thành công**.
-
----
-
-## 16.10 State Transition
-
-```text
-                OPEN
-                  │
-          Complete Checkout
-                  │
-                  ▼
-                PAID
-                  │
-                  ▼
-      Clear Pending Order Details
-                  │
-                  ▼
-      Table.isOccupied = false
-                  │
-                  ▼
-     ServiceStatus = NONE
-```
+# 8. Tổng kết
+
+Tổng số API:
+
+|Module|Số API|
+|--------|------|
+|Bàn & Phục vụ|2|
+|Giỏ hàng|5|
+|Đặt món|1|
+|Bếp|2|
+|Thanh toán|4|
+|PayPal|2|
+
+**Tổng cộng: 16 API**
