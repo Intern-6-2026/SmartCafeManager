@@ -60,7 +60,7 @@ export default function AppRoutes() {
                 />
 
                 <Route
-                    path="/menu/table/:tableName"
+                    path="/menu/table/:tableId"
                     element={<ClientMenu />}
                 />
 

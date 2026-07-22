@@ -19,66 +19,64 @@ export const getBestSellerItems = async () => {
 };
 
 /* Các API gọi món tại bàn — theo tài liệu mới, nằm dưới /api/v1/items */
-const CUSTOMER_URL = `${API_BASE_URL}/items`;
+const CUSTOMER_URL = `${API_BASE_URL}/customer`;
  
 // API 1: Thêm món vào giỏ tạm thời (note là tuỳ chọn)
-export const addItemToCart = async (tableName, itemId, quantity, note) => {
-  const params = { tableName, itemId, quantity };
+export const addItemToCart = async (tableId, itemId, quantity, note) => {
+  const params = { tableId, itemId, quantity };
   if (note) params.note = note;
-  return await axios.post(`${CUSTOMER_URL}/add-item`, null, { params });
+  return await axios.post(`${CUSTOMER_URL}/cart/add`, null, { params });
 };
  
 // API 2: Xem tất cả món trong giỏ hàng tạm thời (PENDING)
-export const getCart = async (tableName) => {
-  return await axios.get(`${CUSTOMER_URL}/cart`, { params: { tableName } });
+export const getCart = async (tableId) => {
+  return await axios.get(`${CUSTOMER_URL}/cart/${tableId}`);
 };
  
 // API 3: [GỌI MÓN] chốt đơn gửi xuống bếp (PENDING -> CONFIRMED)
-export const confirmOrder = async (tableName) => {
+export const confirmOrder = async (tableId) => {
   return await axios.post(`${CUSTOMER_URL}/confirm-order`, null, {
-    params: { tableName },
+    params: { tableId },
   });
 };
  
 // API 4: Xem lịch sử các món đã gọi xuống bếp (CONFIRMED / SERVED / CANCELLED)
-export const getOrderHistory = async (tableName) => {
-  return await axios.get(`${CUSTOMER_URL}/order-history`, {
-    params: { tableName },
-  });
+export const getOrderHistory = async (tableId) => {
+  return await axios.get(`${CUSTOMER_URL}/invoice-summary/${tableId}`);
 };
  
 // API 5: Xem chi tiết tổng quan hóa đơn
-export const getInvoice = async (tableName) => {
-  return await axios.get(`${CUSTOMER_URL}/invoice`, { params: { tableName } });
+export const getInvoice = async (tableId, tableOrderId) => {
+  return await axios.get(`${CUSTOMER_URL}/invoice`, { params: { tableId, tableOrderId } });
 };
  
 // API 6: Yêu cầu thanh toán
 // paymentMethod: "CASH" | "BANK_TRANSFER" | "MOMO" | "VNPAY" (bắt buộc VIẾT HOA)
-export const requestCheckout = async (tableName, paymentMethod) => {
+export const requestCheckout = async (tableId, paymentMethod) => {
   return await axios.post(`${CUSTOMER_URL}/request-checkout`, null, {
-    params: { tableName, paymentMethod },
+    params: { tableId, paymentMethod },
   });
 };
  
 // API 7: Các yêu cầu dịch vụ khác (gọi nhân viên...)
 // status: vd "CALLING_WAITER"
-export const callService = async (tableName, status = "CALLING_WAITER") => {
+export const callService = async (tableId, status = "CALLING_WAITER") => {
   return await axios.post(`${CUSTOMER_URL}/call-service`, null, {
-    params: { tableName, status },
+    params: { tableId, status },
   });
 };
 
 // API 8: Thay đổi số lượng món 
-export const updateItemQuantity = async (tableName, itemId, newQuantity) => {
-  return await axios.post(`${CUSTOMER_URL}/update-quantity`, null, {
-    params: { tableName, itemId, newQuantity },
+export const updateItemQuantity = async (tableId, itemId, note, newQuantity) => {
+  return await axios.put(`${CUSTOMER_URL}/cart/items/${itemId}`, null, {
+    params: { tableId, quantity: newQuantity },
   });
 };
 
 // API 9: Xóa món khỏi giỏ hàng
-export const removeItem = async (tableName, itemId) => {
-  return await axios.post(`${CUSTOMER_URL}/remove-item`, null, {
-    params: { tableName, itemId },
+export const removeItem = async (tableId, itemId) => {
+  return await axios.delete(`${CUSTOMER_URL}/cart/remove`, {
+    params: { tableId, itemId },
   });
 };
 
