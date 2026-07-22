@@ -10,6 +10,7 @@ import Footer from "../components/footer";
 import Profile from "../pages/profile/Profile";
 import EditProfile from "../pages/profile/EditProfile";
 import ChangePassword from "../pages/profile/ChangePassword";
+import PaymentSuccess from "../pages/PaymentSuccess/paymentSuccess";
 
 export default function AppRoutes() {
     return (
@@ -63,7 +64,8 @@ export default function AppRoutes() {
                     path="/menu/table/:tableId"
                     element={<ClientMenu />}
                 />
-
+                
+                <Route path="/payment-success" element={<PaymentSuccess />} />
             </Routes>
         </BrowserRouter>
     );

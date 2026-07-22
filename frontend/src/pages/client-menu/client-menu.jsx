@@ -3,6 +3,7 @@ import "../../styles/client-menu.css";
 import AddDrinkModal from "../../components/add-drink";
 import FeedbackModal from "../../components/feedback";
 import CheckoutModal from "../../components/checkout";
+import PaypalQrModal from "../../components/paypal-qr";
 import { Link, useParams } from "react-router-dom";
 import { logo } from "../../constants/assets";
 import Logo from "../../components/Logo";
@@ -12,6 +13,7 @@ import {
   getCart,
   confirmOrder,
   requestCheckout,
+  getPaymentQRCode,
   getInvoice,
   callService,
   getApiErrorMessage,
@@ -57,6 +59,9 @@ function ClientMenu() {
   const [checkoutOpen, setCheckoutOpen] = useState(false); // modal Thanh toán
   const [invoice, setInvoice] = useState(null); // dữ liệu hóa đơn từ API /invoice
   const [paymentMethod, setPaymentMethod] = useState("CASH"); // enum backend
+  const [paypalOpen, setPaypalOpen] = useState(false); // modal QR PayPal
+  const [paypalData, setPaypalData] = useState(null); // { qrCodeUrl }
+  const [paypalLoading, setPaypalLoading] = useState(false);
   const [message, setMessage] = useState(""); // thông báo kết quả API
   const [loading, setLoading] = useState(false);
 
@@ -64,7 +69,7 @@ function ClientMenu() {
     setMessage(String(msg));
     setTimeout(() => setMessage(""), 4000);
   };
-
+  
   /* ===== API 1: Lấy toàn bộ menu ===== */
   useEffect(() => {
     (async () => {
@@ -193,17 +198,20 @@ function ClientMenu() {
     }
   };
 
-  /* ===== API 9: Bấm "Xác nhận" trong modal -> gửi yêu cầu thanh toán ===== */
+  /* ===== Bấm "Xác nhận" trong modal thanh toán =====
+     Tạo phiên thanh toán, lấy QR code rồi hiện lên cho khách quét. */
   const confirmCheckout = async () => {
-    setLoading(true);
+    setCheckoutOpen(false);
+    setPaypalData(null);
+    setPaypalLoading(true);
+    setPaypalOpen(true);
     try {
-      const res = await requestCheckout(tableId, paymentMethod);
-      notify(res.data);
-      setCheckoutOpen(false);
+      const res = await getPaymentQRCode(tableId);
+      setPaypalData(res.data);
     } catch (err) {
-      notify(getApiErrorMessage(err, "Gửi yêu cầu thanh toán thất bại."));
+      notify(getApiErrorMessage(err, "Không tạo được mã QR thanh toán."));
     } finally {
-      setLoading(false);
+      setPaypalLoading(false);
     }
   };
 
@@ -468,6 +476,12 @@ function ClientMenu() {
         onConfirm={confirmCheckout}
         onClose={() => setCheckoutOpen(false)}
         loading={loading}
+      />
+      <PaypalQrModal
+        open={paypalOpen}
+        data={paypalData}
+        loading={paypalLoading}
+        onClose={() => setPaypalOpen(false)}
       />
     </div>
   );

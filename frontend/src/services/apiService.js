@@ -131,6 +131,13 @@ export const removeItem = async (tableId, itemId) => {
   });
 };
 
+// API 10: Lấy QR code thanh toán 
+export const getPaymentQRCode = async (tableId) => {
+  return await axios.post(`http://localhost:8080/api/v1/items/payment/paypal`, null, {
+    params: { tableId },
+  });
+};
+
 /* Helper: rút thông báo lỗi từ axios error để hiển thị lên UI */
 const ERROR_MESSAGE_MAP = {
   "Old password is incorrect!": "Mật khẩu hiện tại không đúng.",
