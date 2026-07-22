@@ -24,7 +24,7 @@ public class ImpUserDetailsService implements UserDetailsService {
         public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
                 Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
                                 .orElseThrow(() -> new UsernameNotFoundException(
-                                                "User not found with username: " + username));
+                                                                "Không tìm thấy người dùng với tên đăng nhập: " + username));
 
                 String roleName = (account.getRole() != null && account.getRole().getRoleName() != null)
                                 ? account.getRole().getRoleName()

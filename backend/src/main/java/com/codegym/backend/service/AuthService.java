@@ -95,7 +95,7 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Mã OTP không hợp lệ"));
 
         if (account.getResetTokenExpiry().before(new Date())) {
-            throw new RuntimeException("Mã khôi phục đã hết hạn(quá 5 phút)");
+            throw new RuntimeException("Mã khôi phục đã hết hạn (quá 5 phút)");
         }
 
         String resetTokenUuid = java.util.UUID.randomUUID().toString();

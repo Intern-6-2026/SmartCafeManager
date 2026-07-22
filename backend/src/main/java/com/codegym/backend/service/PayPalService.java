@@ -21,7 +21,8 @@ public class PayPalService {
     // Tỷ giá quy đổi tạm thời VND -> USD để gửi qua PayPal
     private static final BigDecimal EXCHANGE_RATE_VND_TO_USD = new BigDecimal("25000");
 
-    public String createPayPalOrder(BigDecimal totalAmountVnd, String returnUrl, String cancelUrl) throws PayPalRESTException {
+    public String createPayPalOrder(BigDecimal totalAmountVnd, String returnUrl, String cancelUrl)
+            throws PayPalRESTException {
         // Quy đổi VND sang USD (làm tròn 2 chữ số thập phân)
         BigDecimal totalAmountUsd = totalAmountVnd.divide(EXCHANGE_RATE_VND_TO_USD, 2, RoundingMode.HALF_UP);
 
@@ -31,7 +32,7 @@ public class PayPalService {
         amount.setTotal(String.format(Locale.US, "%.2f", totalAmountUsd));
 
         Transaction transaction = new Transaction();
-        transaction.setDescription("Thanh toan hoa don nha hang SmartCafe");
+        transaction.setDescription("Thanh toán hóa đơn nhà hàng SmartCafe");
         transaction.setAmount(amount);
 
         List<Transaction> transactions = new ArrayList<>();

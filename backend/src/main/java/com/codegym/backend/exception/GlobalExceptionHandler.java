@@ -29,8 +29,8 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(new Date())
                 .status(HttpStatus.UNPROCESSABLE_ENTITY.value())
-                .error("Validation Failed")
-                .message("Invalid input data, please check again.")
+            .error("Xác thực thất bại")
+            .message("Dữ liệu đầu vào không hợp lệ, vui lòng kiểm tra lại.")
                 .path(request.getRequestURI())
                 .validationErrors(errors)
                 .build();
@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(new Date())
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+            .error("Yêu cầu không hợp lệ")
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -56,7 +56,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(new Date())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
+            .error("Lỗi máy chủ nội bộ")
                 .message("Đã xảy ra lỗi hệ thống từ phía Server. Vui lòng thử lại sau!") // Thông báo an toàn cho
                                                                                          // client, không lộ thông tin
                 .path(request.getRequestURI())
@@ -72,7 +72,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(new java.util.Date())
                 .status(HttpStatus.FORBIDDEN.value())
-                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+            .error("Không có quyền truy cập")
                 .message("Bạn không có quyền truy cập hoặc thực hiện chức năng đăng tin tức!")
                 .path(request.getRequestURI())
                 .build();
