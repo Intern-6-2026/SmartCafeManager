@@ -103,7 +103,7 @@ export default function NewPassword() {
                                 open: true,
                                 type: "error",
                                 title: "Đổi mật khẩu thất bại",
-                                message: getApiErrorMessage(err, "Mã OTP có thể đã hết hạn hoặc không hợp lệ."),
+                                message: getApiErrorMessage(err, "Không thể đổi mật khẩu. Phiên có thể đã hết hạn."),
                             });
                         } finally {
                             setSubmitting(false);

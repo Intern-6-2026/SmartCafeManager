@@ -24,6 +24,10 @@ export const forgotPassword = async (email) => {
   return await axios.post(`${API_BASE_URL}/auth/forgot-password`, { email });
 };
 
+export const verifyOtp = async (token) => {
+  return await axios.post(`${API_BASE_URL}/auth/verify-otp`, { token });
+};
+
 export const resetPassword = async (token, newPassword) => {
   return await axios.post(`${API_BASE_URL}/auth/reset-password`, { token, newPassword });
 };
@@ -134,7 +138,11 @@ const ERROR_MESSAGE_MAP = {
   "Account does not exist!": "Tài khoản không tồn tại.",
   "Invalid input data, please check again.": "Dữ liệu không hợp lệ, vui lòng kiểm tra lại.",
   "Mã OTP không hợp lệ.": "Mã OTP không hợp lệ.",
+  "Mã OTP không hợp lệ": "Mã OTP không hợp lệ.",
   "Mã khôi phục đã hết hạn (quá 5 phút)!": "Mã OTP đã hết hạn (quá 5 phút). Vui lòng gửi lại mã mới.",
+  "Mã khôi phục đã hết hạn(quá 5 phút)": "Mã OTP đã hết hạn (quá 5 phút). Vui lòng gửi lại mã mới.",
+  "Phiên đổi mật khẩu không hợp lệ hoặc đã bị hủy.": "Phiên đổi mật khẩu không hợp lệ. Vui lòng xác thực OTP lại.",
+  "Phiên đổi mật khẩu đã hết hạn (quá 5 phút)!": "Phiên đổi mật khẩu đã hết hạn. Vui lòng xác thực OTP lại.",
 };
 
 export const getApiErrorMessage = (err, fallback = "Đã có lỗi xảy ra.") => {
@@ -151,5 +159,16 @@ export const getApiErrorMessage = (err, fallback = "Đã có lỗi xảy ra.") =
     (typeof data === "string" ? data : null) ||
     err?.message ||
     fallback;
+
+  if (typeof raw === "string") {
+    const technical =
+      /JSON parse error|Cannot construct instance|HttpMessageNotReadable|nested exception|class com\./i.test(
+        raw
+      );
+    if (technical) {
+      return fallback;
+    }
+  }
+
   return ERROR_MESSAGE_MAP[raw] || raw;
 };
