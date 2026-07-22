@@ -44,13 +44,16 @@ const normalizeItem = (it) => ({
 });
 
 function ClientMenu() {
-  /* Route: /menu/table/:tableName — tableName chính là tên bàn gửi lên API (vd: ban01) */
-  const { tableName } = useParams();
+  /* Route: /menu/table/:tableId — tableId chính là tên bàn gửi lên API (vd: ban01) */
+  const { tableId } = useParams();
   const [menuItems, setMenuItems] = useState([]); // menu lấy từ server
   const [category, setCategory] = useState("");
   const [cart, setCart] = useState([]); // giỏ tạm PENDING lấy từ server
+  const [history, setHistory] = useState([]); // món đã gọi (CONFIRMED/SERVED) — chỉ xem
+  const [billTotal, setBillTotal] = useState(0); // currentTotalAmount từ server
   const [selectedItem, setSelectedItem] = useState(null); // món đang mở modal Thêm món
   const [feedbackOpen, setFeedbackOpen] = useState(false); // modal Phản hồi
+  const [tableOrderId, setTableOrderId] = useState(null); // id Order hiện tại
   const [checkoutOpen, setCheckoutOpen] = useState(false); // modal Thanh toán
   const [invoice, setInvoice] = useState(null); // dữ liệu hóa đơn từ API /invoice
   const [paymentMethod, setPaymentMethod] = useState("CASH"); // enum backend
@@ -91,43 +94,67 @@ function ClientMenu() {
     [menuItems, category]
   );
 
-  /* ===== API 5: Xem giỏ hàng tạm thời (PENDING) ===== */
+  /* ===== API 5: Xem giỏ hàng =====
+     Response mới là 1 object gồm cả 2 danh sách:
+     { tableOrderId, tableName, currentTotalAmount, orderedItems[], pendingItems[] } */
   const loadCart = useCallback(async () => {
     try {
-      const res = await getCart(tableName);
-      setCart(Array.isArray(res.data) ? res.data : []);
+      const res = await getCart(tableId);
+      const data = res.data ?? {};
+      setCart(Array.isArray(data.pendingItems) ? data.pendingItems : []);
+      setHistory(Array.isArray(data.orderedItems) ? data.orderedItems : []);
+      setBillTotal(data.currentTotalAmount ?? 0);
+      setTableOrderId(data.tableOrderId ?? null);
     } catch (err) {
-      // 500 "Bàn hiện tại không có hóa đơn nào đang mở!" => giỏ trống, không phải lỗi thật
-      if (err?.response?.status === 500) {
-        setCart([]);
-      } else {
-        setCart([]);
+      // 500 "Bàn hiện tại không có hóa đơn nào đang mở!" => bàn trống, không phải lỗi thật
+      setCart([]);
+      setHistory([]);
+      setBillTotal(0);
+      setTableOrderId(null);
+      if (err?.response?.status !== 500) {
         notify(getApiErrorMessage(err, "Không kết nối được máy chủ."));
       }
     }
-  }, [tableName]);
+  }, [tableId]);
 
   useEffect(() => {
     loadCart();
   }, [loadCart]);
 
-  /* Giỏ hàng: response phẳng { orderDetailId, itemName, quantity, price, status } */
+  /* Giỏ tạm (PENDING): { orderDetailId, itemId, itemName, price, quantity, note, status } */
   const cartRows = cart.map((c) => ({
     orderDetailId: c.orderDetailId,
-    name: c.item?.itemName ?? c.itemName ?? "—",
-    itemId: c.item?.itemId ?? c.itemId,
+    name: c.itemName ?? "—",
+    itemId: c.itemId,
     price: c.price,
     qty: c.quantity,
     note: c.note,
     status: c.status,
   }));
-  const total = cartRows.reduce((s, r) => s + r.price * r.qty, 0);
+  /* Tổng tiền cả hóa đơn do server tính (gồm cả món đã gọi lẫn món trong giỏ) */
+  const total = billTotal;
+
+  /* Món đã gọi — chỉ hiển thị, không cho sửa/xoá */
+  const historyRows = history.map((h) => ({
+    orderDetailId: h.orderDetailId,
+    name: h.itemName ?? "—",
+    price: h.price,
+    qty: h.quantity,
+    note: h.note,
+    status: h.status,
+  }));
+
+  const STATUS_LABEL = {
+    CONFIRMED: "Đang pha chế",
+    SERVED: "Đã phục vụ",
+    CANCELLED: "Đã huỷ",
+  };
 
   /* ===== API 4: Thêm món vào giỏ — bấm "Thêm" trong modal ===== */
   const confirmAddItem = async (item, qty, note) => {
     setLoading(true);
     try {
-      const res = await addItemToCart(tableName, item.id, qty, note);
+      const res = await addItemToCart(tableId, item.id, qty, note);
       notify(res.data);
       await loadCart();
     } catch (err) {
@@ -142,7 +169,7 @@ function ClientMenu() {
   const handleGoiMon = async () => {
     setLoading(true);
     try {
-      const res = await confirmOrder(tableName);
+      const res = await confirmOrder(tableId);
       notify(res.data);
       await loadCart(); // giỏ tạm sẽ trống sau khi chốt
     } catch (err) {
@@ -156,7 +183,7 @@ function ClientMenu() {
   const handleThanhToan = async () => {
     setLoading(true);
     try {
-      const res = await getInvoice(tableName);
+      const res = await getInvoice(tableId, tableOrderId);
       setInvoice(res.data);
       setCheckoutOpen(true);
     } catch (err) {
@@ -170,7 +197,7 @@ function ClientMenu() {
   const confirmCheckout = async () => {
     setLoading(true);
     try {
-      const res = await requestCheckout(tableName, paymentMethod);
+      const res = await requestCheckout(tableId, paymentMethod);
       notify(res.data);
       setCheckoutOpen(false);
     } catch (err) {
@@ -184,7 +211,7 @@ function ClientMenu() {
   const handleGoiNhanVien = async () => {
     setLoading(true);
     try {
-      const res = await callService(tableName, "CALLING_WAITER");
+      const res = await callService(tableId, "CALLING_WAITER");
       notify(res.data);
     } catch (err) {
       notify(getApiErrorMessage(err, "Gọi nhân viên thất bại."));
@@ -194,14 +221,14 @@ function ClientMenu() {
   };
 
   /* ===== API update-quantity: cập nhật số lượng món ===== */
-  const handleChangeQty = async (itemId, currentQty, delta) => {
+  const handleChangeQty = async (itemId, currentQty, note, delta) => {
     const newQty = currentQty + delta;
     if (newQty <= 0) {
       return handleRemoveItem(itemId);
     }
     setLoading(true);
     try {
-      const res = await updateItemQuantity(tableName, itemId, newQty);
+      const res = await updateItemQuantity(tableId, itemId, note, newQty);
       notify(res.data);
       await loadCart();
     } catch (err) {
@@ -215,7 +242,7 @@ function ClientMenu() {
   const handleRemoveItem = async (itemId) => {
     setLoading(true);
     try {
-      const res = await removeItem(tableName, itemId);
+      const res = await removeItem(tableId, itemId);
       notify(res.data);
       await loadCart();
     } catch (err) {
@@ -298,11 +325,33 @@ function ClientMenu() {
 
           {/* Chi tiết đơn hàng (giỏ tạm PENDING từ server) */}
           <section className="order-detail">
-            <h3>{tableName}</h3>
+            <h3>Bàn {tableId}</h3>
             <div className="order-header">
               <span className="order-header-title">Tên món</span>
               <span className="order-header-title">Giá</span>
             </div>
+
+            {/* Một khung cuộn chung: món đã gọi ở trên, giỏ hàng ở dưới */}
+            <div className="order-scroll">
+              {/* Món đã gọi xuống bếp — chỉ xem, không sửa/xoá được */}
+              {historyRows.length > 0 && (
+              <div className="ordered-list" aria-label="Món đã gọi">
+                <div className="ordered-label">Món đã gọi</div>
+                {historyRows.map((r) => (
+                  <div className="ordered-row" key={r.orderDetailId}>
+                    <div className="ordered-info">
+                      <div className="ordered-top">
+                        <span className="ordered-name">{r.name}</span>
+                        <span className="ordered-price">{fmt(r.price)}</span>
+                      </div>
+                      <div className="ordered-bottom">
+                        <span className="ordered-qty">x {r.qty}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="order-list">
               {cartRows.length === 0 && (
@@ -330,7 +379,7 @@ function ClientMenu() {
                         <button
                           className="qty-btn"
                           aria-label={`Giảm số lượng ${r.name}`}
-                          onClick={() => handleChangeQty(r.itemId, r.qty, -1)}
+                          onClick={() => handleChangeQty(r.itemId, r.qty, r.note, -1)}
                         >
                           −
                         </button>
@@ -338,7 +387,7 @@ function ClientMenu() {
                         <button
                           className="qty-btn"
                           aria-label={`Tăng số lượng ${r.name}`}
-                          onClick={() => handleChangeQty(r.itemId, r.qty, 1)}
+                          onClick={() => handleChangeQty(r.itemId, r.qty, r.note, 1)}
                         >
                           +
                         </button>
@@ -347,6 +396,7 @@ function ClientMenu() {
                   </div>
                 </div>
               ))}
+            </div>
             </div>
 
             <div className="order-total">
