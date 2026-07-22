@@ -15,6 +15,7 @@ import com.codegym.backend.dto.ForgotPasswordRequest;
 import com.codegym.backend.dto.LoginRequest;
 import com.codegym.backend.dto.LoginResponse;
 import com.codegym.backend.dto.ResetPasswordRequest;
+import com.codegym.backend.dto.VerityOtpRequest;
 import com.codegym.backend.entity.Account;
 import com.codegym.backend.enums.AccountStatus;
 import com.codegym.backend.repository.AccountRepository;
@@ -38,10 +39,6 @@ public class AuthService {
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
             throw new RuntimeException("Tài khoản của bạn chưa được kích hoạt hoặc đang bị khóa!");
-        }
-
-        if (!passwordEncoder.matches(request.getPassword(), account.getPassword())) {
-            throw new RuntimeException("Mật khẩu không chính xác!");
         }
 
         if (account.getRole() == null || account.getRole().getRoleName() == null) {
@@ -71,11 +68,11 @@ public class AuthService {
 
     @Transactional
     public String processForgotPassword(ForgotPasswordRequest request) {
-        Account account = accountRepository.findByEmailAndDeletedAtIsNull(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản hợp lệ với email này!"));
+        String neutralMessage = "Nếu email hợp lệ, hệ thống sẽ gửi mã OTP khôi phục mật khẩu đến email của bạn.";
 
-        if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new RuntimeException("Tài khoản đang bị khóa hoặc không hoạt động, không thể khôi phục mật khẩu!");
+        Account account = accountRepository.findByEmailAndDeletedAtIsNull(request.getEmail()).orElse(null);
+        if (account == null || account.getStatus() != AccountStatus.ACTIVE) {
+            return neutralMessage;
         }
 
         SecureRandom random = new SecureRandom();
@@ -89,16 +86,40 @@ public class AuthService {
 
         emailService.sendPasswordResetMail(account.getEmail(), otp);
 
-        return "Mã OTP khôi phục mật khẩu đã được gửi đến email của bạn.";
+        return neutralMessage;
+    }
+
+    @Transactional
+    public String verityOTP(VerityOtpRequest request) {
+        Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
+                .orElseThrow(() -> new RuntimeException("Mã OTP không hợp lệ"));
+
+        if (account.getResetTokenExpiry().before(new Date())) {
+            throw new RuntimeException("Mã khôi phục đã hết hạn(quá 5 phút)");
+        }
+
+        String resetTokenUuid = java.util.UUID.randomUUID().toString();
+        account.setResetToken(resetTokenUuid);
+        account.setResetTokenExpiry(new Date(System.currentTimeMillis() + 5 * 60 * 1000));
+        accountRepository.save(account);
+
+        return resetTokenUuid;
     }
 
     @Transactional
     public String processResetPassword(ResetPasswordRequest request) {
         Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
-                .orElseThrow(() -> new RuntimeException("Mã OTP không hợp lệ."));
+                .orElseThrow(() -> new RuntimeException("Phiên đổi mật khẩu không hợp lệ hoặc đã bị hủy."));
+
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new RuntimeException("Tài khoản đang bị khóa hoặc không hoạt động, không thể đổi mật khẩu!");
+        }
 
         if (account.getResetTokenExpiry().before(new Date())) {
-            throw new RuntimeException("Mã khôi phục đã hết hạn (quá 5 phút)!");
+            account.setResetToken(null);
+            account.setResetTokenExpiry(null);
+            accountRepository.save(account);
+            throw new RuntimeException("Phiên đổi mật khẩu đã hết hạn (quá 5 phút)!");
         }
 
         account.setPassword(passwordEncoder.encode(request.getNewPassword()));
