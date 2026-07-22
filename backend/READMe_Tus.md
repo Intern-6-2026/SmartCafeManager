@@ -47,6 +47,9 @@ Khi người dùng quên mật khẩu -> ấn vào quên mật khẩu -> nhập 
 - `POST /api/v1/auth/reset-password`
 - Content-Type: `application/json`
 
+### Ghi chú quyền truy cập
+- Ba API này hiện đang được cấu hình `permitAll()` trong `SecurityConfig`, nên FE không cần token để gọi.
+
 ### 1. Gửi OTP khôi phục mật khẩu
 #### Request mẫu
 ```json
@@ -90,7 +93,7 @@ Khi người dùng quên mật khẩu -> ấn vào quên mật khẩu -> nhập 
 ### Ghi chú cho frontend
 - OTP chỉ có hiệu lực trong thời gian ngắn, hiện tại là 5 phút.
 - Sau khi OTP được xác thực, frontend phải giữ token reset để gọi bước đổi mật khẩu.
-- Nếu người dùng gửi lại yêu cầu quên mật khẩu, backend có thể từ chối theo điều kiện chống spam OTP.
+- Nếu sau này backend bổ sung cơ chế chống spam OTP, FE nên hiển thị trạng thái chờ hoặc cooldown tương ứng.
 
 ---
 
