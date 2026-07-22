@@ -10,8 +10,4 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     Optional<Account> findByEmailAndDeletedAtIsNull(String email);
 
     Optional<Account> findByResetTokenAndDeletedAtIsNull(String resetToken);
-
-    boolean existsByUsername(String username);
-
-    boolean existsByEmail(String email);
 }

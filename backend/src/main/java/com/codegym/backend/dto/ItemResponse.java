@@ -23,5 +23,5 @@ public class ItemResponse {
     private String description;
     private String imageUrl;
     private Boolean isAvailable;
-    private Integer totalOrderCount; // Đã đưa về Integer để khớp Entity và tránh lỗi ép kiểu
+    private Integer totalOrderCount;
 }

@@ -35,7 +35,7 @@ public class NewsService {
 
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Account curentAccount = accountRepository.findByUsernameAndDeletedAtIsNull(username)
-                .orElseThrow(() -> new RuntimeException("Không timm thấy tài khoản người đăng"));
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản người đăng"));
 
         News news = News.builder()
                 .title(title)

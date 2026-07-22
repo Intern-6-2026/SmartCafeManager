@@ -1,6 +1,6 @@
 package com.codegym.backend.service;
 
-import java.io.IOException; // Xử lý lỗi upload file
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -25,10 +25,7 @@ public class ItemServiceImpl implements ItemService {
     private final MenuCategoryRepository menuCategoryRepository;
     private final CloudinaryService cloudinaryService; // Inject CloudinaryService thật
 
-    // ==========================================
     // --- 1. LẤY DANH SÁCH MÓN ĂN ---
-    // ==========================================
-
     @Override
     @Transactional(readOnly = true)
     public List<ItemResponse> getAllItems() {
@@ -57,9 +54,7 @@ public class ItemServiceImpl implements ItemService {
         return mapToItemResponse(item);
     }
 
-    // ==========================================
     // --- 2. THÊM MỚI MÓN ĂN ---
-    // ==========================================
     @Override
     @Transactional
     public ItemResponse createItem(String itemCode, String itemName, BigDecimal price, String description, Long menuCategoryId, String newMenuCategoryName, MultipartFile image) {
@@ -103,9 +98,7 @@ public class ItemServiceImpl implements ItemService {
         return mapToItemResponse(savedItem);
     }
 
-    // ==========================================
     // --- 3. CẬP NHẬT MÓN ĂN ---
-    // ==========================================
     @Override
     @Transactional
     public ItemResponse updateItem(Long itemId, String itemCode, String itemName, BigDecimal price, String description, Long menuCategoryId, String newMenuCategoryName, Boolean isAvailable, MultipartFile image) {
@@ -129,7 +122,6 @@ public class ItemServiceImpl implements ItemService {
         if (isAvailable != null) {
             existingItem.setIsAvailable(isAvailable);
         }
-
         // 3. Xử lý ảnh: Upload ảnh thật lên Cloudinary nếu có file mới gửi lên
         if (image != null && !image.isEmpty()) {
             try {
@@ -159,21 +151,17 @@ public class ItemServiceImpl implements ItemService {
         return mapToItemResponse(updatedItem);
     }
 
-    // ==========================================
     // --- 4. XÓA MÓN ĂN ---
-    // ==========================================
     @Override
     @Transactional
     public void deleteItem(Long itemId) {
         Item existingItem = itemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn với ID: " + itemId));
-        existingItem.setIsAvailable(false); // Xóa mềm: đánh dấu không còn hoạt động
+        existingItem.setIsAvailable(false);
         itemRepository.save(existingItem);
     }
 
-    // ==========================================
     // --- 5. HÀM MAPPING SẠCH (Item -> ItemResponse) ---
-    // ==========================================
     private ItemResponse mapToItemResponse(Item item) {
         return ItemResponse.builder()
                 .itemId(item.getItemId())
