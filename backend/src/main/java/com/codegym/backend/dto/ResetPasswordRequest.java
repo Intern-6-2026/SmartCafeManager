@@ -2,11 +2,13 @@ package com.codegym.backend.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.NoArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public class ResetPasswordRequest {
     @NotBlank(message = "Verification code (Token/OTP) cannot be empty")
     private String token;

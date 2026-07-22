@@ -5,10 +5,12 @@ import com.codegym.backend.enums.Gender;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import lombok.NoArgsConstructor;
 import lombok.*;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public class UpdateProfileRequest {
     @NotBlank(message = "Full name cannot be empty")
     private String fullName;
