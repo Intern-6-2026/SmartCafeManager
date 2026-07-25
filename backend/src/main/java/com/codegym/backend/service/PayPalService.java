@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale; // Import thêm Locale
+import java.util.Locale; 
 
 @Service
 public class PayPalService {
@@ -22,7 +22,6 @@ public class PayPalService {
     private static final BigDecimal EXCHANGE_RATE_VND_TO_USD = new BigDecimal("25000");
 
     public String createPayPalOrder(BigDecimal totalAmountVnd, String returnUrl, String cancelUrl) throws PayPalRESTException {
-        // Quy đổi VND sang USD (làm tròn 2 chữ số thập phân)
         BigDecimal totalAmountUsd = totalAmountVnd.divide(EXCHANGE_RATE_VND_TO_USD, 2, RoundingMode.HALF_UP);
 
         Amount amount = new Amount();
@@ -54,7 +53,7 @@ public class PayPalService {
 
         for (Links link : createdPayment.getLinks()) {
             if (link.getRel().equalsIgnoreCase("approval_url")) {
-                return link.getHref(); // Trả về link trang thanh toán của PayPal
+                return link.getHref(); 
             }
         }
         return null;

@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null") //  Thêm dòng này để loại bỏ hoàn toàn 5 cảnh báo "Null type safety"
 public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
@@ -29,8 +30,6 @@ public class ItemServiceImpl implements ItemService {
     @Override
     @Transactional(readOnly = true)
     public List<ItemResponse> getAllItems() {
-        // Sử dụng PageRequest.of(0, Integer.MAX_VALUE) nếu hàm Repository yêu cầu Pageable,
-        // hoặc gọi thẳng hàm lấy tất cả đã đồng bộ.
         return itemRepository.findAllItemsAsDTO(PageRequest.of(0, Integer.MAX_VALUE));
     }
 

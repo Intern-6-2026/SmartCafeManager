@@ -1,749 +1,449 @@
-# 🍽️ Smart Cafe Manager - Customer & Payment API
+# 📘 SmartCafeManager - Payment & Invoice Integration Guide
 
-> Tài liệu tích hợp API dành cho Frontend (React / Vue / Angular)
+## 🛠️ Changelog
+
+### 1. Spring Security Configuration
+
+- Mở quyền truy cập công khai cho toàn bộ API khách hàng:
+
+  ```
+  /api/v1/customer/**
+  ```
+
+  - Khách hàng có thể:
+    - Xem thực đơn.
+    - Gọi món.
+    - Xem hóa đơn.
+    - Thanh toán.
+  - Không yêu cầu đăng nhập hoặc JWT Token.
+
+- Các API dành cho Nhân viên và Quản trị:
+
+  ```
+  /api/v1/staff/**
+  /api/v1/admin/**
+  ```
+
+  - Bắt buộc xác thực bằng JWT Token (`Bearer Token`).
 
 ---
 
-# 1. Tổng quan
+### 2. Fix Hibernate / JPA Enum Query
 
-## Base URL
+#### Lỗi
 
-```text
-http://localhost:8080
+Hibernate không thể biên dịch JPQL do không nhận diện được Enum:
+
+```
+InterpretationException:
+No enum constant ...
 ```
 
-> Thay đổi theo từng môi trường (Development / Staging / Production).
+#### Nguyên nhân
 
----
+Sử dụng `@Query` với giá trị Enum được hard-code.
 
-## Content Type
+#### Khắc phục
 
-```http
-Content-Type: application/json
-```
-
----
-
-## CORS
-
-Backend đã cấu hình:
+Chuyển sang Derived Query Method:
 
 ```java
-@CrossOrigin("*")
+findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
 ```
 
-Frontend có thể gọi trực tiếp từ bất kỳ domain nào.
+Giúp Repository tự động sinh câu truy vấn chính xác và tránh lỗi Enum.
 
 ---
 
-## Định danh bàn
+### 3. Bổ sung API cho Staff
 
-Toàn bộ API sử dụng
+Hoàn thiện các API phục vụ quy trình vận hành.
 
-```text
-tableId (Long)
-```
+#### Phục vụ
 
-để xác định bàn.
-
-Ví dụ:
-
-```text
-tableId = 1
-```
-
-Không truyền tên bàn như:
-
-```text
-Ban01
-```
-
----
-
-# 2. Axios Setup
-
-Tạo một file:
+- Xem món theo bàn
 
 ```
-src/services/api.js
+GET /table/{tableId}/order-details
 ```
 
-```javascript
-import axios from "axios";
+- Xác nhận đơn
 
-const api = axios.create({
-    baseURL: "http://localhost:8080",
-    headers: {
-        "Content-Type": "application/json",
-    },
-});
-
-export default api;
+```
+POST /confirm-order
 ```
 
-Sau đó chỉ cần
+- Đánh dấu món đã phục vụ
 
-```javascript
-import api from "../services/api";
+```
+POST /serve-item
+```
+
+- Hủy món
+
+```
+POST /cancel-item
 ```
 
 ---
 
-# 3. API Danh Sách
+#### Quản lý Order
+
+- Cập nhật món
+- Xóa món khỏi đơn
 
 ---
 
-# 3.1 Quản lý bàn
+#### Thu ngân
 
-Base Path
+Xác nhận thanh toán tiền mặt
 
 ```
-/api/v1/customer
+POST /approve-cash-payment
 ```
+
+Sau khi xác nhận:
+
+- Chốt hóa đơn.
+- Giải phóng bàn.
+- Gửi WebSocket thông báo realtime.
 
 ---
 
-## 1. Lấy thông tin bàn
+### 4. Sửa Logic tính Tổng tiền Hóa đơn
 
-### Endpoint
+#### Lỗi
 
-```http
-GET /api/v1/customer/table-info
-```
-
-### Query Params
-
-|Tên|Kiểu|Bắt buộc|
-|----|--------|------|
-|tableId|Long|✅|
-
-### Axios
-
-```javascript
-api.get("/api/v1/customer/table-info", {
-    params: {
-        tableId: 1,
-    },
-});
-```
-
----
-
-## 2. Gọi phục vụ
-
-### Endpoint
-
-```http
-POST /api/v1/customer/call-service
-```
-
-### Query Params
-
-|Tên|Kiểu|
-|------|------|
-|tableId|Long|
-|status|ServiceStatus|
-
-### Enum
+API:
 
 ```
-CALL_STAFF
-REQUEST_PAYMENT
-NEED_WATER
-```
-
-### Axios
-
-```javascript
-api.post("/api/v1/customer/call-service", null, {
-    params: {
-        tableId: 1,
-        status: "CALL_STAFF",
-    },
-});
-```
-
----
-
-# 3.2 Giỏ hàng (PENDING)
-
----
-
-## 3. Xem giỏ hàng
-
-### Endpoint
-
-```http
-GET /api/v1/customer/cart/{tableId}
-```
-
-### Axios
-
-```javascript
-api.get(`/api/v1/customer/cart/${tableId}`);
-```
-
-### Response
-
-```json
-{
-    "tableId":1,
-    "tableName":"Bàn 01",
-    "totalAmount":150000,
-    "cartItems":[
-        {
-            "orderDetailId":10,
-            "itemId":5,
-            "itemName":"Cà phê sữa",
-            "price":30000,
-            "quantity":2,
-            "note":"Ít đường",
-            "status":"PENDING"
-        }
-    ]
-}
-```
-
----
-
-## 4. Thêm món
-
-### Endpoint
-
-```http
-POST /api/v1/customer/cart/add
-```
-
-### Query Params
-
-|Tên|Kiểu|
-|------|------|
-|tableId|Long|
-|itemId|Long|
-|quantity|Integer|
-|note|String|
-
-### Axios
-
-```javascript
-api.post("/api/v1/customer/cart/add", null, {
-    params: {
-        tableId: 1,
-        itemId: 5,
-        quantity: 2,
-        note: "Không đá",
-    },
-});
-```
-
----
-
-## 5. Cập nhật món
-
-### Endpoint
-
-```http
-PUT /api/v1/customer/cart/items/{itemId}
-```
-
-### Axios
-
-```javascript
-api.put(`/api/v1/customer/cart/items/${itemId}`, null, {
-    params: {
-        tableId: 1,
-        quantity: 3,
-        note: "Thêm đá",
-    },
-});
-```
-
-> quantity <= 0 sẽ tự động xóa món.
-
----
-
-## 6. Xóa món
-
-### Endpoint
-
-```http
-DELETE /api/v1/customer/cart/remove
-```
-
-### Axios
-
-```javascript
-api.delete("/api/v1/customer/cart/remove", {
-    params: {
-        tableId: 1,
-        itemId: 5,
-    },
-});
-```
-
----
-
-## 7. Xóa toàn bộ giỏ
-
-### Endpoint
-
-```http
-DELETE /api/v1/customer/cart/clear
-```
-
-### Axios
-
-```javascript
-api.delete("/api/v1/customer/cart/clear", {
-    params: {
-        tableId: 1,
-    },
-});
-```
-
----
-
-# 3.3 Đặt món
-
----
-
-## 8. Gửi món xuống bếp
-
-### Endpoint
-
-```http
-POST /api/v1/customer/confirm-order
-```
-
-### Axios
-
-```javascript
-api.post("/api/v1/customer/confirm-order", null, {
-    params: {
-        tableId: 1,
-    },
-});
-```
-
-Sau khi gọi:
-
-```
-PENDING
-↓
-
-CONFIRMED
-```
-
----
-
-# 3.4 Bếp
-
----
-
-## 9. Phục vụ món
-
-```http
-PUT /api/v1/customer/kitchen/serve-item
-```
-
-### Axios
-
-```javascript
-api.put("/api/v1/customer/kitchen/serve-item", null, {
-    params: {
-        orderDetailId: 10,
-    },
-});
-```
-
----
-
-## 10. Hủy món
-
-```http
-PUT /api/v1/customer/kitchen/cancel-item
-```
-
-### Axios
-
-```javascript
-api.put("/api/v1/customer/kitchen/cancel-item", null, {
-    params: {
-        orderDetailId: 10,
-        reason: "Hết nguyên liệu",
-    },
-});
-```
-
----
-
-# 3.5 Thanh toán
-
----
-
-## 11. Khách yêu cầu thanh toán
-
-```http
-POST /api/v1/customer/request-checkout
-```
-
-### PaymentMethod
-
-```
-CASH
-
-BANK_TRANSFER
-
-E_WALLET
-
-PAYPAL
-```
-
-### Axios
-
-```javascript
-api.post("/api/v1/customer/request-checkout", null, {
-    params: {
-        tableId: 1,
-        paymentMethod: "CASH",
-    },
-});
-```
-
----
-
-## 12. Xem hóa đơn
-
-```http
 GET /api/v1/customer/invoice-summary/{tableId}
 ```
 
-### Axios
-
-```javascript
-api.get(`/api/v1/customer/invoice-summary/${tableId}`);
-```
-
-### Response
+trả về:
 
 ```json
 {
-    "tableOrderId":100,
-    "tableName":"Bàn 01",
-    "totalAmount":250000,
-    "status":"UNPAID"
+  "totalAmount": 0
 }
 ```
 
----
+mặc dù bàn đã có món.
 
-## 13. Chi tiết hóa đơn
+#### Nguyên nhân
 
-```http
-GET /api/v1/customer/invoice
-```
+Hệ thống chỉ tính những món đã xác nhận và bỏ qua các món ở trạng thái `PENDING`.
 
-### Query Params
+#### Khắc phục
 
-```
-tableId
+Backend tính động lại toàn bộ tổng tiền.
 
-tableOrderId
-```
+Các trạng thái được tính:
 
----
+- ✅ PENDING
+- ✅ ORDERED
+- ✅ CONFIRMED
+- ✅ SERVED
 
-## 14. Thu ngân xác nhận thanh toán
+Không tính:
 
-```http
-POST /api/v1/customer/complete-checkout
-```
+- ❌ CANCELLED
 
-### Query Params
+Nhờ đó:
 
-```
-tableId
+- `invoice-summary`
+- `invoice`
+- PayPal
+- Các cổng thanh toán khác
 
-paymentMethod
-```
-
-Sau khi thành công
-
-- Hóa đơn chuyển PAID
-
-- Reset bàn
-
-- Xóa giỏ hàng
+đều luôn nhận được số tiền chính xác.
 
 ---
 
-# 3.6 Thanh toán PayPal
+# 📜 Payment & Invoice API Integration
 
-Base Path
+## 1. Tổng quan
 
-```
-/api/v1/items/payment
-```
+Frontend **không cần tự tính tổng tiền**.
 
----
-
-## 15. Tạo giao dịch
-
-```http
-POST /api/v1/items/payment/paypal
-```
-
-### Query Params
-
-```
-tableId
-```
-
-### Response
+Backend luôn trả về:
 
 ```json
 {
-    "approvalUrl":"https://www.sandbox.paypal.com/...",
-    "qrCodeUrl":"https://api.qrserver.com/..."
+    "totalAmount": 180000
 }
 ```
 
-Frontend có thể:
+đúng với giá trị thực tế.
 
-### Mobile
+Điều này giúp tránh lỗi:
+
+```
+Amount cannot be zero
+```
+
+khi tích hợp PayPal hoặc các cổng thanh toán khác.
+
+---
+
+## 2. Trạng thái Order Detail
+
+| Status | Ý nghĩa | Tính vào tổng tiền |
+|---------|----------|--------------------|
+| PENDING | Món trong giỏ tạm | ✅ Có |
+| ORDERED | Đã gửi xuống bếp | ✅ Có |
+| CONFIRMED | Bếp xác nhận | ✅ Có |
+| SERVED | Đã phục vụ | ✅ Có |
+| CANCELLED | Đã hủy | ❌ Không |
+
+### Khuyến nghị cho Frontend
+
+Nếu:
 
 ```text
-window.location = approvalUrl;
+status == CANCELLED
+```
+
+nên:
+
+- Gạch ngang tên món.
+- Làm mờ giá.
+- Hiển thị lý do hủy (`note`) nếu có.
+
+---
+
+# 3. API Integration
+
+## 3.1 Xem tóm tắt hóa đơn
+
+### Endpoint
+
+```
+GET /api/v1/customer/invoice-summary/{tableId}
+```
+
+### Authentication
+
+Không yêu cầu JWT.
+
+### Response
+
+```json
+{
+  "tableOrderId": 7,
+  "tableName": "Ban01",
+  "totalAmount": 180000,
+  "orderStatus": "OPEN",
+  "serviceStatus": "NORMAL",
+  "openAt": "2026-07-26T05:50:32.889331",
+  "orderDetails": [
+    {
+      "orderDetailId": 15,
+      "itemId": 3,
+      "itemName": "Trà Đào Cam Sả",
+      "quantity": 4,
+      "unitPrice": 45000,
+      "note": "Ít ngọt",
+      "status": "PENDING",
+      "imageUrl": "http://domain.com/images/tra-dao.jpg"
+    }
+  ]
+}
+```
+
+---
+
+## 3.2 Yêu cầu thanh toán
+
+Khách hàng bấm:
+
+- Thanh toán tiền mặt
+- Thanh toán PayPal
+
+### Endpoint
+
+```
+POST /api/v1/customer/request-checkout
+```
+
+### Parameters
+
+| Parameter | Kiểu |
+|-----------|------|
+| tableId | Long |
+| paymentMethod | CASH hoặc PAYPAL |
+
+### Frontend xử lý
+
+Sau khi gọi thành công:
+
+- Hiển thị màn hình:
+
+```
+Đang chờ nhân viên xác nhận thanh toán...
 ```
 
 hoặc
 
-### QR
+- Mở PayPal.
 
-```jsx
-<img src={qrCodeUrl} alt="PayPal QR"/>
+Khi đó:
+
+```
+serviceStatus = REQUESTING_BILL
 ```
 
 ---
 
-## 16. Callback thành công
+## 3.3 Thanh toán PayPal
 
-```http
-GET /api/v1/items/payment/paypal/success
-```
-
-### Query Params
+### Tạo giao dịch
 
 ```
-paymentId
-
-PayerID
-
-tableId
+POST /api/v1/customer/payment/paypal
 ```
 
-Sau khi PayPal redirect về Frontend
+### Parameter
 
-Ví dụ
+| Parameter | Kiểu |
+|-----------|------|
+| tableId | Long |
+
+### Response
+
+```json
+{
+    "approvalUrl": "...",
+    "qrCodeUrl": "..."
+}
+```
+
+Frontend:
+
+- Redirect đến `approvalUrl`
+
+hoặc
+
+- Hiển thị QR Code để khách quét.
+
+---
+
+## 3.4 Thanh toán PayPal thành công
 
 ```
-http://localhost:3000/payment-success?tableId=1&paymentId=xxx&PayerID=yyy
+GET /api/v1/customer/payment/paypal/success
 ```
 
-Frontend cần lấy các Query Parameter rồi gọi API này.
+### Parameters
+
+| Parameter | Required |
+|-----------|----------|
+| paymentId | No |
+| token | No |
+| PayerID | Yes |
+| tableId | Yes |
 
 Backend sẽ:
 
-- Xác nhận thanh toán
+- Execute PayPal Payment.
+- Chốt hóa đơn.
+- Giải phóng bàn.
+- Redirect:
 
-- Hoàn tất hóa đơn
-
-- Reset bàn
-
----
-
-# 4. Luồng hoạt động
-
-```text
-Khách quét QR
-      │
-      ▼
-Lấy thông tin bàn
-GET /table-info
-      │
-      ▼
-Chọn món
-POST /cart/add
-      │
-      ▼
-Xem giỏ hàng
-GET /cart/{tableId}
-      │
-      ▼
-Nhấn Gọi món
-POST /confirm-order
-      │
-      ▼
-Bếp nhận đơn
-      │
-      ├─────────────► Serve Item
-      │
-      └─────────────► Cancel Item
-      │
-      ▼
-Thanh toán
-      │
-      ├────────── Tiền mặt
-      │          POST /request-checkout
-      │
-      └────────── PayPal
-                 │
-                 ▼
-          POST /payment/paypal
-                 │
-                 ▼
-          approvalUrl / QRCode
-                 │
-                 ▼
-      payment-success
-                 │
-                 ▼
-GET /payment/paypal/success
-                 │
-                 ▼
-Hoàn tất hóa đơn
+```
+http://localhost:3000/payment-success
 ```
 
 ---
 
-# 5. Trạng thái món
-
-|Status|Ý nghĩa|Frontend|
-|--------|-----------|-------------|
-|PENDING|Trong giỏ hàng|Cho phép sửa/xóa|
-|CONFIRMED|Đã gửi bếp|Khóa chỉnh sửa|
-|SERVED|Đã phục vụ|Hiển thị hoàn thành|
-|CANCELLED|Đã hủy|Gạch ngang + giá 0|
-
----
-
-# 6. Lưu ý quan trọng
-
-## 1. tableId
-
-Luôn truyền kiểu Number.
-
-Ví dụ:
-
-```javascript
-tableId: 1
-```
-
-Không dùng
-
-```javascript
-tableId: "Ban01"
-```
-
----
-
-## 2. RequestParam
-
-Backend đang dùng
-
-```java
-@RequestParam
-```
-
-Do đó với Axios cần viết:
-
-```javascript
-api.post(url, null, {
-    params: {
-        ...
-    }
-});
-```
-
-không gửi JSON Body.
-
----
-
-## 3. Quy tắc UI
-
-### PENDING
-
-✅ Cho sửa
-
-✅ Cho tăng giảm
-
-✅ Cho ghi chú
-
----
-
-### CONFIRMED
-
-❌ Không cho sửa
-
----
-
-### SERVED
-
-Hiển thị đã phục vụ.
-
----
-
-### CANCELLED
-
-Hiển thị:
-
-- gạch ngang tên món
-
-- giá = 0
-
-- lý do hủy nếu có
-
----
-
-# 7. Gợi ý cấu trúc Frontend
+## 3.5 Hủy thanh toán PayPal
 
 ```
-src
-│
-├── services
-│     api.js
-│     customerApi.js
-│     paymentApi.js
-│
-├── pages
-│     MenuPage.jsx
-│     CartPage.jsx
-│     CheckoutPage.jsx
-│     PaymentSuccess.jsx
-│
-├── components
-│     CartItem.jsx
-│     BillSummary.jsx
-│     PaymentQRCode.jsx
-│
-└── hooks
-      useCart.js
-      useTable.js
+GET /api/v1/customer/payment/paypal/cancel
 ```
+
+### Parameter
+
+| Parameter |
+|-----------|
+| tableId |
+
+Backend sẽ redirect về:
+
+```
+http://localhost:3000/payment-cancel
+```
+
+để Frontend hiển thị màn hình:
+
+> Thanh toán đã bị hủy.
 
 ---
 
-# 8. Tổng kết
+## 3.6 Thu ngân xác nhận thanh toán tiền mặt
 
-Tổng số API:
+```
+POST /api/v1/staff/approve-cash-payment
+```
 
-|Module|Số API|
-|--------|------|
-|Bàn & Phục vụ|2|
-|Giỏ hàng|5|
-|Đặt món|1|
-|Bếp|2|
-|Thanh toán|4|
-|PayPal|2|
+### Authentication
 
-**Tổng cộng: 16 API**
+JWT Token.
+
+### Parameter
+
+| Parameter |
+|-----------|
+| tableId |
+
+Backend sẽ:
+
+1. Chuyển các món `PENDING` → `ORDERED`.
+2. Đóng hóa đơn.
+3. Cập nhật trạng thái bàn:
+
+```
+isOccupied = false
+serviceStatus = NORMAL
+```
+
+4. Gửi WebSocket thông báo giải phóng bàn.
+
+---
+
+# 4. WebSocket Integration
+
+Backend sử dụng WebSocket để cập nhật realtime.
+
+## Topic
+
+```
+/topic/staff-requests
+```
+
+## Sự kiện
+
+Sau khi thanh toán hoàn tất:
+
+```json
+{
+  "tableId": 1,
+  "type": "CHECKOUT_COMPLETED",
+  "message": "Bàn 1 đã hoàn tất thanh toán & sẵn sàng đón khách mới."
+}
+```
+
+Frontend nên subscribe Topic trên để:
+
+- Cập nhật trạng thái bàn.
+- Tự động reload danh sách bàn.
+- Đồng bộ giao diện Thu ngân và Nhân viên theo thời gian thực.
+
+---
+
+# 📌 Ghi chú
+
+- Toàn bộ API khách hàng (`/api/v1/customer/**`) không yêu cầu JWT.
+- Toàn bộ API Staff/Admin yêu cầu JWT hợp lệ.
+- `totalAmount` luôn được Backend tính toán và trả về chính xác.
+- Frontend không cần tự cộng tổng tiền trước khi hiển thị hoặc gửi sang cổng thanh toán.

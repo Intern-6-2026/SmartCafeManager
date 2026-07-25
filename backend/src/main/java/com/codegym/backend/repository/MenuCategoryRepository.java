@@ -6,7 +6,6 @@ import java.util.Optional;
 
 public interface MenuCategoryRepository extends JpaRepository<MenuCategory, Long> {
 
-    // Đã đổi thành findByCategoryName để khớp với trường "categoryName" trong
-    // entity MenuCategory của anh
+
     Optional<MenuCategory> findByCategoryName(String categoryName);
 }
