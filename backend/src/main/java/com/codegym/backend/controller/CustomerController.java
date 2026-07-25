@@ -1,23 +1,19 @@
 package com.codegym.backend.controller;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.*;
 
 import com.codegym.backend.dto.CartResponseDTO;
-import com.codegym.backend.dto.TableOrderInvoiceDTO;
 import com.codegym.backend.dto.TableOrderSummaryDTO;
 import com.codegym.backend.entity.Tables;
-import com.codegym.backend.enums.PaymentMethod;
 import com.codegym.backend.enums.ServiceStatus;
-import com.codegym.backend.service.CustomerOrderService;
+import com.codegym.backend.service.OrderService;
+import com.codegym.backend.service.PaymentService;
+import com.codegym.backend.service.StaffOrderService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,42 +23,42 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CustomerController {
 
-    private final CustomerOrderService customerOrderService;
+    private final OrderService orderService;
+    private final PaymentService paymentService;
+    private final StaffOrderService staffOrderService;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    // --- 1. QUẢN LÝ BÀN & THÔNG TIN ---
+    // --- 1. THÔNG TIN BÀN & GỌI PHỤC VỤ ---
     @GetMapping("/table-info")
     public ResponseEntity<Tables> getTableInfo(@RequestParam Long tableId) {
-        return ResponseEntity.ok(customerOrderService.getTableInfo(tableId));
+        return ResponseEntity.ok(staffOrderService.getTableInfo(tableId));
     }
 
     @PostMapping("/call-service")
     public ResponseEntity<String> callService(
             @RequestParam Long tableId,
             @RequestParam ServiceStatus status) {
-        customerOrderService.updateTableServiceStatus(tableId, status);
+        staffOrderService.updateTableServiceStatus(tableId, status);
+        sendWebSocketNotification(tableId, "CALL_SERVICE", "Bàn " + tableId + " yêu cầu: " + status);
         return ResponseEntity.ok("Hệ thống đã ghi nhận yêu cầu: " + status);
     }
 
-    // --- 2. GIỎ HÀNG TẠM (PENDING) ---
-    // Lấy tổng quan giỏ hàng (Gồm món đã gọi + món giỏ tạm)
+    // --- 2. GIỎ HÀNG TẠM ---
     @GetMapping("/cart/{tableId}")
     public ResponseEntity<CartResponseDTO> getCartOverview(@PathVariable Long tableId) {
-        CartResponseDTO cartOverview = customerOrderService.getCartOverview(tableId);
-        return ResponseEntity.ok(cartOverview);
+        return ResponseEntity.ok(orderService.getCartOverview(tableId));
     }
 
-    // Thêm món vào giỏ tạm
     @PostMapping("/cart/add")
     public ResponseEntity<String> addItemToCart(
             @RequestParam Long tableId,
             @RequestParam Long itemId,
             @RequestParam Integer quantity,
             @RequestParam(required = false, defaultValue = "") String note) {
-        customerOrderService.addItemToCart(tableId, itemId, quantity, note);
-        return ResponseEntity.ok("Đã thêm món vào giỏ hàng tạm thời!");
+        orderService.addItemToCart(tableId, itemId, quantity, note);
+        return ResponseEntity.ok("Đã thêm món vào giỏ hàng tạm!");
     }
 
-    // Cập nhật số lượng + ghi chú của món trong giỏ tạm
     @PutMapping("/cart/items/{itemId}")
     public ResponseEntity<String> updateCartItemDetail(
             @RequestParam Long tableId,
@@ -71,84 +67,55 @@ public class CustomerController {
             @RequestParam(required = false) String note) {
 
         if (quantity != null && quantity <= 0) {
-            customerOrderService.removeItemFromCart(tableId, itemId);
-            return ResponseEntity.ok("Đã xóa món khỏi giỏ hàng do số lượng <= 0!");
+            orderService.removeItemFromCart(tableId, itemId);
+            return ResponseEntity.ok("Đã xóa món khỏi giỏ hàng!");
         }
 
-        customerOrderService.updateCartItemDetail(tableId, itemId, quantity, note);
+        orderService.updateCartItemDetail(tableId, itemId, quantity, note);
         return ResponseEntity.ok("Cập nhật giỏ hàng thành công!");
     }
 
-    // Xóa 1 món khỏi giỏ tạm
     @DeleteMapping("/cart/remove")
     public ResponseEntity<String> removeItemFromCart(
             @RequestParam Long tableId,
             @RequestParam Long itemId) {
-        customerOrderService.removeItemFromCart(tableId, itemId);
+        orderService.removeItemFromCart(tableId, itemId);
         return ResponseEntity.ok("Đã xóa món ăn khỏi giỏ hàng!");
     }
 
-    // Xóa sạch giỏ tạm
     @DeleteMapping("/cart/clear")
     public ResponseEntity<String> clearCart(@RequestParam Long tableId) {
-        customerOrderService.clearTemporaryCart(tableId);
+        orderService.clearTemporaryCart(tableId);
         return ResponseEntity.ok("Đã xóa toàn bộ món trong giỏ hàng tạm!");
     }
 
-    // --- 3. XÁC NHẬN GỬI BẾP & QUẢN LÝ ĐƠN ---
-    // Bấm [GỌI MÓN] -> Chuyển PENDING sang CONFIRMED
+    // --- 3. BẤM GỌI MÓN ---
     @PostMapping("/confirm-order")
     public ResponseEntity<String> confirmOrder(@RequestParam Long tableId) {
-        customerOrderService.confirmOrder(tableId);
+        orderService.confirmOrder(tableId);
+        sendWebSocketNotification(tableId, "NEW_ORDER", "Bàn " + tableId + " vừa gửi đơn món mới!");
         return ResponseEntity.ok("Đã gửi đơn hàng thành công xuống bếp!");
     }
 
-    // Bếp đánh dấu đã phục vụ
-    @PutMapping("/kitchen/serve-item")
-    public ResponseEntity<String> markItemAsServed(@RequestParam Long orderDetailId) {
-        customerOrderService.markItemAsServed(orderDetailId);
-        return ResponseEntity.ok("Đã chuyển trạng thái món sang SERVED!");
+    // --- 4. YÊU CẦU THANH TOÁN ---
+    @PostMapping("/payment/cash")
+    public ResponseEntity<String> processCashPayment(@RequestParam Long tableId) {
+        paymentService.processCashPayment(tableId);
+        sendWebSocketNotification(tableId, "CASH_PAYMENT_REQUEST", "Bàn " + tableId + " yêu cầu THANH TOÁN TIỀN MẶT!");
+        return ResponseEntity.ok("Đã gửi yêu cầu thanh toán tiền mặt. Vui lòng chờ nhân viên!");
     }
 
-    // Bếp báo hết món (Hủy món)
-    @PutMapping("/kitchen/cancel-item")
-    public ResponseEntity<String> cancelOrderItem(
-            @RequestParam Long orderDetailId,
-            @RequestParam(required = false, defaultValue = "Hết món") String reason) {
-        customerOrderService.cancelOrderItem(orderDetailId, reason);
-        return ResponseEntity.ok("Đã hủy món thành công và tính lại tổng tiền!");
-    }
-
-    // --- 4. THANH TOÁN & HÓA ĐƠN ---
-    // Khách gửi yêu cầu thanh toán
-    @PostMapping("/request-checkout")
-    public ResponseEntity<String> requestCheckout(
-            @RequestParam Long tableId,
-            @RequestParam PaymentMethod paymentMethod) {
-        customerOrderService.requestCheckout(tableId, paymentMethod);
-        return ResponseEntity.ok("Yêu cầu thanh toán bằng " + paymentMethod + " đã được gửi!");
-    }
-
-    // Khách xem tóm tắt hóa đơn checkout
     @GetMapping("/invoice-summary/{tableId}")
     public ResponseEntity<TableOrderSummaryDTO> getInvoiceSummary(@PathVariable Long tableId) {
-        return ResponseEntity.ok(customerOrderService.getInvoiceSummaryDTO(tableId));
+        return ResponseEntity.ok(paymentService.getInvoiceSummaryDTO(tableId));
     }
 
-    // Xem chi tiết hóa đơn cụ thể (Dành cho Admin/Thu ngân)
-    @GetMapping("/invoice")
-    public ResponseEntity<TableOrderInvoiceDTO> getCurrentInvoice(
-            @RequestParam Long tableId,
-            @RequestParam Long tableOrderId) {
-        return ResponseEntity.ok(customerOrderService.getCurrentInvoice(tableId, tableOrderId));
-    }
-
-    // Thu ngân xác nhận đã thu tiền -> Hoàn tất checkout & Giải phóng bàn
-    @PostMapping("/complete-checkout")
-    public ResponseEntity<String> completeCheckout(
-            @RequestParam Long tableId,
-            @RequestParam PaymentMethod paymentMethod) {
-        customerOrderService.completeCheckout(tableId, paymentMethod);
-        return ResponseEntity.ok("Thanh toán thành công! Hóa đơn đã chốt và bàn đã giải phóng.");
+    // Helper WebSocket
+    private void sendWebSocketNotification(Long tableId, String type, String message) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("tableId", tableId);
+        payload.put("type", type);
+        payload.put("message", message);
+        messagingTemplate.convertAndSend("/topic/staff-requests", payload);
     }
 }

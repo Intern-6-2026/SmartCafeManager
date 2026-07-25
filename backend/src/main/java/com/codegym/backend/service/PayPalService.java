@@ -3,32 +3,35 @@ package com.codegym.backend.service;
 import com.paypal.api.payments.*;
 import com.paypal.base.rest.APIContext;
 import com.paypal.base.rest.PayPalRESTException;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale; // Import thêm Locale
+import java.util.Locale;
 
 @Service
+@RequiredArgsConstructor
 public class PayPalService {
 
-    @Autowired
-    private APIContext apiContext;
+    private final APIContext apiContext;
 
     // Tỷ giá quy đổi tạm thời VND -> USD để gửi qua PayPal
     private static final BigDecimal EXCHANGE_RATE_VND_TO_USD = new BigDecimal("25000");
 
-    public String createPayPalOrder(BigDecimal totalAmountVnd, String returnUrl, String cancelUrl)
-            throws PayPalRESTException {
+    public String createPayPalOrder(BigDecimal totalAmountVnd, String returnUrl, String cancelUrl) throws PayPalRESTException {
+        if (totalAmountVnd == null || totalAmountVnd.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0!");
+        }
+
         // Quy đổi VND sang USD (làm tròn 2 chữ số thập phân)
         BigDecimal totalAmountUsd = totalAmountVnd.divide(EXCHANGE_RATE_VND_TO_USD, 2, RoundingMode.HALF_UP);
 
         Amount amount = new Amount();
         amount.setCurrency("USD");
-        // FIX LỖI Ở DÒNG NÀY: Dùng Locale.US để ép định dạng dấu chấm (.)
+        // Ép định dạng Locale.US để dùng dấu chấm (.) ngăn cách phần thập phân
         amount.setTotal(String.format(Locale.US, "%.2f", totalAmountUsd));
 
         Transaction transaction = new Transaction();
@@ -54,8 +57,8 @@ public class PayPalService {
         Payment createdPayment = payment.create(apiContext);
 
         for (Links link : createdPayment.getLinks()) {
-            if (link.getRel().equalsIgnoreCase("approval_url")) {
-                return link.getHref(); // Trả về link trang thanh toán của PayPal
+            if ("approval_url".equalsIgnoreCase(link.getRel())) {
+                return link.getHref();
             }
         }
         return null;

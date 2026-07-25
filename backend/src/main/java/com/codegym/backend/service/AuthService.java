@@ -32,7 +32,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
-
+    
     public LoginResponse login(LoginRequest request) {
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại hoặc đã bị xóa!"));
@@ -91,9 +91,8 @@ public class AuthService {
 
     @Transactional
     public String verityOTP(VerityOtpRequest request) {
-        Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
-                .orElseThrow(() -> new RuntimeException("Mã OTP không hợp lệ"));
-
+        Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getOtp())
+        .orElseThrow(() -> new RuntimeException("Mã OTP không hợp lệ"));
         if (account.getResetTokenExpiry().before(new Date())) {
             throw new RuntimeException("Mã khôi phục đã hết hạn (quá 5 phút)");
         }

@@ -74,8 +74,7 @@ public class AuthController {
         return ResponseEntity.ok(authService.processResetPassword(request));
     }
 
-    @PreAuthorize("permitAll()")
-    @PostMapping("/verify-otp")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> verifyOTP(@Valid @RequestBody VerityOtpRequest request) {
         String message = authService.verityOTP(request);
         return ResponseEntity.ok(message);
