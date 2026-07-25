@@ -1,15 +1,22 @@
 package com.codegym.backend.controller;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.codegym.backend.dto.TableOrderSummaryDTO;
 import com.codegym.backend.enums.PaymentMethod;
 import com.codegym.backend.service.CustomerOrderService;
 import com.codegym.backend.service.PayPalService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/items/payment")
@@ -43,7 +50,8 @@ public class PaymentController {
         }
     }
 
-    // 2. API Callback sau khi khách bấm thanh toán xong ở PayPal (Sửa String tableName -> Long tableId)
+    // 2. API Callback sau khi khách bấm thanh toán xong ở PayPal (Sửa String
+    // tableName -> Long tableId)
     @GetMapping("/paypal/success")
     public ResponseEntity<?> paymentSuccess(
             @RequestParam("paymentId") String paymentId,

@@ -1,12 +1,15 @@
 package com.codegym.backend.dto;
 
 import java.util.Date;
+
 import com.codegym.backend.enums.Gender;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.*;
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -23,8 +26,6 @@ public class UpdateProfileRequest {
     private String phoneNumber;
 
     private String address;
-
-    private String imageUrl;
 
     @NotBlank(message = "Email không được để trống")
     @Email(message = "Định dạng email không hợp lệ")

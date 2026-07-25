@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.codegym.backend.dto.*;
+import com.codegym.backend.dto.ChangePasswordRequest;
+import com.codegym.backend.dto.UpdateProfileRequest;
+import com.codegym.backend.dto.UserProfileResponse;
 import com.codegym.backend.entity.Account;
 import com.codegym.backend.entity.Customer;
 import com.codegym.backend.entity.Employee;
@@ -115,8 +117,7 @@ public class UserService {
             }
             if (request.getAddress() != null)
                 emp.setAddress(request.getAddress());
-            if (request.getImageUrl() != null)
-                emp.setImageUrl(request.getImageUrl());
+
             employeeRepository.save(emp);
             return getCurrentUserProfile();
         }
@@ -142,8 +143,6 @@ public class UserService {
             }
             if (request.getAddress() != null)
                 cus.setAddress(request.getAddress());
-            if (request.getImageUrl() != null)
-                cus.setImageUrl(request.getImageUrl());
 
             customerRepository.save(cus);
             return getCurrentUserProfile();
@@ -186,6 +185,8 @@ public class UserService {
         Optional<Employee> empOpt = employeeRepository.findByAccount(account);
         if (empOpt.isPresent()) {
             Employee emp = empOpt.get();
+            if (emp.getImageUrl() != null)
+                cloudinaryService.deleteImage(emp.getImageUrl());
             emp.setImageUrl(newImageUrl);
             employeeRepository.save(emp);
             return getCurrentUserProfile();
@@ -194,6 +195,8 @@ public class UserService {
         Optional<Customer> cusOpt = customerRepository.findByAccount(account);
         if (cusOpt.isPresent()) {
             Customer cus = cusOpt.get();
+            if (cus.getImageUrl() != null)
+                cloudinaryService.deleteImage(cus.getImageUrl());
             cus.setImageUrl(newImageUrl);
             customerRepository.save(cus);
             return getCurrentUserProfile();
