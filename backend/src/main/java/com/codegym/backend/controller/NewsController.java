@@ -1,11 +1,21 @@
 package com.codegym.backend.controller;
 
-import com.codegym.backend.service.NewsService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.codegym.backend.enums.NewsStatus;
+import com.codegym.backend.service.NewsService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/news")
@@ -14,38 +24,42 @@ public class NewsController {
 
     private final NewsService newsService;
 
+    // ==========================================
+    // 1. PUBLIC API (KHÁCH HÀNG / VÃNG LAI)
+    // ==========================================
+
     /**
-     * Lấy danh sách toàn bộ tin tức hiện có trên hệ thống.
-     * API này được công khai hoàn toàn (permitAll), cho phép tất cả mọi người
-     * (bao gồm khách vãng lai chưa đăng nhập và người dùng đã có tài khoản)
-     * đều có thể truy cập và xem danh sách tin tức.
-     *
-     * Yêu cầu phân quyền: Công khai, không yêu cầu đăng nhập (permitAll()).
-     *
-     * Đường dẫn API: GET http://localhost:8080/api/v1/news
+     * Lấy danh sách tin tức (Có phân trang, bỏ qua nội dung chi tiết)
+     * Chỉ lấy các bài viết có trạng thái PUBLISHED
      */
     @GetMapping
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> getAllNews() {
-        return ResponseEntity.ok(newsService.getAllNews());
+    public ResponseEntity<?> getAllNews(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(newsService.getAllNews(page, size));
     }
 
     /**
+     * Lấy chi tiết 1 bài viết tin tức dựa vào ID
+     */
+    @GetMapping("/{id}")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getNewsById(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(newsService.getNewsById(id));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // ==========================================
+    // 2. STAFF & ADMIN API (QUẢN LÝ BÀI VIẾT)
+    // ==========================================
+
+    /**
      * Tạo mới một bài viết tin tức.
-     * API nhận dữ liệu đầu vào dưới định dạng multipart/form-data để hỗ trợ
-     * tải lên (upload) file hình ảnh đính kèm cùng với các văn bản thông thường.
-     *
-     * Yêu cầu phân quyền: Chỉ những tài khoản có vai trò Quản trị viên (ADMIN)
-     * hoặc Nhân viên (STAFF) mới được phép thực hiện chức năng này.
-     *
-     * Đường dẫn API: POST http://localhost:8080/api/v1/news
-     * Content-Type: multipart/form-data
-     *
-     * Tham số:
-     * - title: Tiêu đề bài viết.
-     * - summary: Nội dung tóm tắt (không bắt buộc).
-     * - content: Nội dung chi tiết bài viết.
-     * - image: File hình ảnh đính kèm (không bắt buộc).
+     * Cần quyền ADMIN hoặc STAFF.
      */
     @PostMapping(consumes = "multipart/form-data")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
@@ -58,22 +72,7 @@ public class NewsController {
     }
 
     /**
-     * Cập nhật thông tin của một bài viết tin tức đã tồn tại dựa trên ID.
-     * Cho phép chỉnh sửa các thông tin như tiêu đề, nội dung tóm tắt, nội dung
-     * chi tiết, hoặc tải lên hình ảnh mới để thay thế hình ảnh cũ.
-     *
-     * Yêu cầu phân quyền: Tương tự như tạo mới, chỉ ADMIN và STAFF mới có
-     * quyền thao tác.
-     *
-     * Đường dẫn API: PUT http://localhost:8080/api/v1/news/{id}
-     * Content-Type: multipart/form-data
-     *
-     * Tham số:
-     * - id: ID của bài viết tin tức cần cập nhật.
-     * - title: Tiêu đề bài viết.
-     * - summary: Nội dung tóm tắt (không bắt buộc).
-     * - content: Nội dung chi tiết bài viết.
-     * - image: File hình ảnh mới để thay thế ảnh cũ (không bắt buộc).
+     * Cập nhật thông tin của một bài viết tin tức đã tồn tại.
      */
     @PutMapping(value = "/{id}", consumes = "multipart/form-data")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
@@ -87,22 +86,46 @@ public class NewsController {
     }
 
     /**
-     * Xóa một bài viết tin tức cụ thể khỏi hệ thống thông qua ID.
-     * (Lưu ý: Tùy thuộc vào thiết kế của service, đây có thể là xóa mềm - đánh
-     * dấu xóa, hoặc xóa cứng - xóa vĩnh viễn khỏi cơ sở dữ liệu).
-     *
-     * Yêu cầu phân quyền: Cần tài khoản cấp ADMIN hoặc STAFF để thực thi hành
-     * động này.
-     *
-     * Đường dẫn API: DELETE http://localhost:8080/api/v1/news/{id}
-     *
-     * Tham số:
-     * - id: ID của bài viết tin tức cần xóa.
+     * Xóa mềm một bài viết tin tức.
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> deleteNews(@PathVariable Long id) {
-        newsService.deleteNews(id);
-        return ResponseEntity.ok("Xóa tin tức thành công!");
+        try {
+            newsService.deleteNews(id);
+            return ResponseEntity.ok("Xóa tin tức thành công!");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // ==========================================
+    // 3. ADMIN ONLY API (PHÊ DUYỆT & QUẢN TRỊ TỔNG)
+    // ==========================================
+
+    /**
+     * Dành cho Admin: Lấy tất cả bài viết (kể cả PENDING, REJECTED)
+     */
+    @GetMapping("/admin/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getAllNewsForAdmin(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(newsService.getAllNewsForAdmin(page, size));
+    }
+
+    /**
+     * Dành cho Admin: Duyệt bài hoặc Đổi trạng thái bài viết
+     */
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> changeNewsStatus(
+            @PathVariable Long id,
+            @RequestParam NewsStatus status) {
+        try {
+            return ResponseEntity.ok(newsService.changeNewsStatus(id, status));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

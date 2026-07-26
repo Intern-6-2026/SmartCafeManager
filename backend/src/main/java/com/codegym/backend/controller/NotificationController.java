@@ -10,8 +10,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.codegym.backend.service.NotificationService;
 
-import lombok.RequiredArgsConstructor;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
@@ -43,7 +43,8 @@ public class NotificationController {
      * tới tất cả các màn hình (emitters) của nhân viên đang lắng nghe ở luồng
      * API subscribe phía trên.
      *
-     * (Đã cập nhật nhận @RequestBody bằng DTO để hỗ trợ test tiện lợi trên Swagger UI)
+     * (Đã cập nhật nhận @RequestBody bằng DTO để hỗ trợ test tiện lợi trên Swagger
+     * UI)
      *
      * Đường dẫn API: POST http://localhost:8080/api/v1/auth/notification/send
      */
@@ -56,7 +57,8 @@ public class NotificationController {
         return ResponseEntity.ok("Đã gửi thông báo thành công!");
     }
 
-    // --- Định nghĩa DTO trực tiếp tại đây để Swagger UI hiển thị form nhập dữ liệu ---
+    // --- Định nghĩa DTO trực tiếp tại đây để Swagger UI hiển thị form nhập dữ liệu
+    // ---
     @Data
     public static class NotificationDto {
         private String tableName;

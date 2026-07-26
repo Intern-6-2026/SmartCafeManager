@@ -1,17 +1,18 @@
 package com.codegym.backend.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class VerityOtpRequest {
-
-    private String email;
-    private String otp;
-
+    @NotBlank(message = "OTP không được rỗng")
+    private String token;
 }

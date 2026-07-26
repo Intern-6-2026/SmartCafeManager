@@ -12,6 +12,7 @@ import com.codegym.backend.dto.LoginRequest;
 import com.codegym.backend.dto.ResetPasswordRequest;
 import com.codegym.backend.dto.VerityOtpRequest;
 import com.codegym.backend.service.AuthService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -77,7 +78,6 @@ public class AuthController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> verifyOTP(@Valid @RequestBody VerityOtpRequest request) {
         String message = authService.verityOTP(request);
-        return ResponseEntity.ok(message);
+        return ResponseEntity.ok(java.util.Map.of("resetToken", message));
     }
-
 }

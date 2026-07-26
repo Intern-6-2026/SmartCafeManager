@@ -1,16 +1,24 @@
 package com.codegym.backend.service;
 
-import com.paypal.api.payments.*;
-import com.paypal.base.rest.APIContext;
-import com.paypal.base.rest.PayPalRESTException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+
+import org.springframework.stereotype.Service;
+
+import com.paypal.api.payments.Amount;
+import com.paypal.api.payments.Links;
+import com.paypal.api.payments.Payer;
+import com.paypal.api.payments.Payment;
+import com.paypal.api.payments.PaymentExecution;
+import com.paypal.api.payments.RedirectUrls;
+import com.paypal.api.payments.Transaction;
+import com.paypal.base.rest.APIContext;
+import com.paypal.base.rest.PayPalRESTException;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -21,11 +29,8 @@ public class PayPalService {
     // Tỷ giá quy đổi tạm thời VND -> USD để gửi qua PayPal
     private static final BigDecimal EXCHANGE_RATE_VND_TO_USD = new BigDecimal("25000");
 
-    public String createPayPalOrder(BigDecimal totalAmountVnd, String returnUrl, String cancelUrl) throws PayPalRESTException {
-        if (totalAmountVnd == null || totalAmountVnd.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0!");
-        }
-
+    public String createPayPalOrder(BigDecimal totalAmountVnd, String returnUrl, String cancelUrl)
+            throws PayPalRESTException {
         // Quy đổi VND sang USD (làm tròn 2 chữ số thập phân)
         BigDecimal totalAmountUsd = totalAmountVnd.divide(EXCHANGE_RATE_VND_TO_USD, 2, RoundingMode.HALF_UP);
 

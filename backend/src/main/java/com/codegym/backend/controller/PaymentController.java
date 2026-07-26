@@ -7,7 +7,12 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.view.RedirectView;
 
 import com.codegym.backend.dto.TableOrderInvoiceDTO;
@@ -30,7 +35,8 @@ public class PaymentController {
     private final PayPalService payPalService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // Địa chỉ domain của Frontend (Đưa vào application.properties nếu muốn cấu hình động)
+    // Địa chỉ domain của Frontend (Đưa vào application.properties nếu muốn cấu hình
+    // động)
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
@@ -47,7 +53,7 @@ public class PaymentController {
     public ResponseEntity<String> completeCheckout(
             @RequestParam Long tableId,
             @RequestParam PaymentMethod paymentMethod) {
-        
+
         paymentService.completeCheckout(tableId, paymentMethod);
         notifyStaffCheckout(tableId, "Bàn " + tableId + " đã hoàn tất thanh toán & sẵn sàng đón khách mới.");
 
@@ -60,9 +66,11 @@ public class PaymentController {
     public ResponseEntity<?> createPayPalPayment(@RequestParam Long tableId) {
         try {
             TableOrderSummaryDTO invoice = paymentService.getInvoiceSummaryDTO(tableId);
-            if (invoice == null || invoice.getTotalAmount() == null || invoice.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            return ResponseEntity.badRequest().body("Bàn " + tableId + " hiện chưa có món ăn hoặc tổng tiền bằng 0. Không thể thanh toán!");
-        }
+            if (invoice == null || invoice.getTotalAmount() == null
+                    || invoice.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                return ResponseEntity.badRequest()
+                        .body("Bàn " + tableId + " hiện chưa có món ăn hoặc tổng tiền bằng 0. Không thể thanh toán!");
+            }
             String returnUrl = "http://localhost:8080/api/v1/customer/payment/paypal/success?tableId=" + tableId;
             String cancelUrl = "http://localhost:8080/api/v1/customer/payment/paypal/cancel?tableId=" + tableId;
 
@@ -70,9 +78,8 @@ public class PaymentController {
             String qrCodeImageUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + approvalUrl;
 
             Map<String, String> response = Map.of(
-                "approvalUrl", approvalUrl,
-                "qrCodeUrl", qrCodeImageUrl
-            );
+                    "approvalUrl", approvalUrl,
+                    "qrCodeUrl", qrCodeImageUrl);
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -81,7 +88,8 @@ public class PaymentController {
         }
     }
 
-    // ✅ THANH TOÁN THÀNH CÔNG: Chuyển hướng về Frontend
+    // 2. API Callback sau khi khách bấm thanh toán xong ở PayPal (Sửa String
+    // tableName -> Long tableId)
     @GetMapping("/paypal/success")
     public RedirectView paymentSuccess(
             @RequestParam(value = "paymentId", required = false) String paymentId,
