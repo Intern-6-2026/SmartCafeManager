@@ -88,8 +88,7 @@ public class PaymentController {
         }
     }
 
-    // 2. API Callback sau khi khách bấm thanh toán xong ở PayPal (Sửa String
-    // tableName -> Long tableId)
+    // ✅ THANH TOÁN THÀNH CÔNG: Chuyển hướng về Frontend
     @GetMapping("/paypal/success")
     public RedirectView paymentSuccess(
             @RequestParam(value = "paymentId", required = false) String paymentId,

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.paypal.api.payments.Amount;
@@ -18,29 +19,26 @@ import com.paypal.api.payments.Transaction;
 import com.paypal.base.rest.APIContext;
 import com.paypal.base.rest.PayPalRESTException;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
-@RequiredArgsConstructor
 public class PayPalService {
 
-    private final APIContext apiContext;
+    @Autowired
+    private APIContext apiContext;
 
     // Tỷ giá quy đổi tạm thời VND -> USD để gửi qua PayPal
     private static final BigDecimal EXCHANGE_RATE_VND_TO_USD = new BigDecimal("25000");
 
     public String createPayPalOrder(BigDecimal totalAmountVnd, String returnUrl, String cancelUrl)
             throws PayPalRESTException {
-        // Quy đổi VND sang USD (làm tròn 2 chữ số thập phân)
         BigDecimal totalAmountUsd = totalAmountVnd.divide(EXCHANGE_RATE_VND_TO_USD, 2, RoundingMode.HALF_UP);
 
         Amount amount = new Amount();
         amount.setCurrency("USD");
-        // Ép định dạng Locale.US để dùng dấu chấm (.) ngăn cách phần thập phân
+        // FIX LỖI Ở DÒNG NÀY: Dùng Locale.US để ép định dạng dấu chấm (.)
         amount.setTotal(String.format(Locale.US, "%.2f", totalAmountUsd));
 
         Transaction transaction = new Transaction();
-        transaction.setDescription("Thanh toán hóa đơn nhà hàng SmartCafe");
+        transaction.setDescription("Thanh toan hoa don nha hang SmartCafe");
         transaction.setAmount(amount);
 
         List<Transaction> transactions = new ArrayList<>();
@@ -62,7 +60,7 @@ public class PayPalService {
         Payment createdPayment = payment.create(apiContext);
 
         for (Links link : createdPayment.getLinks()) {
-            if ("approval_url".equalsIgnoreCase(link.getRel())) {
+            if (link.getRel().equalsIgnoreCase("approval_url")) {
                 return link.getHref();
             }
         }
