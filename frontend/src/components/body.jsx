@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from "react";
-import coffeeBeans from "../assets/coffee-beans.jpg";
-import { getLatestItems, getBestSellerItems } from "../services/apiService";
 import { useNavigate } from "react-router-dom";
+import coffeeBeans from "../assets/coffee-beans.jpg";
+// Thêm addItemToCart vào đây
+import {
+  getLatestItems,
+  getBestSellerItems,
+  addItemToCart,
+} from "../services/apiService";
+
 function Body() {
+  const navigate = useNavigate();
   const [latestItems, setLatestItems] = useState([]);
   const [bestSellerItems, setBestSellerItems] = useState([]);
-  const navigate = useNavigate();
 
-  const [showFloatingButton, setShowFloatingButton] = useState(false);
   useEffect(() => {
     getLatestItems().then((res) => {
       console.log("Dữ liệu món mới:", res.data);
@@ -19,20 +24,23 @@ function Body() {
     });
   }, []);
 
-  // Thêm logic theo dõi cuộn trang
-  useEffect(() => {
-    const handleScroll = () => {
-      // Nếu cuộn xuống quá 300px thì hiện nút, ngược lại thì ẩn
-      if (window.scrollY > 300) {
-        setShowFloatingButton(true);
-      } else {
-        setShowFloatingButton(false);
-      }
-    };
+  // --- CẬP NHẬT HÀM XỬ LÝ KHI BẤM VÀO MÓN ĂN ---
+  const handleItemClick = async (item) => {
+    const itemId = item.itemId || item.id;
+    const tableId = 1; // Mặc định bàn số 1 theo quy ước của team backend
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    try {
+      // 1. Gọi API thêm vào giỏ hàng thật trên server
+      await addItemToCart(tableId, itemId, 1, "");
+      console.log("Đã thêm món vào giỏ hàng thành công!");
+    } catch (error) {
+      console.error("Lỗi khi thêm vào giỏ hàng:", error);
+    }
+    window.scrollTo(0, 0); // Cuộn lên đầu trang
+    // 2. Chuyển hướng sang trang menu của bàn số 1
+    navigate(`/menu/table/${tableId}`);
+  };
+
   return (
     <main className="w-full">
       {/* 1. Phần Hero */}
@@ -50,7 +58,7 @@ function Body() {
           </h1>
           <button
             onClick={() => navigate("/menu/table/1")}
-            className="bg-white text-black px-6 py-2 rounded-full font-medium"
+            className="bg-white text-black px-6 py-2 rounded-full font-medium cursor-pointer hover:bg-gray-100"
           >
             Đặt món
           </button>
@@ -61,7 +69,10 @@ function Body() {
       <section className="container mx-auto my-8 overflow-hidden rounded-lg">
         <div className="bg-[#EBE2CB] p-6 flex flex-col items-center">
           <h2 className="text-2xl font-bold mb-4">Top 4 món mới nhất</h2>
-          <button className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium">
+          <button
+            onClick={() => navigate("/menu/table/1")}
+            className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium cursor-pointer"
+          >
             Khám phá
           </button>
         </div>
@@ -70,8 +81,7 @@ function Body() {
           {latestItems.map((item) => (
             <div
               key={item.itemId || item.id}
-              onClick={() => navigate("/menu/table/1")} // Thêm sự kiện này
-              className="flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-all" // Thêm style để biết là có thể nhấn
+              className="flex flex-col items-center text-center"
             >
               <img
                 src={
@@ -80,12 +90,18 @@ function Body() {
                     : "https://via.placeholder.com/150"
                 }
                 alt={item.itemName}
-                className="w-40 h-40 object-cover rounded-2xl mb-4 bg-gray-200"
+                onClick={() => handleItemClick(item)}
+                className="w-40 h-40 object-cover rounded-2xl mb-4 bg-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
                 onError={(e) => {
                   e.target.src = "https://via.placeholder.com/150";
                 }}
               />
-              <h3 className="font-bold text-lg">{item.itemName}</h3>
+              <h3
+                onClick={() => handleItemClick(item)}
+                className="font-bold text-lg cursor-pointer hover:text-[#A4B435] transition-colors"
+              >
+                {item.itemName}
+              </h3>
               <p className="text-[#A4B435] font-bold">
                 {item.price ? `${item.price.toLocaleString()} vnđ` : "Liên hệ"}
               </p>
@@ -100,7 +116,10 @@ function Body() {
           <h2 className="text-2xl font-bold mb-4">
             Top những món bán chạy nhất
           </h2>
-          <button className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium">
+          <button
+            onClick={() => navigate("/menu/table/1")}
+            className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium cursor-pointer"
+          >
             Khám phá
           </button>
         </div>
@@ -109,8 +128,7 @@ function Body() {
           {bestSellerItems.map((item) => (
             <div
               key={item.itemId || item.id}
-              onClick={() => navigate("/menu/table/1")} // Thêm sự kiện này
-              className="flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-all" // Thêm style để biết là có thể nhấn
+              className="flex flex-col items-center text-center"
             >
               <img
                 src={
@@ -119,12 +137,18 @@ function Body() {
                     : "https://via.placeholder.com/150"
                 }
                 alt={item.itemName}
-                className="w-40 h-40 object-cover rounded-2xl mb-4 bg-gray-200"
+                onClick={() => handleItemClick(item)}
+                className="w-40 h-40 object-cover rounded-2xl mb-4 bg-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
                 onError={(e) => {
                   e.target.src = "https://via.placeholder.com/150";
                 }}
               />
-              <h3 className="font-bold text-lg">{item.itemName}</h3>
+              <h3
+                onClick={() => handleItemClick(item)}
+                className="font-bold text-lg cursor-pointer hover:text-[#A4B435] transition-colors"
+              >
+                {item.itemName}
+              </h3>
               <p className="text-[#A4B435] font-bold">
                 {item.price ? `${item.price.toLocaleString()} vnđ` : "Liên hệ"}
               </p>
@@ -144,39 +168,17 @@ function Body() {
         </p>
         <div className="flex flex-col gap-4">
           <div className="flex items-center w-full bg-white rounded-lg px-4 py-3 border border-gray-300 shadow-sm focus-within:ring-2 focus-within:ring-[#4a3f33]">
-            <svg
-              className="w-5 h-5 text-gray-400 mr-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-            </svg>
             <input
               type="email"
               placeholder="Địa chỉ email"
-              className="flex-grow bg-transparent outline-none text-gray-700 placeholder-gray-500"
+              className="flex-grow bg-transparent outline-none text-gray-700 placeholder-gray-500 px-2"
             />
           </div>
-          <button className="w-full bg-[#3E2723] text-white py-3 rounded-lg font-bold text-lg hover:bg-[#5D4037] transition-all duration-300 shadow-md transform hover:scale-[1.02]">
+          <button className="w-full bg-[#3E2723] text-white py-3 rounded-lg font-bold text-lg hover:bg-[#5D4037] transition-all duration-300 shadow-md">
             Đăng kí
           </button>
         </div>
       </section>
-      {showFloatingButton && (
-        <button
-          onClick={() => navigate("/menu/table/1")}
-          className="fixed bottom-6 right-6 z-50 bg-[#5C4D3F] text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-all duration-300 animate-bounce"
-        >
-          {/* Bạn có thể để chữ hoặc icon */}
-          <span className="font-bold">Đặt món</span>
-        </button>
-      )}
     </main>
   );
 }
