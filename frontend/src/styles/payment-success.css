@@ -7,6 +7,7 @@
   --line: #E4D2B8;
   --ok: #3F9E5A;
   --warn: #D89A3A;
+  --fail: #D6544A;
 }
 
 .payment-success {
@@ -46,6 +47,7 @@
 
 .ps-icon.ok { background: var(--ok); }
 .ps-icon.warn { background: var(--warn); }
+.ps-icon.fail { background: var(--fail); }
 
 .ps-title {
   font-family: 'Fraunces', serif;

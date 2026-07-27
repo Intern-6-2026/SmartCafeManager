@@ -98,7 +98,7 @@ export const getOrderHistory = async (tableId) => {
  
 // API 5: Xem chi tiết tổng quan hóa đơn
 export const getInvoice = async (tableId, tableOrderId) => {
-  return await axios.get(`${CUSTOMER_URL}/invoice`, { params: { tableId, tableOrderId } });
+  return await axios.get(`${CUSTOMER_URL}/invoice-summary/${tableId}`);
 };
  
 // API 6: Yêu cầu thanh toán
@@ -133,11 +133,17 @@ export const removeItem = async (tableId, itemId) => {
 
 // API 10: Lấy QR code thanh toán 
 export const getPaymentQRCode = async (tableId) => {
-  return await axios.post(`http://localhost:8080/api/v1/items/payment/paypal`, null, {
+  return await axios.post(`${CUSTOMER_URL}/payment/paypal`, null, {
     params: { tableId },
   });
 };
 
+// API 11: thanh toán tiền mặt 
+export const payWithCash = async (tableId) => {
+  return await axios.post(`${CUSTOMER_URL}/payment/cash`, null, {
+    params: { tableId },
+  });
+};
 /* Helper: rút thông báo lỗi từ axios error để hiển thị lên UI */
 const ERROR_MESSAGE_MAP = {
   "Old password is incorrect!": "Mật khẩu hiện tại không đúng.",

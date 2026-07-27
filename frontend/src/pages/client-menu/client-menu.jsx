@@ -18,7 +18,8 @@ import {
   callService,
   getApiErrorMessage,
   updateItemQuantity,
-  removeItem
+  removeItem,
+  payWithCash,
 } from "../../services/apiService";
 
 /* Menu dự phòng khi không kết nối được server (giữ đúng shape đã chuẩn hoá) */
@@ -201,17 +202,32 @@ function ClientMenu() {
   /* ===== Bấm "Xác nhận" trong modal thanh toán =====
      Tạo phiên thanh toán, lấy QR code rồi hiện lên cho khách quét. */
   const confirmCheckout = async () => {
-    setCheckoutOpen(false);
-    setPaypalData(null);
-    setPaypalLoading(true);
-    setPaypalOpen(true);
-    try {
-      const res = await getPaymentQRCode(tableId);
-      setPaypalData(res.data);
-    } catch (err) {
-      notify(getApiErrorMessage(err, "Không tạo được mã QR thanh toán."));
-    } finally {
-      setPaypalLoading(false);
+    if (paymentMethod === "CASH") {
+      setLoading(true);
+      try { 
+        const res = await payWithCash(tableId);
+        notify(res.data);
+        await loadCart();
+      } catch (err) {
+        notify(getApiErrorMessage(err, "Thanh toán tiền mặt thất bại."));
+      } finally {
+        setCheckoutOpen(false);
+        window.scrollTo(0, 0);
+        setLoading(false);
+      }
+    } else if (paymentMethod === "BANK_TRANSFER") {
+      setCheckoutOpen(false);
+      setPaypalData(null);
+      setPaypalLoading(true);
+      setPaypalOpen(true);
+      try {
+        const res = await getPaymentQRCode(tableId);
+        setPaypalData(res.data);
+      } catch (err) {
+        notify(getApiErrorMessage(err, "Không tạo được mã QR thanh toán."));
+      } finally {
+        setPaypalLoading(false);
+      }
     }
   };
 
@@ -425,7 +441,6 @@ function ClientMenu() {
               >
                 <option value="CASH">Tiền mặt</option>
                 <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
-                <option value="E_WALLET">Ví điện tử</option>
               </select>
             </div>
 
