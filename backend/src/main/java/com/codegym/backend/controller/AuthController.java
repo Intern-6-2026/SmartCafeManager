@@ -75,7 +75,11 @@ public class AuthController {
         return ResponseEntity.ok(authService.processResetPassword(request));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    /**
+     * Xác thực mã OTP và cấp Reset Token (UUID)
+     */
+    @PreAuthorize("permitAll()")
+    @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOTP(@Valid @RequestBody VerityOtpRequest request) {
         String message = authService.verityOTP(request);
         return ResponseEntity.ok(java.util.Map.of("resetToken", message));

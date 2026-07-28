@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.paypal.api.payments.Amount;
@@ -22,10 +21,8 @@ import com.paypal.base.rest.PayPalRESTException;
 @Service
 public class PayPalService {
 
-    @Autowired
     private APIContext apiContext;
 
-    // Tỷ giá quy đổi tạm thời VND -> USD để gửi qua PayPal
     private static final BigDecimal EXCHANGE_RATE_VND_TO_USD = new BigDecimal("25000");
 
     public String createPayPalOrder(BigDecimal totalAmountVnd, String returnUrl, String cancelUrl)
