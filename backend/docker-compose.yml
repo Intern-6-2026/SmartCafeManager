@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  backend:
+    image: maven:3.9-eclipse-temurin-21
+    container_name: smart-cafe-dev
+    working_dir: /app
+    volumes:
+      # Đồng bộ toàn bộ code từ máy tính của Bro vào thư mục /app trong Container
+      - .:/app
+      # Lưu cache các thư viện Maven để lần sau khởi chạy nhanh hơn
+      - maven-cache:/root/.m2
+    ports:
+      - "8080:8080"
+    # Lệnh chạy Spring Boot trực tiếp từ mã nguồn thay vì chạy file .jar
+    command: mvn spring-boot:run
+    # Đảm bảo Container vẫn gọi được MySQL ở máy tính bên ngoài
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  maven-cache:
