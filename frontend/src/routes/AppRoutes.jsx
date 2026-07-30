@@ -65,7 +65,20 @@ export default function AppRoutes() {
                     element={<ClientMenu />}
                 />
                 
-                <Route path="/payment-success" element={<PaymentSuccess />} />
+                <Route 
+                    path="/payment-success" 
+                    element={<PaymentSuccess />} 
+                />
+
+                <Route 
+                    path="/sale-manager" 
+                    element={<SaleManager />} 
+                />
+
+                <Route 
+                    path="/feedback-manager" 
+                    element={<FeedbackManager />} 
+                />
             </Routes>
         </BrowserRouter>
     );
