@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  shared-db:
+    image: mysql:8.0
+    container_name: global_mysql_server
+    environment:
+      MYSQL_ROOT_PASSWORD: root_super_password
+      MYSQL_DATABASE: smart_cafe_management
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - smart_cafe_shared_net
+
+networks:
+  smart_cafe_shared_net:
+    name: smart_cafe_shared_net
+    driver: bridge
+
+volumes:
+  mysql-data:
