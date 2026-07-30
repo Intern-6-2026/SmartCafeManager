@@ -1,1 +1,60 @@
 databaseChangeLog:
+  - changeSet:
+      id: 20260727-fix-column-lengths
+      author: codegym
+      changes:
+        # 1. Cập nhật các bản ghi null về 'PENDING' trước khi gắn NOT NULL
+        - update:
+            tableName: order_detail
+            columns:
+              - column:
+                  name: status
+                  value: PENDING
+            where: status IS NULL
+
+        # 2. Sửa độ dài cột payment_method trong bảng table_order
+        - modifyDataType:
+            tableName: table_order
+            columnName: payment_method
+            newDataType: VARCHAR(50)
+databaseChangeLog:
+  - changeSet:
+      id: 20260727-fix-column-lengths
+      author: codegym
+      changes:
+        # 1. Cập nhật các bản ghi null về 'PENDING' trước khi gắn NOT NULL
+        - update:
+            tableName: order_detail
+            columns:
+              - column:
+                  name: status
+                  value: PENDING
+            where: status IS NULL
+
+        # 2. Sửa độ dài cột payment_method trong bảng table_order
+        - modifyDataType:
+            tableName: table_order
+            columnName: payment_method
+            newDataType: VARCHAR(50)
+
+        # 3. Sửa kiểu dữ liệu cột status trong bảng order_detail
+        - modifyDataType:
+            tableName: order_detail
+            columnName: status
+            newDataType: VARCHAR(50)
+
+        # 4. Thêm ràng buộc NOT NULL cho cột status
+        - addNotNullConstraint:
+            tableName: order_detail
+            columnName: status
+            columnDataType: VARCHAR(50)
+        - modifyDataType:
+            tableName: order_detail
+            columnName: status
+            newDataType: VARCHAR(50)
+
+        # 4. Thêm ràng buộc NOT NULL cho cột status
+        - addNotNullConstraint:
+            tableName: order_detail
+            columnName: status
+            columnDataType: VARCHAR(50)
