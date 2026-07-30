@@ -10,10 +10,11 @@ function PaymentSuccess() {
   const [params] = useSearchParams();
   const tableId = params.get("tableId");
   const paymentId = params.get("paymentId");
-  const payerId = params.get("PayerID");
+  const payerId = params.get("PayerID");//sửa lại payer id sau
+  
 
   // Có PayerID nghĩa là khách đã duyệt thanh toán trên PayPal
-  const approved = Boolean(payerId);
+  const approved = Boolean(tableId);
 
   return (
     <div className="payment-success">

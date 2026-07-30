@@ -57,7 +57,7 @@ export default function Otp() {
         setLoading(true);
         try {
             const res = await verifyOtp(fullOtp);
-            const resetToken = res.data;
+            const resetToken = res.data.resetToken;
             sessionStorage.setItem(RESET_OTP_KEY, resetToken);
             navigate("/new-password", { state: { token: resetToken, email } });
         } catch (err) {

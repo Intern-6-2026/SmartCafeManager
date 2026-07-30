@@ -380,7 +380,7 @@ function ClientMenu() {
             <div className="order-list">
               {cartRows.length === 0 && (
                 <div className="order-empty">
-                  Chưa có món nào.
+                  Chưa có món nào mới.
                 </div>
               )}
               {cartRows.map((r) => (
