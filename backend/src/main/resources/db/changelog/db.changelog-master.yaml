@@ -1,27 +1,5 @@
 databaseChangeLog:
-  - changeSet:
-      id: 20260727-fix-column-lengths
-      author: codegym
-      changes:
-        - update:
-            tableName: order_detail
-            columns:
-              - column:
-                  name: status
-                  value: PENDING
-            where: status IS NULL
-
-        - modifyDataType:
-            tableName: table_order
-            columnName: payment_method
-            newDataType: VARCHAR(50)
-
-        - modifyDataType:
-            tableName: order_detail
-            columnName: status
-            newDataType: VARCHAR(50)
-
-        - addNotNullConstraint:
-            tableName: order_detail
-            columnName: status
-            columnDataType: VARCHAR(50)
+  - include:
+      file: db/changelog/versions/v1.0-generated.yaml
+  - include:
+      file: db/changelog/versions/v1.1-update-data.yaml

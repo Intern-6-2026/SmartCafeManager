@@ -51,7 +51,7 @@ CREATE TABLE `account` (
 
 LOCK TABLES `account` WRITE;
 /*!40000 ALTER TABLE `account` DISABLE KEYS */;
-INSERT INTO `account` VALUES (1,'2026-07-12 19:19:00.000000','system',NULL,'2026-07-22 22:44:15.291000','admin','codegymintern@gmail.com','$2a$10$B3RsyVPJNSIgs0XltFTlHeMZWWaf4T3gqY8OFtkr/grxWpRq4Vgem','2026-07-22 22:42:58.856000','7734a6e7-1122-472f-91e7-6ed0be6fc164','2026-07-22 22:49:15.290000','ACTIVE','admin',1),(2,'2026-07-12 19:19:00.000000','admin',NULL,NULL,NULL,'staff01@smartcafe.com','$2a$10$tDjHK77akloaamnCYJHKw.vA6l6zl9NhVEZyLff/UCeEbRu0pUmQu','2026-07-12 19:19:00.000000',NULL,NULL,'ACTIVE','staff01',2),(3,'2026-07-12 19:19:00.000000','admin',NULL,NULL,NULL,'staff02@smartcafe.com','$2a$10$tDjHK77akloaamnCYJHKw.vA6l6zl9NhVEZyLff/UCeEbRu0pUmQu','2026-07-12 19:19:00.000000',NULL,NULL,'ACTIVE','staff02',2),(4,'2026-07-12 19:19:00.000000','system',NULL,'2026-07-16 19:08:38.761000',NULL,'thanhbinhk645@gmail.com','$2a$10$ag3gq.PYrDN0lshEY8vj/.poKGLa3kkUMAJkkt4a1T8T96O0JrB9e','2026-07-16 19:08:38.760000',NULL,NULL,'ACTIVE','customer01',3),(5,'2026-07-12 19:19:00.000000','system',NULL,NULL,NULL,'customer02@gmail.com','$2a$10$tDjHK77akloaamnCYJHKw.vA6l6zl9NhVEZyLff/UCeEbRu0pUmQu','2026-07-12 19:19:00.000000',NULL,NULL,'ACTIVE','customer02',3);
+INSERT INTO `account` VALUES (1,'2026-07-12 19:19:00.000000','system',NULL,'2026-07-30 00:15:23.155000','admin','codegymintern@gmail.com','$2a$10$gVt/t3VoFQ20aMJW6n/wnOPjRzwa50Hviu6FjFQLV47i5DBQB3SUe','2026-07-30 00:15:23.056000','7734a6e7-1122-472f-91e7-6ed0be6fc164','2026-07-22 22:49:15.290000','ACTIVE','admin',1),(2,'2026-07-12 19:19:00.000000','admin',NULL,NULL,NULL,'staff01@smartcafe.com','$2a$10$tDjHK77akloaamnCYJHKw.vA6l6zl9NhVEZyLff/UCeEbRu0pUmQu','2026-07-12 19:19:00.000000',NULL,NULL,'ACTIVE','staff01',2),(3,'2026-07-12 19:19:00.000000','admin',NULL,NULL,NULL,'staff02@smartcafe.com','$2a$10$tDjHK77akloaamnCYJHKw.vA6l6zl9NhVEZyLff/UCeEbRu0pUmQu','2026-07-12 19:19:00.000000',NULL,NULL,'ACTIVE','staff02',2),(4,'2026-07-12 19:19:00.000000','system',NULL,'2026-07-16 19:08:38.761000',NULL,'thanhbinhk645@gmail.com','$2a$10$ag3gq.PYrDN0lshEY8vj/.poKGLa3kkUMAJkkt4a1T8T96O0JrB9e','2026-07-16 19:08:38.760000',NULL,NULL,'ACTIVE','customer01',3),(5,'2026-07-12 19:19:00.000000','system',NULL,NULL,NULL,'customer02@gmail.com','$2a$10$tDjHK77akloaamnCYJHKw.vA6l6zl9NhVEZyLff/UCeEbRu0pUmQu','2026-07-12 19:19:00.000000',NULL,NULL,'ACTIVE','customer02',3);
 /*!40000 ALTER TABLE `account` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -353,6 +353,7 @@ CREATE TABLE `news` (
   `summary` text COLLATE utf8mb4_unicode_ci,
   `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` bigint DEFAULT NULL,
+  `status` enum('PENDING','PUBLISHED','REJECTED') COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`news_id`),
   KEY `FK9jgaemfexdg06ffxt30n6acwq` (`account_id`),
   CONSTRAINT `FK9jgaemfexdg06ffxt30n6acwq` FOREIGN KEY (`account_id`) REFERENCES `account` (`account_id`)
@@ -365,7 +366,7 @@ CREATE TABLE `news` (
 
 LOCK TABLES `news` WRITE;
 /*!40000 ALTER TABLE `news` DISABLE KEYS */;
-INSERT INTO `news` VALUES (1,'2026-07-12 19:19:00.000000','admin',NULL,NULL,NULL,'Nội dung chi tiết chương trình khai trương dành cho khách hàng...','https://res.cloudinary.com/xqkvkmdf/image/upload/v1/news_grand_opening.png','Tuần lễ khai trương giảm giá 20%','Khai trương hồng phát',1),(2,'2026-07-12 19:19:00.000000','staff01',NULL,NULL,NULL,'Cùng thưởng thức menu đồ uống giải nhiệt mùa hè của Smart Cafe...','https://res.cloudinary.com/xqkvkmdf/image/upload/v1/news_summer.png','Thử ngay Trà Vải Nhiệt Đới','Ra mắt thức uống mới',2),(3,'2026-07-12 12:32:29.972000','admin','2026-07-12 12:39:21.502000','2026-07-12 12:39:21.502000','admin','Không có gì hết ở nội dung','https://res.cloudinary.com/xqkvkmdf/image/upload/v1783859551/htyhtuz9cz7bc9vrqesx.png','Không có gì hết ở tóm tắt','Mẫu thử',1),(4,'2026-07-15 13:23:05.974000','admin',NULL,'2026-07-15 13:23:05.975000','admin','aaaa','https://res.cloudinary.com/xqkvkmdf/image/upload/v1784121790/zn7zqisdad984ha8qs0i.png','aaaa','aaaa',1);
+INSERT INTO `news` VALUES (1,'2026-07-12 19:19:00.000000','admin',NULL,NULL,NULL,'Nội dung chi tiết chương trình khai trương dành cho khách hàng...','https://res.cloudinary.com/xqkvkmdf/image/upload/v1/news_grand_opening.png','Tuần lễ khai trương giảm giá 20%','Khai trương hồng phát',1,'PUBLISHED'),(2,'2026-07-12 19:19:00.000000','staff01',NULL,NULL,NULL,'Cùng thưởng thức menu đồ uống giải nhiệt mùa hè của Smart Cafe...','https://res.cloudinary.com/xqkvkmdf/image/upload/v1/news_summer.png','Thử ngay Trà Vải Nhiệt Đới','Ra mắt thức uống mới',2,'PENDING'),(3,'2026-07-12 12:32:29.972000','admin','2026-07-12 12:39:21.502000','2026-07-12 12:39:21.502000','admin','Không có gì hết ở nội dung','https://res.cloudinary.com/xqkvkmdf/image/upload/v1783859551/htyhtuz9cz7bc9vrqesx.png','Không có gì hết ở tóm tắt','Mẫu thử',1,'PENDING'),(4,'2026-07-15 13:23:05.974000','admin',NULL,'2026-07-28 09:46:16.140000','admin','aaaa','https://res.cloudinary.com/xqkvkmdf/image/upload/v1784121790/zn7zqisdad984ha8qs0i.png','aaaa','aaaa',1,'PUBLISHED');
 /*!40000 ALTER TABLE `news` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -385,7 +386,7 @@ CREATE TABLE `order_detail` (
   `updated_by` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `note` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `quantity` int NOT NULL,
-  `status` enum('CANCELLED','CONFIRMED','PENDING','SERVED') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `unit_price` decimal(15,0) NOT NULL,
   `item_id` bigint DEFAULT NULL,
   `order_id` bigint DEFAULT NULL,
@@ -433,7 +434,7 @@ CREATE TABLE `role` (
 
 LOCK TABLES `role` WRITE;
 /*!40000 ALTER TABLE `role` DISABLE KEYS */;
-INSERT INTO `role` VALUES (1,NULL,NULL,NULL,NULL,NULL,'ADMIN'),(2,NULL,NULL,NULL,NULL,NULL,'STAFF'),(3,NULL,NULL,NULL,NULL,NULL,'CUSTOMER');
+INSERT INTO `role` VALUES (1,NULL,NULL,NULL,NULL,NULL,'ADMIN'),(2,NULL,NULL,NULL,NULL,NULL,'STAFF'),(3,NULL,NULL,NULL,NULL,NULL,'USER');
 /*!40000 ALTER TABLE `role` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -454,7 +455,7 @@ CREATE TABLE `table_order` (
   `close_at` datetime(6) DEFAULT NULL,
   `open_at` datetime(6) NOT NULL,
   `paid_at` datetime(6) DEFAULT NULL,
-  `payment_method` enum('BANK_TRANSFER','CASH','E_WALLET') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `payment_method` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `status` enum('CANCELLED','OPEN','PAID') COLLATE utf8mb4_unicode_ci NOT NULL,
   `total_amount` decimal(15,0) NOT NULL,
   `customer_id` bigint DEFAULT NULL,
@@ -489,4 +490,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-07-28  8:03:00
+-- Dump completed on 2026-07-31  9:55:31
