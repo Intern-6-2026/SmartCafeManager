@@ -35,3 +35,6 @@ build/
 ### Log and Text files ###
 *.txt
 *.log
+
+### Folder tạm để nhặt code ###
+X/

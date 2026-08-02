@@ -26,12 +26,13 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration:86400000}")
     private long jwtExpiration;
 
-    public String generateToken(UserDetails userDetails) {
+    public String generateToken(UserDetails userDetails, boolean requirePasswordChange) {
         Map<String, Object> claims = new HashMap<>();
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(authority -> authority.getAuthority())
                 .collect(Collectors.toList());
         claims.put("roles", roles);
+        claims.put("requirePasswordChange", requirePasswordChange);
 
         return createToken(claims, userDetails.getUsername());
     }
@@ -88,5 +89,11 @@ public class JwtTokenProvider {
     private Key getSigningKey() {
         byte[] keyBytes = secretKey.getBytes();
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public boolean extractRequirePasswordChange(String token) {
+        Claims claims = extractAllClaims(token);
+        Object requireChange = claims.get("requirePasswordChange", Boolean.class);
+        return requireChange != null && (Boolean) requireChange;
     }
 }

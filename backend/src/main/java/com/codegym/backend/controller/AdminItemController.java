@@ -1,9 +1,18 @@
 package com.codegym.backend.controller;
 
 import java.math.BigDecimal;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.codegym.backend.dto.ItemResponse;
@@ -19,7 +28,8 @@ public class AdminItemController {
 
     private final ItemService itemService;
 
-    // 1. LẤY CHI TIẾT MỘT MÓN ĂN THEO ID (Dùng để hiển thị lên form Sửa ở Front-end)
+    // 1. LẤY CHI TIẾT MỘT MÓN ĂN THEO ID (Dùng để hiển thị lên form Sửa ở
+    // Front-end)
     @GetMapping("/{id}")
     public ResponseEntity<?> getItemById(@PathVariable Long id) {
         try {
@@ -37,14 +47,12 @@ public class AdminItemController {
             @RequestParam("itemName") String itemName,
             @RequestParam("price") BigDecimal price,
             @RequestParam(value = "description", required = false) String description,
-            @RequestParam(value = "categoryId", required = false) Long categoryId, 
-            @RequestParam(value = "newCategoryName", required = false) String newCategoryName, 
-            @RequestPart(value = "image", required = false) MultipartFile image 
-    ) {
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "newCategoryName", required = false) String newCategoryName,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
         try {
             ItemResponse newItem = itemService.createItem(
-                    itemCode, itemName, price, description, categoryId, newCategoryName, image
-            );
+                    itemCode, itemName, price, description, categoryId, newCategoryName, image);
             return ResponseEntity.ok(newItem);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi khi thêm món mới: " + e.getMessage());
@@ -67,8 +75,7 @@ public class AdminItemController {
     ) {
         try {
             ItemResponse updatedItem = itemService.updateItem(
-                    id, itemCode, itemName, price, description, categoryId, newCategoryName, isAvailable, image
-            );
+                    id, itemCode, itemName, price, description, categoryId, newCategoryName, isAvailable, image);
             return ResponseEntity.ok(updatedItem);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi khi cập nhật món ăn: " + e.getMessage());

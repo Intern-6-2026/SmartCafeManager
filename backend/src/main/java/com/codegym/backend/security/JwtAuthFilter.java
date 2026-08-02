@@ -12,6 +12,10 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.codegym.backend.entity.Account;
+import com.codegym.backend.enums.AccountStatus;
+import com.codegym.backend.repository.AccountRepository;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final AccountRepository accountRepository;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -39,6 +44,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     if (!jwtTokenProvider.isTokenExpired(token)) {
+
+                        Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username).orElse(null);
+                        if (account == null || account.getStatus() != AccountStatus.ACTIVE) {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json; charset=UTF-8");
+                            response.getWriter().write(
+                                    "{\"error\": \"Tài khoản không tồn tại, đang bị khóa hoặc đã bị xóa!\"}");
+                            return;
+                        }
+
+                        boolean requirePasswordChange = jwtTokenProvider.extractRequirePasswordChange(token);
+                        String requestedUrl = request.getRequestURI();
+
+                        if (requirePasswordChange && !requestedUrl.equals("/api/v1/users/change-password")
+                                && !requestedUrl.startsWith("/api/v1/auth/logout")) {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json; charset=UTF-8");
+                            response.getWriter().write(
+                                    "{\"error\": \"Mật khẩu của bạn đã quá hạn 30 ngày. Vui lòng đổi mật khẩu để tiếp tục sử dụng hệ thống!\"}");
+                            return;
+                        }
+
                         List<String> roles = jwtTokenProvider.extractRoles(token);
 
                         log.info("==> [JWT Auth] Tài khoản: {} | Quyền hạn giải mã từ Token: {}", username, roles);

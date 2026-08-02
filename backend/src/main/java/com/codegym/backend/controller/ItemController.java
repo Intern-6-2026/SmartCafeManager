@@ -1,14 +1,16 @@
 package com.codegym.backend.controller;
 
-import com.codegym.backend.dto.ItemResponse;
-import com.codegym.backend.service.ItemService;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.codegym.backend.dto.ItemResponse;
+import com.codegym.backend.service.ItemService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/items")
@@ -46,7 +48,8 @@ public class ItemController {
 
     /**
      * Lấy danh sách các món ăn/thức uống bán chạy nhất dựa trên tổng số lượt
-     * gọi món (totalOrderCount). Số lượng trả về thường được giới hạn ở tầng Service.
+     * gọi món (totalOrderCount). Số lượng trả về thường được giới hạn ở tầng
+     * Service.
      * Rất hữu ích để gợi ý cho khách hàng trong mục "Món bán chạy".
      *
      * Yêu cầu phân quyền: Công khai, không yêu cầu đăng nhập.
