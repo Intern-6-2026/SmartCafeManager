@@ -11,62 +11,46 @@ import Profile from "../pages/profile/Profile";
 import EditProfile from "../pages/profile/EditProfile";
 import ChangePassword from "../pages/profile/ChangePassword";
 import PaymentSuccess from "../pages/PaymentSuccess/paymentSuccess";
+import InvoiceManagement from "../pages/InvoiceManagement/InvoiceManagement";
+import RevenueDashboard from "../pages/RevenueDashboard/RevenueDashboard";
 
 export default function AppRoutes() {
-    return (
-        <BrowserRouter>
-            <Routes>
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
 
-                <Route path="/" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
-                <Route
-                    path="/forgot-password"
-                    element={<ForgotPassword />}
-                />
+        <Route path="/otp" element={<Otp />} />
 
-                <Route
-                    path="/otp"
-                    element={<Otp />}
-                />
+        <Route path="/new-password" element={<NewPassword />} />
 
-                <Route
-                    path="/new-password"
-                    element={<NewPassword />}
-                />
+        <Route path="/profile" element={<Profile />} />
 
-                <Route
-                    path="/profile"
-                    element={<Profile />}
-                />
+        <Route path="/edit-profile" element={<EditProfile />} />
 
-                <Route
-                    path="/edit-profile"
-                    element={<EditProfile />}
-                />
+        <Route path="/change-password" element={<ChangePassword />} />
 
-                <Route
-                    path="/change-password"
-                    element={<ChangePassword />}
-                />
-                
-                <Route
-                    path="/home"
-                    element={
-                        <>
-                            <Header/>
-                            <Body/>
-                            <Footer/>
-                        </>
-                    }
-                />
+        <Route
+          path="/home"
+          element={
+            <>
+              <Header />
+              <Body />
+              <Footer />
+            </>
+          }
+        />
 
-                <Route
-                    path="/menu/table/:tableId"
-                    element={<ClientMenu />}
-                />
-                
-                <Route path="/payment-success" element={<PaymentSuccess />} />
-            </Routes>
-        </BrowserRouter>
-    );
+        <Route path="/menu/table/:tableId" element={<ClientMenu />} />
+
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+
+        {/* --- CÁC ROUTE MỚI CHO ADMIN / QUẢN LÝ --- */}
+        <Route path="/admin/invoices" element={<InvoiceManagement />} />
+        <Route path="/admin/revenue" element={<RevenueDashboard />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
