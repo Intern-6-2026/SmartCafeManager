@@ -5,44 +5,65 @@ import com.codegym.backend.dto.FeedbackResponseDTO;
 import com.codegym.backend.entity.Customer;
 import com.codegym.backend.entity.Feedback;
 import com.codegym.backend.entity.Item;
+import com.codegym.backend.enums.StatusTableOrder;
 import com.codegym.backend.repository.CustomerRepository;
 import com.codegym.backend.repository.FeedbackRepository;
 import com.codegym.backend.repository.ItemRepository;
+import com.codegym.backend.repository.OrderDetailRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date; // 👈 Import java.util.Date
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null") // 👈 Tắt cảnh báo Null type safety từ Spring Data JPA
+@SuppressWarnings("null")
 public class FeedbackServiceImpl implements FeedbackService {
 
     private final FeedbackRepository feedbackRepository;
     private final CustomerRepository customerRepository;
     private final ItemRepository itemRepository;
+    private final OrderDetailRepository orderDetailRepository; // 👈 Inject thêm repository này
 
     @Override
     @Transactional
     public FeedbackResponseDTO createFeedback(FeedbackRequestDTO dto) {
-        Customer customer = null;
-        if (dto.getCustomerId() != null) {
-            customer = customerRepository.findById(dto.getCustomerId()).orElse(null);
+
+        // 1. KIỂM TRA ĐĂNG NHẬP: Bắt buộc phải có customerId
+        if (dto.getCustomerId() == null) {
+            throw new RuntimeException("Bạn cần đăng nhập tài khoản để gửi đánh giá món ăn!");
         }
 
-        Item item = null;
-        if (dto.getItemId() != null) {
-            item = itemRepository.findById(dto.getItemId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn ID: " + dto.getItemId()));
+        Customer customer = customerRepository.findById(dto.getCustomerId())
+                .orElseThrow(() -> new RuntimeException("Tài khoản khách hàng không tồn tại!"));
+
+        // 2. KIỂM TRA MÓN ĂN
+        if (dto.getItemId() == null) {
+            throw new RuntimeException("Vui lòng chọn món ăn cần đánh giá!");
         }
 
+        Item item = itemRepository.findById(dto.getItemId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn ID: " + dto.getItemId()));
+
+        // 3. KIỂM TRA MUA HÀNG & THANH TOÁN: Kiểm tra đơn hàng có món này và đã PAID chưa
+        boolean hasPurchasedAndPaid = orderDetailRepository.existsByCustomerAndItemAndOrderStatus(
+                customer.getCustomerId(),
+                item.getItemId(),
+                StatusTableOrder.PAID
+        );
+
+        if (!hasPurchasedAndPaid) {
+            throw new RuntimeException("Bạn chỉ có thể đánh giá sau khi đã thưởng thức và thanh toán thành công món này!");
+        }
+
+        // 4. LƯU FEEDBACK (Nếu thỏa mãn toàn bộ điều kiện trên)
         Feedback feedback = Feedback.builder()
                 .content(dto.getContent())
                 .rating(dto.getRating())
-                .senderName(dto.getSenderName() != null ? dto.getSenderName() : (customer != null ? customer.getFullName() : "Khách hàng"))
+                .senderName(customer.getFullName())
                 .email(dto.getEmail())
                 .imageUrl(dto.getImageUrl())
                 .customer(customer)
@@ -77,8 +98,7 @@ public class FeedbackServiceImpl implements FeedbackService {
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đánh giá ID: " + feedbackId));
 
-        // Fix lỗi Line 79: Đổi LocalDateTime.now() sang new Date()
-        feedback.setDeletedAt(new Date()); 
+        feedback.setDeletedAt(new Date());
         feedbackRepository.save(feedback);
     }
 
@@ -90,7 +110,7 @@ public class FeedbackServiceImpl implements FeedbackService {
                 .senderName(feedback.getSenderName())
                 .email(feedback.getEmail())
                 .imageUrl(feedback.getImageUrl())
-                .sentAt(feedback.getSentAt()) // Fix lỗi Line 91: Khớp kiểu Date
+                .sentAt(feedback.getSentAt())
                 .customerId(feedback.getCustomer() != null ? feedback.getCustomer().getCustomerId() : null)
                 .itemId(feedback.getItem() != null ? feedback.getItem().getItemId() : null)
                 .itemName(feedback.getItem() != null ? feedback.getItem().getItemName() : null)
