@@ -477,7 +477,6 @@ function ClientMenu() {
                   </div>
                 ))}
               </div>
-            )}
 
             <div className="order-list">
               {cartRows.length === 0 && (
