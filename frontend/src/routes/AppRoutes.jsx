@@ -46,9 +46,6 @@ export default function AppRoutes() {
           }
         />
 
-        {/* Route menu sạch hoàn toàn, chỉ đọc localStorage ra xài */}
-        <Route path="/menu" element={<ClientMenu />} />
-
         <Route path="/payment-success" element={<PaymentSuccess />} />
 
         {/* --- CÁC ROUTE CHO ADMIN / QUẢN LÝ --- */}
@@ -56,7 +53,7 @@ export default function AppRoutes() {
         <Route path="/admin/revenue" element={<RevenueDashboard />} />
   
         <Route
-            path="/menu/table/:tableId"
+            path="/menu"
             element={<ClientMenu />}
         />
         

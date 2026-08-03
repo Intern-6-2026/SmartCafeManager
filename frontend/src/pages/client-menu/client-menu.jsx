@@ -89,8 +89,7 @@ const normalizeItem = (it) => ({
 });
 
 function ClientMenu() {
-  /* Route: /menu/table/:tableId — tableId chính là tên bàn gửi lên API (vd: ban01) */
-  const { tableId } = useParams();
+  const tableId = localStorage.getItem("tableId") || "1";
   const [menuItems, setMenuItems] = useState([]); // menu lấy từ server
   const [category, setCategory] = useState("");
   const [cart, setCart] = useState([]); // giỏ tạm PENDING lấy từ server
