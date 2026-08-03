@@ -1,17 +1,44 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import coffeeBeans from "../assets/coffee-beans.jpg";
-// Thêm addItemToCart vào đây
 import {
   getLatestItems,
   getBestSellerItems,
   addItemToCart,
+  getNewsList,
 } from "../services/apiService";
+import { canManageNews, formatNewsDate } from "../utils/newsHelpers";
+import "../styles/news.css";
 
 function Body() {
   const navigate = useNavigate();
+  const newsTrackRef = useRef(null);
   const [latestItems, setLatestItems] = useState([]);
   const [bestSellerItems, setBestSellerItems] = useState([]);
+  const [latestNews, setLatestNews] = useState([]);
+  const [newsTotal, setNewsTotal] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const manageNews = canManageNews();
+
+  const updateNewsScrollState = () => {
+    const el = newsTrackRef.current;
+    if (!el) {
+      setCanScrollLeft(false);
+      setCanScrollRight(false);
+      return;
+    }
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < maxScroll - 4);
+  };
+
+  const scrollNews = (dir) => {
+    const el = newsTrackRef.current;
+    if (!el) return;
+    const step = Math.min(340, el.clientWidth * 0.85);
+    el.scrollBy({ left: dir * step, behavior: "smooth" });
+  };
 
   useEffect(() => {
     getLatestItems().then((res) => {
@@ -22,7 +49,28 @@ function Body() {
       console.log("Dữ liệu bán chạy:", res.data);
       setBestSellerItems(res.data || []);
     });
+    getNewsList(0, 50)
+      .then((res) => {
+        setLatestNews(res.data?.content || []);
+        setNewsTotal(res.data?.totalElements ?? (res.data?.content || []).length);
+      })
+      .catch(() => {
+        setLatestNews([]);
+        setNewsTotal(0);
+      });
   }, []);
+
+  useEffect(() => {
+    const el = newsTrackRef.current;
+    if (!el) return undefined;
+    updateNewsScrollState();
+    el.addEventListener("scroll", updateNewsScrollState, { passive: true });
+    window.addEventListener("resize", updateNewsScrollState);
+    return () => {
+      el.removeEventListener("scroll", updateNewsScrollState);
+      window.removeEventListener("resize", updateNewsScrollState);
+    };
+  }, [latestNews]);
 
   // --- CẬP NHẬT HÀM XỬ LÝ KHI BẤM VÀO MÓN ĂN ---
   const handleItemClick = async (item) => {
@@ -56,12 +104,127 @@ function Body() {
           <h1 className="text-[24px] font-bold my-2">
             Trải nghiệm cà phê thông minh
           </h1>
-          <button
-            onClick={() => navigate("/menu/table/1")}
-            className="bg-white text-black px-6 py-2 rounded-full font-medium cursor-pointer hover:bg-gray-100"
-          >
-            Đặt món
-          </button>
+          <div className="flex flex-wrap gap-3 mt-2">
+            <button
+              onClick={() => navigate("/menu/table/1")}
+              className="bg-white text-black px-6 py-2 rounded-full font-medium cursor-pointer hover:bg-gray-100"
+            >
+              Đặt món
+            </button>
+            <button
+              onClick={() => navigate("/news")}
+              className="bg-transparent text-white px-6 py-2 rounded-full font-medium cursor-pointer border border-white/80 hover:bg-white/15"
+            >
+              Xem tin tức
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Tin tức trên dashboard — hàng ngang lướt được */}
+      <section className="home-news my-8">
+        <div className="home-news-inner">
+          <div className="home-news-head">
+            <div>
+              <h2>Tin tức NEOCAFÉ</h2>
+              <p>
+                Vuốt ngang để xem thêm
+                {newsTotal > 0 ? ` · ${newsTotal} bài viết` : ""}.
+              </p>
+            </div>
+            <div className="home-news-actions">
+              {latestNews.length > 0 && (
+                <div className="home-news-nav">
+                  <button
+                    type="button"
+                    className="home-news-nav-btn"
+                    aria-label="Lướt trái"
+                    disabled={!canScrollLeft}
+                    onClick={() => scrollNews(-1)}
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    className="home-news-nav-btn"
+                    aria-label="Lướt phải"
+                    disabled={!canScrollRight}
+                    onClick={() => scrollNews(1)}
+                  >
+                    →
+                  </button>
+                </div>
+              )}
+              <Link to="/news" className="news-btn news-btn-primary">
+                Xem tất cả
+              </Link>
+              {manageNews && (
+                <Link to="/admin/news" className="news-btn news-btn-ghost">
+                  Quản lý
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {latestNews.length === 0 ? (
+            <div className="home-news-empty">
+              Chưa có tin tức công khai.
+              {manageNews ? (
+                <>
+                  {" "}
+                  <Link to="/admin/news/new" className="news-card-more">
+                    Thêm bài viết đầu tiên →
+                  </Link>
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              <div className="home-news-carousel">
+                <div
+                  className="home-news-track"
+                  ref={newsTrackRef}
+                  onScroll={updateNewsScrollState}
+                >
+                  {latestNews.map((item) => (
+                    <Link
+                      key={item.newsId}
+                      to={`/news/${item.newsId}`}
+                      className="news-card home-news-card"
+                    >
+                      <div className="news-card-media">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.title} />
+                        ) : null}
+                      </div>
+                      <div className="news-card-body">
+                        <div className="news-card-time">
+                          {formatNewsDate(item.createdAt)}
+                        </div>
+                        <h3 className="news-card-title">{item.title}</h3>
+                        <p className="news-card-summary">
+                          {item.summary || "Xem chi tiết bài viết."}
+                        </p>
+                        <span className="news-card-more">Đọc tiếp →</span>
+                      </div>
+                    </Link>
+                  ))}
+                  <Link to="/news" className="home-news-see-all-card">
+                    <span className="home-news-see-all-title">Xem tất cả tin tức</span>
+                    <span className="home-news-see-all-sub">
+                      Mở trang danh sách đầy đủ
+                    </span>
+                    <span className="home-news-see-all-arrow">→</span>
+                  </Link>
+                </div>
+              </div>
+              <div className="home-news-footer">
+                <Link to="/news" className="news-card-more">
+                  Xem tất cả tin tức →
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

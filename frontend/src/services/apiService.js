@@ -69,6 +69,50 @@ export const getBestSellerItems = async () => {
   return await axios.get(`${API_BASE_URL}/items/best-sellers`);
 };
 
+export const getNewsList = async (page = 0, size = 6) => {
+  return await axios.get(`${API_BASE_URL}/news`, { params: { page, size } });
+};
+
+export const getNewsById = async (id) => {
+  return await axios.get(`${API_BASE_URL}/news/${id}`);
+};
+
+export const getAdminNewsList = async (page = 0, size = 10) => {
+  return await axios.get(`${API_BASE_URL}/news/admin/all`, { params: { page, size } });
+};
+
+export const getAdminNewsById = async (id) => {
+  return await axios.get(`${API_BASE_URL}/news/admin/${id}`);
+};
+
+export const createNews = async ({ title, summary, content, image }) => {
+  const formData = new FormData();
+  formData.append("title", title);
+  formData.append("summary", summary || "");
+  formData.append("content", content);
+  if (image) formData.append("image", image);
+  return await axios.post(`${API_BASE_URL}/news`, formData);
+};
+
+export const updateNews = async (id, { title, summary, content, image }) => {
+  const formData = new FormData();
+  formData.append("title", title);
+  formData.append("summary", summary || "");
+  formData.append("content", content);
+  if (image) formData.append("image", image);
+  return await axios.put(`${API_BASE_URL}/news/${id}`, formData);
+};
+
+export const deleteNews = async (id) => {
+  return await axios.delete(`${API_BASE_URL}/news/${id}`);
+};
+
+export const changeNewsStatus = async (id, status) => {
+  return await axios.put(`${API_BASE_URL}/news/${id}/status`, null, {
+    params: { status },
+  });
+};
+
 /* Các API gọi món tại bàn — theo tài liệu mới, nằm dưới /api/v1/items */
 const CUSTOMER_URL = `${API_BASE_URL}/customer`;
  

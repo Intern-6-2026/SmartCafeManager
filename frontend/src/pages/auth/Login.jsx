@@ -25,13 +25,19 @@ export default function Login() {
         setLoading(true);
         try {
             const res = await loginApi(username, password);
-            const { token, roleName, userName } = res.data;
+            const { token, roleName, userName, requirePasswordChange } = res.data;
 
             localStorage.setItem("token", token);
             localStorage.setItem("roleName", roleName);
             localStorage.setItem("userName", userName);
 
-            navigate("/profile");
+            if (requirePasswordChange) {
+                navigate("/change-password");
+            } else if (String(roleName || "").toUpperCase() === "STAFF") {
+                navigate("/admin/news");
+            } else {
+                navigate("/home");
+            }
         } catch (err) {
             setErrorMsg(getApiErrorMessage(err, "Đăng nhập thất bại."));
         } finally {
