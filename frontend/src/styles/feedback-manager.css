@@ -1,148 +1,111 @@
-.feedback-manager {
-  --bg: #F6EEE1;
-  --tan-light: #E7C9A1;
-  --tan: #D5A874;
-  --tan-deep: #9C6B3A;
-  --ink: #33261A;
-  --ink-soft: #6E5C4A;
-  --card: #FFFDF9;
-  --line: #E4D2B8;
-  --radius: 12px;
+.feedback-manager{
+  --bg:#F6EEE1; --tan-light:#E7C9A1; --tan:#D5A874; --tan-deep:#9C6B3A;
+  --ink:#33261A; --ink-soft:#6E5C4A; --card:#FFFDF9; --line:#E4D2B8;
+  --star:#E0A32E; --radius:12px;
+  min-height:100vh; background:var(--bg); color:var(--ink);
+  font-family:'Be Vietnam Pro',sans-serif; -webkit-font-smoothing:antialiased;
+}
+.feedback-manager *{box-sizing:border-box;}
 
-  min-height: 100vh;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: 'Be Vietnam Pro', sans-serif;
-  -webkit-font-smoothing: antialiased;
+.feedback-manager .topbar{
+  background:linear-gradient(160deg,var(--tan-light),var(--tan));
+  padding:14px 22px; display:flex; align-items:center; justify-content:space-between;
 }
+.feedback-manager .brand{display:flex; align-items:center; gap:10px;}
+.feedback-manager .brand-mark{
+  width:38px;height:38px;border-radius:50%;background:var(--ink);color:var(--tan-light);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Fraunces',serif;font-weight:600;font-size:19px;
+}
+.feedback-manager .brand-name{font-family:'Fraunces',serif;font-weight:600;font-size:20px;letter-spacing:.5px;}
+.feedback-manager .topbar-right{display:flex; align-items:center; gap:16px; font-size:13px; color:#4A3627;}
+.feedback-manager .staff{display:flex; align-items:center; gap:8px; font-weight:600;}
+.feedback-manager .staff-avatar{width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--tan-light);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
 
-.feedback-manager * { box-sizing: border-box; }
+.feedback-manager .wrap{max-width:1240px; margin:0 auto; padding:22px;}
 
-.feedback-manager .topbar {
-  background: linear-gradient(160deg, var(--tan-light), var(--tan));
-  padding: 14px 22px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.feedback-manager .brand { display: flex; align-items: center; gap: 10px; }
-.feedback-manager .brand-mark {
-  width: 38px; height: 38px; border-radius: 50%;
-  background: var(--ink); color: var(--tan-light);
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Fraunces', serif; font-weight: 600; font-size: 19px;
-}
-.feedback-manager .brand-name { font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; letter-spacing: .5px; }
-.feedback-manager .topbar-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #4A3627; }
-.feedback-manager .staff { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.feedback-manager .staff-avatar {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: var(--ink); color: var(--tan-light);
-  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
-}
+.feedback-manager .page-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px;}
+.feedback-manager .page-title{font-family:'Fraunces',serif; font-size:22px; font-weight:600;}
+.feedback-manager .page-count{font-size:13px; color:var(--ink-soft);}
 
-.feedback-manager .wrap { max-width: 1000px; margin: 0 auto; padding: 22px; }
+.feedback-manager .filter-bar{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:16px;}
+.feedback-manager .filter-field{display:flex; flex-direction:column; gap:5px;}
+.feedback-manager .filter-field label{font-size:11.5px; font-weight:600; color:var(--ink-soft);}
+.feedback-manager .filter-field select{
+  min-width:170px; font-family:inherit; font-size:13px; color:var(--ink);
+  border:1px solid var(--line); border-radius:8px; padding:8px 10px; background:#fff; outline:none; cursor:pointer;
+}
+.feedback-manager .filter-field select:focus{border-color:var(--tan-deep);}
+.feedback-manager .filter-clear{
+  padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:#fff;
+  font-family:inherit; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;
+}
+.feedback-manager .filter-clear:hover{border-color:var(--tan-deep); color:var(--tan-deep);}
 
-.feedback-manager .page-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
-.feedback-manager .page-title { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; }
-.feedback-manager .page-count { font-size: 13px; color: var(--ink-soft); }
+.feedback-manager .table-scroll{background:var(--card); border:1px solid var(--line); border-radius:16px; overflow-x:auto;}
+.feedback-manager table.fb-table{width:100%; border-collapse:collapse; min-width:1000px;}
+.feedback-manager .fb-table thead th{
+  text-align:left; font-size:11.5px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.4px; color:var(--ink-soft); white-space:nowrap;
+  padding:13px 14px; background:#F3E9D8; border-bottom:1px solid var(--line);
+}
+.feedback-manager .fb-table thead th.sortable{cursor:pointer; user-select:none;}
+.feedback-manager .fb-table thead th.sortable:hover{color:var(--tan-deep);}
+.feedback-manager .sort-ind{display:inline-block; width:12px; font-size:10px; color:var(--tan-deep);}
+.feedback-manager .fb-table tbody td{
+  padding:13px 14px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:top;
+}
+.feedback-manager .fb-table tbody tr:last-child td{border-bottom:none;}
+.feedback-manager .fb-table tbody tr:hover{background:#FBF4E7;}
 
-.feedback-manager .table-scroll {
-  background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
-}
-.feedback-manager .fb-table { width: 100%; border-collapse: collapse; }
-.feedback-manager .fb-table thead th {
-  text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .4px; color: var(--ink-soft);
-  padding: 13px 16px; background: #F3E9D8; border-bottom: 1px solid var(--line);
-}
-.feedback-manager .fb-table tbody td {
-  padding: 14px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: middle;
-}
-.feedback-manager .fb-table tbody tr:last-child td { border-bottom: none; }
-.feedback-manager .fb-table tbody tr:hover { background: #FBF4E7; }
+.feedback-manager .col-id{font-variant-numeric:tabular-nums; color:var(--ink-soft); font-weight:600;}
+.feedback-manager .col-time{color:var(--ink-soft); font-size:12px; white-space:nowrap;}
+.feedback-manager .col-name{font-weight:600; white-space:nowrap;}
+.feedback-manager .col-email{color:var(--ink-soft); font-size:12px;}
+.feedback-manager .col-table{white-space:nowrap;}
+.feedback-manager .col-item{color:var(--ink); white-space:nowrap;}
+.feedback-manager .col-content{color:var(--ink); line-height:1.5; min-width:220px; max-width:320px;}
 
-.feedback-manager .cust { display: flex; align-items: center; gap: 10px; }
-.feedback-manager .cust-avatar {
-  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-  background: var(--tan-light); color: var(--tan-deep);
-  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
-}
-.feedback-manager .cust-name { font-weight: 600; }
-.feedback-manager .cust-email { font-size: 11.5px; color: var(--ink-soft); }
+.feedback-manager .rating{display:flex; gap:1px; white-space:nowrap; color:var(--star); font-size:14px;}
+.feedback-manager .rating .off{color:#D9CBB2;}
+.feedback-manager .rating-num{font-size:11px; color:var(--ink-soft); margin-left:4px;}
 
-.feedback-manager .fb-text { color: var(--ink); line-height: 1.5; max-width: 340px; }
-.feedback-manager .fb-time { color: var(--ink-soft); font-size: 12.5px; white-space: nowrap; }
-.feedback-manager .no-img { color: var(--ink-soft); }
+.feedback-manager .no-img{color:var(--ink-soft);}
+.feedback-manager .thumbs{display:flex; gap:6px;}
+.feedback-manager .thumb{
+  width:42px;height:42px;border-radius:8px;overflow:hidden;
+  border:1px solid var(--line); padding:0; cursor:pointer; background:none; flex-shrink:0;
+}
+.feedback-manager .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+.feedback-manager .thumb:hover{border-color:var(--tan-deep);}
 
-.feedback-manager .thumbs { display: flex; gap: 6px; }
-.feedback-manager .thumb {
-  width: 44px; height: 44px; border-radius: 8px; overflow: hidden;
-  border: 1px solid var(--line); padding: 0; cursor: pointer; background: none; flex-shrink: 0;
-}
-.feedback-manager .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.feedback-manager .thumb:hover { border-color: var(--tan-deep); }
+.feedback-manager .fb-state{padding:40px 16px; text-align:center; color:var(--ink-soft); font-size:13.5px;}
 
-/* ---------- Phân trang ---------- */
-.feedback-manager .pagination {
-  display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 18px;
+.feedback-manager .pagination{display:flex; align-items:center; justify-content:center; gap:14px; margin-top:18px;}
+.feedback-manager .pg-nums{display:flex; gap:4px;}
+.feedback-manager .pg-num{
+  min-width:32px; height:32px; border-radius:8px; border:1px solid var(--line);
+  background:var(--card); color:var(--ink); font-family:inherit; font-size:13px; cursor:pointer;
 }
-.feedback-manager .pg-nums { display: flex; gap: 4px; }
-.feedback-manager .pg-num {
-  min-width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line);
-  background: var(--card); color: var(--ink); font-family: inherit; font-size: 13px; cursor: pointer;
+.feedback-manager .pg-num.active{background:var(--ink); color:var(--tan-light); border-color:var(--ink); font-weight:700;}
+.feedback-manager .pg-num:hover:not(.active){border-color:var(--tan-deep);}
+.feedback-manager .pg-btn{
+  padding:7px 14px; border-radius:8px; border:1px solid var(--line);
+  background:var(--card); color:var(--ink); font-family:inherit; font-size:13px; cursor:pointer;
 }
-.feedback-manager .pg-num.active { background: var(--ink); color: var(--tan-light); border-color: var(--ink); font-weight: 700; }
-.feedback-manager .pg-num:hover:not(.active) { border-color: var(--tan-deep); }
-.feedback-manager .pg-btn {
-  padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line);
-  background: var(--card); color: var(--ink); font-family: inherit; font-size: 13px; cursor: pointer;
-}
-.feedback-manager .pg-btn:disabled { opacity: .45; cursor: not-allowed; }
+.feedback-manager .pg-btn:disabled{opacity:.45; cursor:not-allowed;}
 
-/* ---------- Lightbox xem ảnh ---------- */
-.feedback-manager .lightbox {
-  position: fixed; inset: 0; background: rgba(25, 18, 12, .82);
-  display: flex; align-items: center; justify-content: center; padding: 30px; z-index: 200;
+/* ---------- Lightbox (component ImageLightbox) ---------- */
+.lightbox{
+  position:fixed; inset:0; background:rgba(25,18,12,.82);
+  display:none; align-items:center; justify-content:center; padding:30px; z-index:200;
 }
-.feedback-manager .lightbox img {
-  max-width: 90vw; max-height: 85vh; border-radius: 10px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, .4);
+.lightbox.show{display:flex;}
+.lightbox img{max-width:90vw; max-height:85vh; border-radius:10px; box-shadow:0 20px 50px rgba(0,0,0,.4);}
+.lightbox-close{
+  position:absolute; top:20px; right:24px;
+  width:40px;height:40px;border-radius:50%;border:none;
+  background:rgba(255,255,255,.15); color:#fff; font-size:18px; cursor:pointer;
 }
-.feedback-manager .lightbox-close {
-  position: absolute; top: 20px; right: 24px;
-  width: 40px; height: 40px; border-radius: 50%; border: none;
-  background: rgba(255, 255, 255, .15); color: #fff; font-size: 18px; cursor: pointer;
-}
-.feedback-manager .lightbox-close:hover { background: rgba(255, 255, 255, .28); }
-
-@media (max-width: 680px) {
-  .feedback-manager .fb-table thead { display: none; }
-  .feedback-manager .fb-table,
-  .feedback-manager .fb-table tbody,
-  .feedback-manager .fb-table tr,
-  .feedback-manager .fb-table td { display: block; width: 100%; }
-  .feedback-manager .fb-table tr {
-    border-bottom: 2px solid var(--line); padding: 8px 0;
-  }
-  .feedback-manager .fb-table tbody td { border: none; padding: 5px 16px; }
-  .feedback-manager .fb-text { max-width: none; }
-}
-
-.feedback-manager .fb-error {
-  margin-bottom: 14px;
-  padding: 11px 15px;
-  background: #FBEAEA;
-  border: 1px solid #D07A7A;
-  border-radius: 10px;
-  font-size: 13px;
-  color: #8B2C2C;
-}
-
-.feedback-manager .fb-state {
-  padding: 44px 16px !important;
-  text-align: center;
-  color: var(--ink-soft);
-  font-size: 13.5px;
-}
-
-.feedback-manager .pg-num:disabled,
-.feedback-manager .pg-btn:disabled { opacity: .45; cursor: not-allowed; }
+.lightbox-close:hover{background:rgba(255,255,255,.28);}

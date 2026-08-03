@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import "../../styles/feedback-manager.css";
-import ImageLightbox from "../../components/ImageLightbox";
+import ImageLightbox from "../../components/image-lightbox";
 import { SAMPLE_FEEDBACKS, PAGE_SIZE } from "../../data/feedbackData";
 
 const initials = (name) =>
