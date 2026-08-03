@@ -2,6 +2,7 @@ services:
   shared-db:
     image: mysql:8.0
     container_name: global_mysql_server
+    command: --lower_case_table_names=1
     environment:
       MYSQL_ROOT_PASSWORD: root_super_password
       MYSQL_DATABASE: smart_cafe_management
@@ -9,9 +10,12 @@ services:
       - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      # - ./smart_cafe_management.sql:/docker-entrypoint-initdb.d/smart_cafe_management.sql
     networks:
       - smart_cafe_shared_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
 networks:
   smart_cafe_shared_net:

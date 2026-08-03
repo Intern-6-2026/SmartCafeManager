@@ -1,5 +1,9 @@
 package com.codegym.backend.entity;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.envers.Audited;
+import org.hibernate.type.SqlTypes;
+
 import com.codegym.backend.enums.PhysicalState;
 import com.codegym.backend.enums.ServiceStatus;
 
@@ -19,6 +23,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "cafe_table")
+@Audited
 @Getter
 @Setter
 @NoArgsConstructor
@@ -34,6 +39,7 @@ public class Tables extends BaseEntity {
     private String tableName;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "physical_state", nullable = false)
     private PhysicalState physicalState;
 
@@ -41,6 +47,7 @@ public class Tables extends BaseEntity {
     private Boolean isOccupied;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "service_status", nullable = false)
     private ServiceStatus serviceStatus;
 }

@@ -2,6 +2,10 @@ package com.codegym.backend.entity;
 
 import java.math.BigDecimal;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.envers.Audited;
+import org.hibernate.type.SqlTypes;
+
 import com.codegym.backend.enums.StatusOrderDetail;
 
 import jakarta.persistence.Column;
@@ -22,6 +26,7 @@ import lombok.Setter;
 
 @Entity
 @jakarta.persistence.Table(name = "order_detail")
+@Audited
 @Getter
 @Setter
 @NoArgsConstructor
@@ -51,6 +56,7 @@ public class OrderDetail extends BaseEntity {
     private String note;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false)
     private StatusOrderDetail status;
 }

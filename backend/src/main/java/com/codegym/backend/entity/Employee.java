@@ -3,6 +3,10 @@ package com.codegym.backend.entity;
 import java.math.BigDecimal;
 import java.util.Date;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.envers.Audited;
+import org.hibernate.type.SqlTypes;
+
 import com.codegym.backend.enums.Gender;
 
 import jakarta.persistence.Column;
@@ -22,6 +26,7 @@ import lombok.Setter;
 
 @Entity
 @jakarta.persistence.Table(name = "employee")
+@Audited
 @Getter
 @Setter
 @NoArgsConstructor
@@ -44,6 +49,7 @@ public class Employee extends BaseEntity {
     private Date dateOfBirth;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "gender")
     private Gender gender;
 

@@ -120,6 +120,10 @@
 			<scope>runtime</scope>
 			<optional>true</optional>
 		</dependency>
+		<dependency>
+			<groupId>org.hibernate.orm</groupId>
+			<artifactId>hibernate-envers</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -157,10 +161,8 @@
 						jdbc:mysql://localhost:3307/smart_cafe_management?useSSL=false&amp;allowPublicKeyRetrieval=true</url>
 					<username>root</username>
 					<password>root_super_password</password>
-					<outputChangeLogFile>
-						src/main/resources/db/changelog/versions/v1.0-generated.yaml</outputChangeLogFile>
-					<changeLogFile>
-						src/main/resources/db/changelog/db.changelog-master.yaml</changeLogFile>
+					<diffChangeLogFile>src/main/resources/db/changelog/versions/v1.0-generated.yaml</diffChangeLogFile>
+					<changeLogFile>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogFile>
 					<referenceUrl>
 						hibernate:spring:com.codegym.backend.entity?dialect=org.hibernate.dialect.MySQLDialect</referenceUrl>
 				</configuration>
@@ -179,6 +181,11 @@
 						<groupId>org.springframework.boot</groupId>
 						<artifactId>spring-boot-starter-data-jpa</artifactId>
 						<version>3.3.0</version>
+					</dependency>
+					<dependency>
+						<groupId>jakarta.validation</groupId>
+						<artifactId>jakarta.validation-api</artifactId>
+						<version>3.0.2</version>
 					</dependency>
 				</dependencies>
 			</plugin>

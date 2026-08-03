@@ -1,5 +1,9 @@
 package com.codegym.backend.entity;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.envers.Audited;
+import org.hibernate.type.SqlTypes;
+
 import com.codegym.backend.enums.NewsStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -22,6 +26,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "news")
+@Audited
 @Getter
 @Setter
 @NoArgsConstructor
@@ -50,6 +55,7 @@ public class News extends BaseEntity {
     private Account author;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false)
     private NewsStatus status;
 }
