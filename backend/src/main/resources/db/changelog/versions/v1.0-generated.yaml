@@ -1,6 +1,6 @@
 databaseChangeLog:
 - changeSet:
-    id: 1785462881703-1
+    id: 1785741117041-1
     author: ASUS (generated)
     changes:
     - createTable:
@@ -10,27 +10,45 @@ databaseChangeLog:
             constraints:
               nullable: false
               primaryKey: true
+              primaryKeyName: REVINFOPK
+            name: REV
+            type: INT
+        - column:
+            name: REVTSTMP
+            type: BIGINT
+        tableName: REVINFO
+- changeSet:
+    id: 1785741117041-2
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: accountPK
             name: account_id
             type: BIGINT
         - column:
             name: created_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: created_by
             type: VARCHAR(255)
         - column:
             name: deleted_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_by
             type: VARCHAR(255)
         - column:
             constraints:
               nullable: false
-              unique: true
             name: email
             type: VARCHAR(255)
         - column:
@@ -40,22 +58,21 @@ databaseChangeLog:
             type: VARCHAR(255)
         - column:
             name: password_changed_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: reset_token
             type: VARCHAR(255)
         - column:
             name: reset_token_expiry
-            type: datetime
+            type: datetime(6)
         - column:
             constraints:
               nullable: false
             name: status
-            type: ENUM('ACTIVE', 'INACTIVE')
+            type: VARCHAR(255)
         - column:
             constraints:
               nullable: false
-              unique: true
             name: username
             type: VARCHAR(255)
         - column:
@@ -63,7 +80,66 @@ databaseChangeLog:
             type: BIGINT
         tableName: account
 - changeSet:
-    id: 1785462881703-2
+    id: 1785741117041-3
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: account_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: email
+            type: VARCHAR(255)
+        - column:
+            name: password
+            type: VARCHAR(255)
+        - column:
+            name: password_changed_at
+            type: datetime(6)
+        - column:
+            name: reset_token
+            type: VARCHAR(255)
+        - column:
+            name: reset_token_expiry
+            type: datetime(6)
+        - column:
+            name: status
+            type: VARCHAR(255)
+        - column:
+            name: username
+            type: VARCHAR(255)
+        - column:
+            name: role_id
+            type: BIGINT
+        tableName: account_AUD
+- changeSet:
+    id: 1785741117041-4
     author: ASUS (generated)
     changes:
     - createTable:
@@ -73,20 +149,21 @@ databaseChangeLog:
             constraints:
               nullable: false
               primaryKey: true
+              primaryKeyName: cafe_tablePK
             name: table_id
             type: BIGINT
         - column:
             name: created_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: created_by
             type: VARCHAR(255)
         - column:
             name: deleted_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_by
             type: VARCHAR(255)
@@ -94,26 +171,72 @@ databaseChangeLog:
             constraints:
               nullable: false
             name: is_occupied
-            type: BIT(1)
+            type: BIT
         - column:
             constraints:
               nullable: false
             name: physical_state
-            type: ENUM('BROKEN', 'GOOD', 'MAINTENANCE')
+            type: VARCHAR(255)
         - column:
             constraints:
               nullable: false
             name: service_status
-            type: ENUM('CALLING_WAITER', 'NORMAL', 'REQUESTING_BILL', 'WAITING_FOOD')
+            type: VARCHAR(255)
         - column:
             constraints:
               nullable: false
-              unique: true
             name: table_name
             type: VARCHAR(255)
         tableName: cafe_table
 - changeSet:
-    id: 1785462881703-3
+    id: 1785741117041-5
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: table_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: is_occupied
+            type: BIT
+        - column:
+            name: physical_state
+            type: VARCHAR(255)
+        - column:
+            name: service_status
+            type: VARCHAR(255)
+        - column:
+            name: table_name
+            type: VARCHAR(255)
+        tableName: cafe_table_AUD
+- changeSet:
+    id: 1785741117041-6
     author: ASUS (generated)
     changes:
     - createTable:
@@ -123,20 +246,21 @@ databaseChangeLog:
             constraints:
               nullable: false
               primaryKey: true
+              primaryKeyName: customerPK
             name: customer_id
             type: BIGINT
         - column:
             name: created_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: created_by
             type: VARCHAR(255)
         - column:
             name: deleted_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_by
             type: VARCHAR(255)
@@ -145,7 +269,7 @@ databaseChangeLog:
             type: VARCHAR(255)
         - column:
             name: date_of_birth
-            type: datetime
+            type: datetime(6)
         - column:
             constraints:
               nullable: false
@@ -153,7 +277,7 @@ databaseChangeLog:
             type: VARCHAR(255)
         - column:
             name: gender
-            type: ENUM('FEMALE', 'MALE')
+            type: VARCHAR(255)
         - column:
             name: image_url
             type: VARCHAR(255)
@@ -166,12 +290,70 @@ databaseChangeLog:
         - column:
             constraints:
               nullable: false
-              unique: true
             name: account_id
             type: BIGINT
         tableName: customer
 - changeSet:
-    id: 1785462881703-4
+    id: 1785741117041-7
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: customer_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: address
+            type: VARCHAR(255)
+        - column:
+            name: date_of_birth
+            type: datetime(6)
+        - column:
+            name: full_name
+            type: VARCHAR(255)
+        - column:
+            name: gender
+            type: VARCHAR(255)
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            name: loyalty_points
+            type: INT
+        - column:
+            name: phone_number
+            type: VARCHAR(255)
+        - column:
+            name: account_id
+            type: BIGINT
+        tableName: customer_AUD
+- changeSet:
+    id: 1785741117041-8
     author: ASUS (generated)
     changes:
     - createTable:
@@ -181,20 +363,21 @@ databaseChangeLog:
             constraints:
               nullable: false
               primaryKey: true
+              primaryKeyName: employeePK
             name: employee_id
             type: BIGINT
         - column:
             name: created_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: created_by
             type: VARCHAR(255)
         - column:
             name: deleted_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_by
             type: VARCHAR(255)
@@ -203,7 +386,7 @@ databaseChangeLog:
             type: VARCHAR(255)
         - column:
             name: date_of_birth
-            type: datetime
+            type: datetime(6)
         - column:
             constraints:
               nullable: false
@@ -211,7 +394,7 @@ databaseChangeLog:
             type: VARCHAR(255)
         - column:
             name: gender
-            type: ENUM('FEMALE', 'MALE')
+            type: VARCHAR(255)
         - column:
             name: image_url
             type: VARCHAR(255)
@@ -226,12 +409,70 @@ databaseChangeLog:
         - column:
             constraints:
               nullable: false
-              unique: true
             name: account_id
             type: BIGINT
         tableName: employee
 - changeSet:
-    id: 1785462881703-5
+    id: 1785741117041-9
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: employee_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: address
+            type: VARCHAR(255)
+        - column:
+            name: date_of_birth
+            type: datetime(6)
+        - column:
+            name: full_name
+            type: VARCHAR(255)
+        - column:
+            name: gender
+            type: VARCHAR(255)
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            name: phone_number
+            type: VARCHAR(255)
+        - column:
+            name: salary
+            type: DECIMAL(38, 2)
+        - column:
+            name: account_id
+            type: BIGINT
+        tableName: employee_AUD
+- changeSet:
+    id: 1785741117041-10
     author: ASUS (generated)
     changes:
     - createTable:
@@ -241,20 +482,21 @@ databaseChangeLog:
             constraints:
               nullable: false
               primaryKey: true
+              primaryKeyName: feedbackPK
             name: feedback_id
             type: BIGINT
         - column:
             name: created_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: created_by
             type: VARCHAR(255)
         - column:
             name: deleted_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_by
             type: VARCHAR(255)
@@ -285,7 +527,7 @@ databaseChangeLog:
             constraints:
               nullable: false
             name: sent_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: customer_id
             type: BIGINT
@@ -294,7 +536,66 @@ databaseChangeLog:
             type: BIGINT
         tableName: feedback
 - changeSet:
-    id: 1785462881703-6
+    id: 1785741117041-11
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: feedback_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: content
+            type: VARCHAR(255)
+        - column:
+            name: email
+            type: VARCHAR(255)
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            name: rating
+            type: INT
+        - column:
+            name: sender_name
+            type: VARCHAR(255)
+        - column:
+            name: sent_at
+            type: datetime(6)
+        - column:
+            name: customer_id
+            type: BIGINT
+        - column:
+            name: item_id
+            type: BIGINT
+        tableName: feedback_AUD
+- changeSet:
+    id: 1785741117041-12
     author: ASUS (generated)
     changes:
     - createTable:
@@ -304,20 +605,21 @@ databaseChangeLog:
             constraints:
               nullable: false
               primaryKey: true
+              primaryKeyName: itemPK
             name: item_id
             type: BIGINT
         - column:
             name: created_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: created_by
             type: VARCHAR(255)
         - column:
             name: deleted_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_by
             type: VARCHAR(255)
@@ -331,24 +633,22 @@ databaseChangeLog:
             constraints:
               nullable: false
             name: is_available
-            type: BIT(1)
+            type: BIT
         - column:
             constraints:
               nullable: false
-              unique: true
             name: item_code
             type: VARCHAR(255)
         - column:
             constraints:
               nullable: false
-              unique: true
             name: item_name
             type: VARCHAR(255)
         - column:
             constraints:
               nullable: false
             name: price
-            type: DECIMAL(15)
+            type: DECIMAL(15, 0)
         - column:
             constraints:
               nullable: false
@@ -359,7 +659,66 @@ databaseChangeLog:
             type: BIGINT
         tableName: item
 - changeSet:
-    id: 1785462881703-7
+    id: 1785741117041-13
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: item_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: description
+            type: VARCHAR(255)
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            name: is_available
+            type: BIT
+        - column:
+            name: item_code
+            type: VARCHAR(255)
+        - column:
+            name: item_name
+            type: VARCHAR(255)
+        - column:
+            name: price
+            type: DECIMAL(15, 0)
+        - column:
+            name: total_order_count
+            type: INT
+        - column:
+            name: category_id
+            type: BIGINT
+        tableName: item_AUD
+- changeSet:
+    id: 1785741117041-14
     author: ASUS (generated)
     changes:
     - createTable:
@@ -369,32 +728,70 @@ databaseChangeLog:
             constraints:
               nullable: false
               primaryKey: true
+              primaryKeyName: menu_categoryPK
             name: category_id
             type: BIGINT
         - column:
             name: created_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: created_by
             type: VARCHAR(255)
         - column:
             name: deleted_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_by
             type: VARCHAR(255)
         - column:
             constraints:
               nullable: false
-              unique: true
             name: category_name
             type: VARCHAR(255)
         tableName: menu_category
 - changeSet:
-    id: 1785462881703-8
+    id: 1785741117041-15
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: category_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: category_name
+            type: VARCHAR(255)
+        tableName: menu_category_AUD
+- changeSet:
+    id: 1785741117041-16
     author: ASUS (generated)
     changes:
     - createTable:
@@ -404,20 +801,21 @@ databaseChangeLog:
             constraints:
               nullable: false
               primaryKey: true
-            name: news_id
+              primaryKeyName: newsPK
+            name: newsId
             type: BIGINT
         - column:
             name: created_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: created_by
             type: VARCHAR(255)
         - column:
             name: deleted_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_by
             type: VARCHAR(255)
@@ -426,6 +824,11 @@ databaseChangeLog:
             type: TEXT
         - column:
             name: image_url
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: status
             type: VARCHAR(255)
         - column:
             name: summary
@@ -438,14 +841,62 @@ databaseChangeLog:
         - column:
             name: account_id
             type: BIGINT
+        tableName: news
+- changeSet:
+    id: 1785741117041-17
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
         - column:
             constraints:
               nullable: false
+            name: newsId
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: content
+            type: TEXT
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
             name: status
-            type: ENUM('PENDING', 'PUBLISHED', 'REJECTED')
-        tableName: news
+            type: VARCHAR(255)
+        - column:
+            name: summary
+            type: TEXT
+        - column:
+            name: title
+            type: VARCHAR(255)
+        - column:
+            name: account_id
+            type: BIGINT
+        tableName: news_AUD
 - changeSet:
-    id: 1785462881703-9
+    id: 1785741117041-18
     author: ASUS (generated)
     changes:
     - createTable:
@@ -455,20 +906,21 @@ databaseChangeLog:
             constraints:
               nullable: false
               primaryKey: true
+              primaryKeyName: order_detailPK
             name: order_detail_id
             type: BIGINT
         - column:
             name: created_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: created_by
             type: VARCHAR(255)
         - column:
             name: deleted_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_by
             type: VARCHAR(255)
@@ -484,12 +936,12 @@ databaseChangeLog:
             constraints:
               nullable: false
             name: status
-            type: VARCHAR(50)
+            type: VARCHAR(255)
         - column:
             constraints:
               nullable: false
             name: unit_price
-            type: DECIMAL(15)
+            type: DECIMAL(15, 0)
         - column:
             name: item_id
             type: BIGINT
@@ -498,7 +950,60 @@ databaseChangeLog:
             type: BIGINT
         tableName: order_detail
 - changeSet:
-    id: 1785462881703-10
+    id: 1785741117041-19
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: order_detail_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: note
+            type: VARCHAR(255)
+        - column:
+            name: quantity
+            type: INT
+        - column:
+            name: status
+            type: VARCHAR(255)
+        - column:
+            name: unit_price
+            type: DECIMAL(15, 0)
+        - column:
+            name: item_id
+            type: BIGINT
+        - column:
+            name: order_id
+            type: BIGINT
+        tableName: order_detail_AUD
+- changeSet:
+    id: 1785741117041-20
     author: ASUS (generated)
     changes:
     - createTable:
@@ -508,32 +1013,70 @@ databaseChangeLog:
             constraints:
               nullable: false
               primaryKey: true
+              primaryKeyName: rolePK
             name: role_id
             type: BIGINT
         - column:
             name: created_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: created_by
             type: VARCHAR(255)
         - column:
             name: deleted_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_by
             type: VARCHAR(255)
         - column:
             constraints:
               nullable: false
-              unique: true
             name: role_name
             type: VARCHAR(255)
         tableName: role
 - changeSet:
-    id: 1785462881703-11
+    id: 1785741117041-21
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: role_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: role_name
+            type: VARCHAR(255)
+        tableName: role_AUD
+- changeSet:
+    id: 1785741117041-22
     author: ASUS (generated)
     changes:
     - createTable:
@@ -543,47 +1086,48 @@ databaseChangeLog:
             constraints:
               nullable: false
               primaryKey: true
+              primaryKeyName: table_orderPK
             name: order_id
             type: BIGINT
         - column:
             name: created_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: created_by
             type: VARCHAR(255)
         - column:
             name: deleted_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: updated_by
             type: VARCHAR(255)
         - column:
             name: close_at
-            type: datetime
+            type: datetime(6)
         - column:
             constraints:
               nullable: false
             name: open_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: paid_at
-            type: datetime
+            type: datetime(6)
         - column:
             name: payment_method
-            type: VARCHAR(50)
+            type: VARCHAR(255)
         - column:
             constraints:
               nullable: false
             name: status
-            type: ENUM('CANCELLED', 'OPEN', 'PAID')
+            type: VARCHAR(255)
         - column:
             constraints:
               nullable: false
             name: total_amount
-            type: DECIMAL(15)
+            type: DECIMAL(15, 0)
         - column:
             name: customer_id
             type: BIGINT
@@ -595,117 +1139,284 @@ databaseChangeLog:
             type: BIGINT
         tableName: table_order
 - changeSet:
-    id: 1785462881703-12
+    id: 1785741117041-23
     author: ASUS (generated)
     changes:
-    - createIndex:
-        associatedWith: ''
+    - createTable:
         columns:
         - column:
-            name: item_id
-        indexName: FK4dtqbi7ilse9x730y087wagm2
-        tableName: order_detail
-- changeSet:
-    id: 1785462881703-13
-    author: ASUS (generated)
-    changes:
-    - createIndex:
-        associatedWith: ''
-        columns:
+            constraints:
+              nullable: false
+            name: order_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: close_at
+            type: datetime(6)
+        - column:
+            name: open_at
+            type: datetime(6)
+        - column:
+            name: paid_at
+            type: datetime(6)
+        - column:
+            name: payment_method
+            type: VARCHAR(255)
+        - column:
+            name: status
+            type: VARCHAR(255)
+        - column:
+            name: total_amount
+            type: DECIMAL(15, 0)
         - column:
             name: customer_id
-        indexName: FK5tx3lr2wfe6vggtq35atnviiv
-        tableName: table_order
+            type: BIGINT
+        - column:
+            name: employee_id
+            type: BIGINT
+        - column:
+            name: table_id
+            type: BIGINT
+        tableName: table_order_AUD
 - changeSet:
-    id: 1785462881703-14
+    id: 1785741117041-24
     author: ASUS (generated)
     changes:
-    - createIndex:
-        associatedWith: ''
-        columns:
-        - column:
-            name: category_id
-        indexName: FK7bhw51h2808m4nbmq62pn9tco
-        tableName: item
+    - addPrimaryKey:
+        columnNames: REV, account_id
+        constraintName: account_AUDPK
+        tableName: account_AUD
 - changeSet:
-    id: 1785462881703-15
+    id: 1785741117041-25
     author: ASUS (generated)
     changes:
-    - createIndex:
-        associatedWith: ''
-        columns:
-        - column:
-            name: account_id
-        indexName: FK9jgaemfexdg06ffxt30n6acwq
-        tableName: news
+    - addPrimaryKey:
+        columnNames: REV, table_id
+        constraintName: cafe_table_AUDPK
+        tableName: cafe_table_AUD
 - changeSet:
-    id: 1785462881703-16
+    id: 1785741117041-26
     author: ASUS (generated)
     changes:
-    - createIndex:
-        associatedWith: ''
-        columns:
-        - column:
-            name: role_id
-        indexName: FKd4vb66o896tay3yy52oqxr9w0
+    - addPrimaryKey:
+        columnNames: REV, customer_id
+        constraintName: customer_AUDPK
+        tableName: customer_AUD
+- changeSet:
+    id: 1785741117041-27
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, employee_id
+        constraintName: employee_AUDPK
+        tableName: employee_AUD
+- changeSet:
+    id: 1785741117041-28
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, feedback_id
+        constraintName: feedback_AUDPK
+        tableName: feedback_AUD
+- changeSet:
+    id: 1785741117041-29
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, item_id
+        constraintName: item_AUDPK
+        tableName: item_AUD
+- changeSet:
+    id: 1785741117041-30
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, category_id
+        constraintName: menu_category_AUDPK
+        tableName: menu_category_AUD
+- changeSet:
+    id: 1785741117041-31
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, newsId
+        constraintName: news_AUDPK
+        tableName: news_AUD
+- changeSet:
+    id: 1785741117041-32
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, order_detail_id
+        constraintName: order_detail_AUDPK
+        tableName: order_detail_AUD
+- changeSet:
+    id: 1785741117041-33
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, role_id
+        constraintName: role_AUDPK
+        tableName: role_AUD
+- changeSet:
+    id: 1785741117041-34
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, order_id
+        constraintName: table_order_AUDPK
+        tableName: table_order_AUD
+- changeSet:
+    id: 1785741117041-35
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: email
+        constraintName: UC_ACCOUNTEMAIL_COL
         tableName: account
 - changeSet:
-    id: 1785462881703-17
+    id: 1785741117041-36
     author: ASUS (generated)
     changes:
-    - createIndex:
-        associatedWith: ''
-        columns:
-        - column:
-            name: order_id
-        indexName: FKd7u0gc7kgc44yf8juueqhu8ey
-        tableName: order_detail
+    - addUniqueConstraint:
+        columnNames: username
+        constraintName: UC_ACCOUNTUSERNAME_COL
+        tableName: account
 - changeSet:
-    id: 1785462881703-18
+    id: 1785741117041-37
     author: ASUS (generated)
     changes:
-    - createIndex:
-        associatedWith: ''
-        columns:
-        - column:
-            name: employee_id
-        indexName: FKkxxygsd18l03f7lqtjge09clo
-        tableName: table_order
+    - addUniqueConstraint:
+        columnNames: table_name
+        constraintName: UC_CAFE_TABLETABLE_NAME_COL
+        tableName: cafe_table
 - changeSet:
-    id: 1785462881703-19
+    id: 1785741117041-38
     author: ASUS (generated)
     changes:
-    - createIndex:
-        associatedWith: ''
-        columns:
-        - column:
-            name: item_id
-        indexName: FKmb01nh42pdh08swkfwgn9lfvi
-        tableName: feedback
+    - addUniqueConstraint:
+        columnNames: account_id
+        constraintName: UC_CUSTOMERACCOUNT_ID_COL
+        tableName: customer
 - changeSet:
-    id: 1785462881703-20
+    id: 1785741117041-39
     author: ASUS (generated)
     changes:
-    - createIndex:
-        associatedWith: ''
-        columns:
-        - column:
-            name: table_id
-        indexName: FKotmcbqjiyur4250cdlcn325f3
-        tableName: table_order
+    - addUniqueConstraint:
+        columnNames: phone_number
+        constraintName: UC_CUSTOMERPHONE_NUMBER_COL
+        tableName: customer
 - changeSet:
-    id: 1785462881703-21
+    id: 1785741117041-40
     author: ASUS (generated)
     changes:
-    - createIndex:
-        associatedWith: ''
-        columns:
-        - column:
-            name: customer_id
-        indexName: FKpi2y2j7n01ypo49fone3knjry
-        tableName: feedback
+    - addUniqueConstraint:
+        columnNames: account_id
+        constraintName: UC_EMPLOYEEACCOUNT_ID_COL
+        tableName: employee
 - changeSet:
-    id: 1785462881703-22
+    id: 1785741117041-41
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: phone_number
+        constraintName: UC_EMPLOYEEPHONE_NUMBER_COL
+        tableName: employee
+- changeSet:
+    id: 1785741117041-42
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: item_code
+        constraintName: UC_ITEMITEM_CODE_COL
+        tableName: item
+- changeSet:
+    id: 1785741117041-43
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: item_name
+        constraintName: UC_ITEMITEM_NAME_COL
+        tableName: item
+- changeSet:
+    id: 1785741117041-44
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: category_name
+        constraintName: UC_MENU_CATEGORYCATEGORY_NAME_COL
+        tableName: menu_category
+- changeSet:
+    id: 1785741117041-45
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: role_name
+        constraintName: UC_ROLEROLE_NAME_COL
+        tableName: role
+- changeSet:
+    id: 1785741117041-46
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: item_AUD
+        constraintName: FK1stjwven6v2eqbrfa8py7p5us
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785741117041-47
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: customer_AUD
+        constraintName: FK3bqyogu5eqso9yqni4l7cssod
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785741117041-48
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: cafe_table_AUD
+        constraintName: FK3ndm9wk61jusrpv8t8baepycv
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785741117041-49
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -714,13 +1425,37 @@ databaseChangeLog:
         constraintName: FK4dtqbi7ilse9x730y087wagm2
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: item_id
         referencedTableName: item
         validate: true
 - changeSet:
-    id: 1785462881703-23
+    id: 1785741117041-50
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: table_order_AUD
+        constraintName: FK4f9aptcb53m15xlcctbpt1ffc
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785741117041-51
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: menu_category_AUD
+        constraintName: FK4pcmgj7c4a74q8sm8ev0xt1gn
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785741117041-52
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -729,13 +1464,11 @@ databaseChangeLog:
         constraintName: FK5tx3lr2wfe6vggtq35atnviiv
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: customer_id
         referencedTableName: customer
         validate: true
 - changeSet:
-    id: 1785462881703-24
+    id: 1785741117041-53
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -744,13 +1477,24 @@ databaseChangeLog:
         constraintName: FK7bhw51h2808m4nbmq62pn9tco
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: category_id
         referencedTableName: menu_category
         validate: true
 - changeSet:
-    id: 1785462881703-25
+    id: 1785741117041-54
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: role_AUD
+        constraintName: FK8h463kdoiwnf479pf1hujtjxb
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785741117041-55
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -759,13 +1503,24 @@ databaseChangeLog:
         constraintName: FK9jgaemfexdg06ffxt30n6acwq
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: account_id
         referencedTableName: account
         validate: true
 - changeSet:
-    id: 1785462881703-26
+    id: 1785741117041-56
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: order_detail_AUD
+        constraintName: FKah4orytby15bof75qmgkhqnv
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785741117041-57
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -774,13 +1529,11 @@ databaseChangeLog:
         constraintName: FKcfg6ajo8oske94exynxpf7tf9
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: account_id
         referencedTableName: account
         validate: true
 - changeSet:
-    id: 1785462881703-27
+    id: 1785741117041-58
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -789,13 +1542,11 @@ databaseChangeLog:
         constraintName: FKd4vb66o896tay3yy52oqxr9w0
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: role_id
         referencedTableName: role
         validate: true
 - changeSet:
-    id: 1785462881703-28
+    id: 1785741117041-59
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -804,13 +1555,37 @@ databaseChangeLog:
         constraintName: FKd7u0gc7kgc44yf8juueqhu8ey
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: order_id
         referencedTableName: table_order
         validate: true
 - changeSet:
-    id: 1785462881703-29
+    id: 1785741117041-60
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: account_AUD
+        constraintName: FKhihl1i4h0l70rf8pgxpkbhafy
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785741117041-61
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: news_AUD
+        constraintName: FKkbrafwxgs09mkoprvoxajqu58
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785741117041-62
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -819,13 +1594,11 @@ databaseChangeLog:
         constraintName: FKkxxygsd18l03f7lqtjge09clo
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: employee_id
         referencedTableName: employee
         validate: true
 - changeSet:
-    id: 1785462881703-30
+    id: 1785741117041-63
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -834,13 +1607,11 @@ databaseChangeLog:
         constraintName: FKmb01nh42pdh08swkfwgn9lfvi
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: item_id
         referencedTableName: item
         validate: true
 - changeSet:
-    id: 1785462881703-31
+    id: 1785741117041-64
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -849,13 +1620,11 @@ databaseChangeLog:
         constraintName: FKn9x2k8svpxj3r328iy1rpur83
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: account_id
         referencedTableName: account
         validate: true
 - changeSet:
-    id: 1785462881703-32
+    id: 1785741117041-65
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -864,13 +1633,24 @@ databaseChangeLog:
         constraintName: FKotmcbqjiyur4250cdlcn325f3
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: table_id
         referencedTableName: cafe_table
         validate: true
 - changeSet:
-    id: 1785462881703-33
+    id: 1785741117041-66
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: employee_AUD
+        constraintName: FKpendlmkecy76ioxqsvu8ymdlc
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785741117041-67
     author: ASUS (generated)
     changes:
     - addForeignKeyConstraint:
@@ -879,9 +1659,1698 @@ databaseChangeLog:
         constraintName: FKpi2y2j7n01ypo49fone3knjry
         deferrable: false
         initiallyDeferred: false
-        onDelete: RESTRICT
-        onUpdate: RESTRICT
         referencedColumnNames: customer_id
         referencedTableName: customer
+        validate: true
+- changeSet:
+    id: 1785741117041-68
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: feedback_AUD
+        constraintName: FKy0fqrspm3k8aqj0vqk32ger7
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+
+databaseChangeLog:
+- changeSet:
+    id: 1785749661881-1
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: REVINFOPK
+            name: REV
+            type: INT
+        - column:
+            name: REVTSTMP
+            type: BIGINT
+        tableName: REVINFO
+- changeSet:
+    id: 1785749661881-2
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: accountPK
+            name: account_id
+            type: BIGINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: email
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: password
+            type: VARCHAR(255)
+        - column:
+            name: password_changed_at
+            type: datetime(6)
+        - column:
+            name: reset_token
+            type: VARCHAR(255)
+        - column:
+            name: reset_token_expiry
+            type: datetime(6)
+        - column:
+            constraints:
+              nullable: false
+            name: status
+            type: ENUM
+        - column:
+            constraints:
+              nullable: false
+            name: username
+            type: VARCHAR(255)
+        - column:
+            name: role_id
+            type: BIGINT
+        tableName: account
+- changeSet:
+    id: 1785749661881-3
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: account_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: email
+            type: VARCHAR(255)
+        - column:
+            name: password
+            type: VARCHAR(255)
+        - column:
+            name: password_changed_at
+            type: datetime(6)
+        - column:
+            name: reset_token
+            type: VARCHAR(255)
+        - column:
+            name: reset_token_expiry
+            type: datetime(6)
+        - column:
+            name: status
+            type: ENUM
+        - column:
+            name: username
+            type: VARCHAR(255)
+        - column:
+            name: role_id
+            type: BIGINT
+        tableName: account_AUD
+- changeSet:
+    id: 1785749661881-4
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: cafe_tablePK
+            name: table_id
+            type: BIGINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: is_occupied
+            type: BIT
+        - column:
+            constraints:
+              nullable: false
+            name: physical_state
+            type: ENUM
+        - column:
+            constraints:
+              nullable: false
+            name: service_status
+            type: ENUM
+        - column:
+            constraints:
+              nullable: false
+            name: table_name
+            type: VARCHAR(255)
+        tableName: cafe_table
+- changeSet:
+    id: 1785749661881-5
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: table_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: is_occupied
+            type: BIT
+        - column:
+            name: physical_state
+            type: ENUM
+        - column:
+            name: service_status
+            type: ENUM
+        - column:
+            name: table_name
+            type: VARCHAR(255)
+        tableName: cafe_table_AUD
+- changeSet:
+    id: 1785749661881-6
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: customerPK
+            name: customer_id
+            type: BIGINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: address
+            type: VARCHAR(255)
+        - column:
+            name: date_of_birth
+            type: datetime(6)
+        - column:
+            constraints:
+              nullable: false
+            name: full_name
+            type: VARCHAR(255)
+        - column:
+            name: gender
+            type: ENUM
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            name: loyalty_points
+            type: INT
+        - column:
+            name: phone_number
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: account_id
+            type: BIGINT
+        tableName: customer
+- changeSet:
+    id: 1785749661881-7
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: customer_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: address
+            type: VARCHAR(255)
+        - column:
+            name: date_of_birth
+            type: datetime(6)
+        - column:
+            name: full_name
+            type: VARCHAR(255)
+        - column:
+            name: gender
+            type: ENUM
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            name: loyalty_points
+            type: INT
+        - column:
+            name: phone_number
+            type: VARCHAR(255)
+        - column:
+            name: account_id
+            type: BIGINT
+        tableName: customer_AUD
+- changeSet:
+    id: 1785749661881-8
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: employeePK
+            name: employee_id
+            type: BIGINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: address
+            type: VARCHAR(255)
+        - column:
+            name: date_of_birth
+            type: datetime(6)
+        - column:
+            constraints:
+              nullable: false
+            name: full_name
+            type: VARCHAR(255)
+        - column:
+            name: gender
+            type: ENUM
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            name: phone_number
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: salary
+            type: DECIMAL(38, 2)
+        - column:
+            constraints:
+              nullable: false
+            name: account_id
+            type: BIGINT
+        tableName: employee
+- changeSet:
+    id: 1785749661881-9
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: employee_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: address
+            type: VARCHAR(255)
+        - column:
+            name: date_of_birth
+            type: datetime(6)
+        - column:
+            name: full_name
+            type: VARCHAR(255)
+        - column:
+            name: gender
+            type: ENUM
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            name: phone_number
+            type: VARCHAR(255)
+        - column:
+            name: salary
+            type: DECIMAL(38, 2)
+        - column:
+            name: account_id
+            type: BIGINT
+        tableName: employee_AUD
+- changeSet:
+    id: 1785749661881-10
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: feedbackPK
+            name: feedback_id
+            type: BIGINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: content
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: email
+            type: VARCHAR(255)
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: rating
+            type: INT
+        - column:
+            constraints:
+              nullable: false
+            name: sender_name
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: sent_at
+            type: datetime(6)
+        - column:
+            name: customer_id
+            type: BIGINT
+        - column:
+            name: item_id
+            type: BIGINT
+        tableName: feedback
+- changeSet:
+    id: 1785749661881-11
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: feedback_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: content
+            type: VARCHAR(255)
+        - column:
+            name: email
+            type: VARCHAR(255)
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            name: rating
+            type: INT
+        - column:
+            name: sender_name
+            type: VARCHAR(255)
+        - column:
+            name: sent_at
+            type: datetime(6)
+        - column:
+            name: customer_id
+            type: BIGINT
+        - column:
+            name: item_id
+            type: BIGINT
+        tableName: feedback_AUD
+- changeSet:
+    id: 1785749661881-12
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: itemPK
+            name: item_id
+            type: BIGINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: description
+            type: VARCHAR(255)
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: is_available
+            type: BIT
+        - column:
+            constraints:
+              nullable: false
+            name: item_code
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: item_name
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: price
+            type: DECIMAL(15, 0)
+        - column:
+            constraints:
+              nullable: false
+            name: total_order_count
+            type: INT
+        - column:
+            name: category_id
+            type: BIGINT
+        tableName: item
+- changeSet:
+    id: 1785749661881-13
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: item_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: description
+            type: VARCHAR(255)
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            name: is_available
+            type: BIT
+        - column:
+            name: item_code
+            type: VARCHAR(255)
+        - column:
+            name: item_name
+            type: VARCHAR(255)
+        - column:
+            name: price
+            type: DECIMAL(15, 0)
+        - column:
+            name: total_order_count
+            type: INT
+        - column:
+            name: category_id
+            type: BIGINT
+        tableName: item_AUD
+- changeSet:
+    id: 1785749661881-14
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: menu_categoryPK
+            name: category_id
+            type: BIGINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: category_name
+            type: VARCHAR(255)
+        tableName: menu_category
+- changeSet:
+    id: 1785749661881-15
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: category_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: category_name
+            type: VARCHAR(255)
+        tableName: menu_category_AUD
+- changeSet:
+    id: 1785749661881-16
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: newsPK
+            name: newsId
+            type: BIGINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: content
+            type: TEXT
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: status
+            type: ENUM
+        - column:
+            name: summary
+            type: TEXT
+        - column:
+            constraints:
+              nullable: false
+            name: title
+            type: VARCHAR(255)
+        - column:
+            name: account_id
+            type: BIGINT
+        tableName: news
+- changeSet:
+    id: 1785749661881-17
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: newsId
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: content
+            type: TEXT
+        - column:
+            name: image_url
+            type: VARCHAR(255)
+        - column:
+            name: status
+            type: ENUM
+        - column:
+            name: summary
+            type: TEXT
+        - column:
+            name: title
+            type: VARCHAR(255)
+        - column:
+            name: account_id
+            type: BIGINT
+        tableName: news_AUD
+- changeSet:
+    id: 1785749661881-18
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: order_detailPK
+            name: order_detail_id
+            type: BIGINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: note
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: quantity
+            type: INT
+        - column:
+            constraints:
+              nullable: false
+            name: status
+            type: ENUM
+        - column:
+            constraints:
+              nullable: false
+            name: unit_price
+            type: DECIMAL(15, 0)
+        - column:
+            name: item_id
+            type: BIGINT
+        - column:
+            name: order_id
+            type: BIGINT
+        tableName: order_detail
+- changeSet:
+    id: 1785749661881-19
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: order_detail_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: note
+            type: VARCHAR(255)
+        - column:
+            name: quantity
+            type: INT
+        - column:
+            name: status
+            type: ENUM
+        - column:
+            name: unit_price
+            type: DECIMAL(15, 0)
+        - column:
+            name: item_id
+            type: BIGINT
+        - column:
+            name: order_id
+            type: BIGINT
+        tableName: order_detail_AUD
+- changeSet:
+    id: 1785749661881-20
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: rolePK
+            name: role_id
+            type: BIGINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: role_name
+            type: VARCHAR(255)
+        tableName: role
+- changeSet:
+    id: 1785749661881-21
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: role_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: role_name
+            type: VARCHAR(255)
+        tableName: role_AUD
+- changeSet:
+    id: 1785749661881-22
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            autoIncrement: true
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: table_orderPK
+            name: order_id
+            type: BIGINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: close_at
+            type: datetime(6)
+        - column:
+            constraints:
+              nullable: false
+            name: open_at
+            type: datetime(6)
+        - column:
+            name: paid_at
+            type: datetime(6)
+        - column:
+            name: payment_method
+            type: ENUM
+        - column:
+            constraints:
+              nullable: false
+            name: status
+            type: ENUM
+        - column:
+            constraints:
+              nullable: false
+            name: total_amount
+            type: DECIMAL(15, 0)
+        - column:
+            name: customer_id
+            type: BIGINT
+        - column:
+            name: employee_id
+            type: BIGINT
+        - column:
+            name: table_id
+            type: BIGINT
+        tableName: table_order
+- changeSet:
+    id: 1785749661881-23
+    author: ASUS (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: order_id
+            type: BIGINT
+        - column:
+            constraints:
+              nullable: false
+            name: REV
+            type: INT
+        - column:
+            name: REVTYPE
+            type: TINYINT
+        - column:
+            name: created_at
+            type: datetime(6)
+        - column:
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: deleted_at
+            type: datetime(6)
+        - column:
+            name: updated_at
+            type: datetime(6)
+        - column:
+            name: updated_by
+            type: VARCHAR(255)
+        - column:
+            name: close_at
+            type: datetime(6)
+        - column:
+            name: open_at
+            type: datetime(6)
+        - column:
+            name: paid_at
+            type: datetime(6)
+        - column:
+            name: payment_method
+            type: ENUM
+        - column:
+            name: status
+            type: ENUM
+        - column:
+            name: total_amount
+            type: DECIMAL(15, 0)
+        - column:
+            name: customer_id
+            type: BIGINT
+        - column:
+            name: employee_id
+            type: BIGINT
+        - column:
+            name: table_id
+            type: BIGINT
+        tableName: table_order_AUD
+- changeSet:
+    id: 1785749661881-24
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, account_id
+        constraintName: account_AUDPK
+        tableName: account_AUD
+- changeSet:
+    id: 1785749661881-25
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, table_id
+        constraintName: cafe_table_AUDPK
+        tableName: cafe_table_AUD
+- changeSet:
+    id: 1785749661881-26
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, customer_id
+        constraintName: customer_AUDPK
+        tableName: customer_AUD
+- changeSet:
+    id: 1785749661881-27
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, employee_id
+        constraintName: employee_AUDPK
+        tableName: employee_AUD
+- changeSet:
+    id: 1785749661881-28
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, feedback_id
+        constraintName: feedback_AUDPK
+        tableName: feedback_AUD
+- changeSet:
+    id: 1785749661881-29
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, item_id
+        constraintName: item_AUDPK
+        tableName: item_AUD
+- changeSet:
+    id: 1785749661881-30
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, category_id
+        constraintName: menu_category_AUDPK
+        tableName: menu_category_AUD
+- changeSet:
+    id: 1785749661881-31
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, newsId
+        constraintName: news_AUDPK
+        tableName: news_AUD
+- changeSet:
+    id: 1785749661881-32
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, order_detail_id
+        constraintName: order_detail_AUDPK
+        tableName: order_detail_AUD
+- changeSet:
+    id: 1785749661881-33
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, role_id
+        constraintName: role_AUDPK
+        tableName: role_AUD
+- changeSet:
+    id: 1785749661881-34
+    author: ASUS (generated)
+    changes:
+    - addPrimaryKey:
+        columnNames: REV, order_id
+        constraintName: table_order_AUDPK
+        tableName: table_order_AUD
+- changeSet:
+    id: 1785749661881-35
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: email
+        constraintName: UC_ACCOUNTEMAIL_COL
+        tableName: account
+- changeSet:
+    id: 1785749661881-36
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: username
+        constraintName: UC_ACCOUNTUSERNAME_COL
+        tableName: account
+- changeSet:
+    id: 1785749661881-37
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: table_name
+        constraintName: UC_CAFE_TABLETABLE_NAME_COL
+        tableName: cafe_table
+- changeSet:
+    id: 1785749661881-38
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: account_id
+        constraintName: UC_CUSTOMERACCOUNT_ID_COL
+        tableName: customer
+- changeSet:
+    id: 1785749661881-39
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: phone_number
+        constraintName: UC_CUSTOMERPHONE_NUMBER_COL
+        tableName: customer
+- changeSet:
+    id: 1785749661881-40
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: account_id
+        constraintName: UC_EMPLOYEEACCOUNT_ID_COL
+        tableName: employee
+- changeSet:
+    id: 1785749661881-41
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: phone_number
+        constraintName: UC_EMPLOYEEPHONE_NUMBER_COL
+        tableName: employee
+- changeSet:
+    id: 1785749661881-42
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: item_code
+        constraintName: UC_ITEMITEM_CODE_COL
+        tableName: item
+- changeSet:
+    id: 1785749661881-43
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: item_name
+        constraintName: UC_ITEMITEM_NAME_COL
+        tableName: item
+- changeSet:
+    id: 1785749661881-44
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: category_name
+        constraintName: UC_MENU_CATEGORYCATEGORY_NAME_COL
+        tableName: menu_category
+- changeSet:
+    id: 1785749661881-45
+    author: ASUS (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: role_name
+        constraintName: UC_ROLEROLE_NAME_COL
+        tableName: role
+- changeSet:
+    id: 1785749661881-46
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: item_AUD
+        constraintName: FK1stjwven6v2eqbrfa8py7p5us
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785749661881-47
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: customer_AUD
+        constraintName: FK3bqyogu5eqso9yqni4l7cssod
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785749661881-48
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: cafe_table_AUD
+        constraintName: FK3ndm9wk61jusrpv8t8baepycv
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785749661881-49
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: item_id
+        baseTableName: order_detail
+        constraintName: FK4dtqbi7ilse9x730y087wagm2
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: item_id
+        referencedTableName: item
+        validate: true
+- changeSet:
+    id: 1785749661881-50
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: table_order_AUD
+        constraintName: FK4f9aptcb53m15xlcctbpt1ffc
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785749661881-51
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: menu_category_AUD
+        constraintName: FK4pcmgj7c4a74q8sm8ev0xt1gn
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785749661881-52
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: customer_id
+        baseTableName: table_order
+        constraintName: FK5tx3lr2wfe6vggtq35atnviiv
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: customer_id
+        referencedTableName: customer
+        validate: true
+- changeSet:
+    id: 1785749661881-53
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: category_id
+        baseTableName: item
+        constraintName: FK7bhw51h2808m4nbmq62pn9tco
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: category_id
+        referencedTableName: menu_category
+        validate: true
+- changeSet:
+    id: 1785749661881-54
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: role_AUD
+        constraintName: FK8h463kdoiwnf479pf1hujtjxb
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785749661881-55
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: account_id
+        baseTableName: news
+        constraintName: FK9jgaemfexdg06ffxt30n6acwq
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: account_id
+        referencedTableName: account
+        validate: true
+- changeSet:
+    id: 1785749661881-56
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: order_detail_AUD
+        constraintName: FKah4orytby15bof75qmgkhqnv
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785749661881-57
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: account_id
+        baseTableName: employee
+        constraintName: FKcfg6ajo8oske94exynxpf7tf9
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: account_id
+        referencedTableName: account
+        validate: true
+- changeSet:
+    id: 1785749661881-58
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: role_id
+        baseTableName: account
+        constraintName: FKd4vb66o896tay3yy52oqxr9w0
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: role_id
+        referencedTableName: role
+        validate: true
+- changeSet:
+    id: 1785749661881-59
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: order_id
+        baseTableName: order_detail
+        constraintName: FKd7u0gc7kgc44yf8juueqhu8ey
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: order_id
+        referencedTableName: table_order
+        validate: true
+- changeSet:
+    id: 1785749661881-60
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: account_AUD
+        constraintName: FKhihl1i4h0l70rf8pgxpkbhafy
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785749661881-61
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: news_AUD
+        constraintName: FKkbrafwxgs09mkoprvoxajqu58
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785749661881-62
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: employee_id
+        baseTableName: table_order
+        constraintName: FKkxxygsd18l03f7lqtjge09clo
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: employee_id
+        referencedTableName: employee
+        validate: true
+- changeSet:
+    id: 1785749661881-63
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: item_id
+        baseTableName: feedback
+        constraintName: FKmb01nh42pdh08swkfwgn9lfvi
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: item_id
+        referencedTableName: item
+        validate: true
+- changeSet:
+    id: 1785749661881-64
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: account_id
+        baseTableName: customer
+        constraintName: FKn9x2k8svpxj3r328iy1rpur83
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: account_id
+        referencedTableName: account
+        validate: true
+- changeSet:
+    id: 1785749661881-65
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: table_id
+        baseTableName: table_order
+        constraintName: FKotmcbqjiyur4250cdlcn325f3
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: table_id
+        referencedTableName: cafe_table
+        validate: true
+- changeSet:
+    id: 1785749661881-66
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: employee_AUD
+        constraintName: FKpendlmkecy76ioxqsvu8ymdlc
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
+        validate: true
+- changeSet:
+    id: 1785749661881-67
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: customer_id
+        baseTableName: feedback
+        constraintName: FKpi2y2j7n01ypo49fone3knjry
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: customer_id
+        referencedTableName: customer
+        validate: true
+- changeSet:
+    id: 1785749661881-68
+    author: ASUS (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: REV
+        baseTableName: feedback_AUD
+        constraintName: FKy0fqrspm3k8aqj0vqk32ger7
+        deferrable: false
+        initiallyDeferred: false
+        referencedColumnNames: REV
+        referencedTableName: REVINFO
         validate: true
 

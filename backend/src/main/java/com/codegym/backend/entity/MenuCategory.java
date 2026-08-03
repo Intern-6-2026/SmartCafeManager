@@ -1,5 +1,7 @@
 package com.codegym.backend.entity;
 
+import org.hibernate.envers.Audited;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -14,6 +16,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "menu_category")
+@Audited
 @Getter
 @Setter
 @NoArgsConstructor

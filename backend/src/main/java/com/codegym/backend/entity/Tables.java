@@ -1,5 +1,7 @@
 package com.codegym.backend.entity;
 
+import org.hibernate.envers.Audited;
+
 import com.codegym.backend.enums.PhysicalState;
 import com.codegym.backend.enums.ServiceStatus;
 
@@ -19,6 +21,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "cafe_table")
+@Audited
 @Getter
 @Setter
 @NoArgsConstructor

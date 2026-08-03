@@ -1,5 +1,7 @@
 package com.codegym.backend.entity;
 
+import org.hibernate.envers.Audited;
+
 import com.codegym.backend.enums.NewsStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -22,6 +24,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "news")
+@Audited
 @Getter
 @Setter
 @NoArgsConstructor
