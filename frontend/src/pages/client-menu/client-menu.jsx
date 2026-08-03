@@ -477,6 +477,52 @@ function ClientMenu() {
                   </div>
                 ))}
               </div>
+            )}
+
+            <div className="order-list">
+              {cartRows.length === 0 && (
+                <div className="order-empty">
+                  Chưa có món nào mới.
+                </div>
+              )}
+              {cartRows.map((r) => (
+                <div className="order-row" key={r.orderDetailId}>
+                  <button
+                    className="remove-btn"
+                    aria-label={`Xoá ${r.name}`}
+                    onClick={() => handleRemoveItem(r.itemId)}
+                  >
+                    <img src="/images/Icon Remove.png" alt="" className="remove-icon" />
+                  </button>
+                  <div className="order-info">
+                    <div className="order-top">
+                      <span className="order-name">{r.name}</span>
+                      <span className="order-price">{fmt(r.price)}</span>
+                    </div>
+                    {/*{r.note && <div className="order-item-note">Ghi chú: {r.note}</div>}*/}
+                    <div className="order-bottom">
+                      <div className="order-qty">
+                        <button
+                          className="qty-btn"
+                          aria-label={`Giảm số lượng ${r.name}`}
+                          onClick={() => handleChangeQty(r.itemId, r.qty, r.note, -1)}
+                        >
+                          −
+                        </button>
+                        <span className="qty-value">{r.qty}</span>
+                        <button
+                          className="qty-btn"
+                          aria-label={`Tăng số lượng ${r.name}`}
+                          onClick={() => handleChangeQty(r.itemId, r.qty, r.note, 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
             </div>
 
             <div className="order-total">
