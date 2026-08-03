@@ -32,8 +32,9 @@ export default function AppRoutes() {
 
         <Route path="/change-password" element={<ChangePassword />} />
 
+        {/* Route trang chủ nhận QR code quét vào (VD: /home/1 hoặc /home/2) để lưu vào localStorage */}
         <Route
-          path="/home"
+          path="/home/:tableId?"
           element={
             <>
               <Header />
@@ -43,15 +44,12 @@ export default function AppRoutes() {
           }
         />
 
-        {/* Route nhận QR code có chứa ID bàn (sẽ bắt, lưu vào localStorage và tự động điều hướng) */}
-        <Route path="/menu/table/:tableId" element={<ClientMenu />} />
-
-        {/* Route menu sạch hoàn toàn sau khi đã giấu ID trên thanh địa chỉ */}
+        {/* Route menu sạch hoàn toàn, chỉ đọc localStorage ra xài */}
         <Route path="/menu" element={<ClientMenu />} />
 
         <Route path="/payment-success" element={<PaymentSuccess />} />
 
-        {/* --- CÁC ROUTE MỚI CHO ADMIN / QUẢN LÝ --- */}
+        {/* --- CÁC ROUTE CHO ADMIN / QUẢN LÝ --- */}
         <Route path="/admin/invoices" element={<InvoiceManagement />} />
         <Route path="/admin/revenue" element={<RevenueDashboard />} />
       </Routes>

@@ -4,7 +4,7 @@ import AddDrinkModal from "../../components/add-drink";
 import FeedbackModal from "../../components/feedback";
 import CheckoutModal from "../../components/checkout";
 import PaypalQrModal from "../../components/paypal-qr";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { logo } from "../../constants/assets";
 import Logo from "../../components/Logo";
 import {
@@ -89,20 +89,8 @@ const normalizeItem = (it) => ({
 });
 
 function ClientMenu() {
-  const { tableId: urlTableId } = useParams();
-  const navigate = useNavigate();
-
-  /* Xử lý giấu ID bàn trên URL và lưu vào localStorage theo yêu cầu */
-  useEffect(() => {
-    if (urlTableId) {
-      localStorage.setItem("tableId", urlTableId);
-      navigate("/menu", { replace: true });
-    }
-  }, [urlTableId, navigate]);
-
-  // Lấy tableId thực tế từ localStorage (nếu có)
-  const tableId = localStorage.getItem("tableId") || urlTableId || "1";
-
+  /* Route: /menu/table/:tableId — tableId chính là tên bàn gửi lên API (vd: ban01) */
+  const { tableId } = useParams();
   const [menuItems, setMenuItems] = useState([]); // menu lấy từ server
   const [category, setCategory] = useState("");
   const [cart, setCart] = useState([]); // giỏ tạm PENDING lấy từ server
@@ -156,9 +144,10 @@ function ClientMenu() {
     [menuItems, category],
   );
 
-  /* ===== API 5: Xem giỏ hàng ===== */
+  /* ===== API 5: Xem giỏ hàng =====
+     Response mới là 1 object gồm cả 2 danh sách:
+     { tableOrderId, tableName, currentTotalAmount, orderedItems[], pendingItems[] } */
   const loadCart = useCallback(async () => {
-    if (!tableId) return;
     try {
       const res = await getCart(tableId);
       const data = res.data ?? {};
@@ -167,6 +156,7 @@ function ClientMenu() {
       setBillTotal(data.currentTotalAmount ?? 0);
       setTableOrderId(data.tableOrderId ?? null);
     } catch (err) {
+      // 500 "Bàn hiện tại không có hóa đơn nào đang mở!" => bàn trống, không phải lỗi thật
       setCart([]);
       setHistory([]);
       setBillTotal(0);
@@ -181,7 +171,7 @@ function ClientMenu() {
     loadCart();
   }, [loadCart]);
 
-  /* Giỏ tạm (PENDING) */
+  /* Giỏ tạm (PENDING): { orderDetailId, itemId, itemName, price, quantity, note, status } */
   const cartRows = cart.map((c) => ({
     orderDetailId: c.orderDetailId,
     name: c.itemName ?? "—",
@@ -191,10 +181,10 @@ function ClientMenu() {
     note: c.note,
     status: c.status,
   }));
-
+  /* Tổng tiền cả hóa đơn do server tính (gồm cả món đã gọi lẫn món trong giỏ) */
   const total = billTotal;
 
-  /* Món đã gọi */
+  /* Món đã gọi — chỉ hiển thị, không cho sửa/xoá */
   const historyRows = history.map((h) => ({
     orderDetailId: h.orderDetailId,
     name: h.itemName ?? "—",
@@ -204,7 +194,13 @@ function ClientMenu() {
     status: h.status,
   }));
 
-  /* ===== API 4: Thêm món vào giỏ ===== */
+  const STATUS_LABEL = {
+    CONFIRMED: "Đang pha chế",
+    SERVED: "Đã phục vụ",
+    CANCELLED: "Đã huỷ",
+  };
+
+  /* ===== API 4: Thêm món vào giỏ — bấm "Thêm" trong modal ===== */
   const confirmAddItem = async (item, qty, note) => {
     setLoading(true);
     try {
@@ -225,7 +221,7 @@ function ClientMenu() {
     try {
       const res = await confirmOrder(tableId);
       notify(res.data);
-      await loadCart();
+      await loadCart(); // giỏ tạm sẽ trống sau khi chốt
     } catch (err) {
       notify(getApiErrorMessage(err, "Gọi món thất bại."));
     } finally {
@@ -233,7 +229,7 @@ function ClientMenu() {
     }
   };
 
-  /* ===== API 8: Bấm nút "Thanh toán" ===== */
+  /* ===== API 8: Bấm nút "Thanh toán" -> lấy hóa đơn, mở modal ===== */
   const handleThanhToan = async () => {
     setLoading(true);
     try {
@@ -247,7 +243,8 @@ function ClientMenu() {
     }
   };
 
-  /* ===== Xác nhận thanh toán ===== */
+  /* ===== Bấm "Xác nhận" trong modal thanh toán =====
+     Tạo phiên thanh toán, lấy QR code rồi hiện lên cho khách quét. */
   const confirmCheckout = async () => {
     if (paymentMethod === "CASH") {
       setLoading(true);
@@ -291,7 +288,7 @@ function ClientMenu() {
     }
   };
 
-  /* ===== API update-quantity ===== */
+  /* ===== API update-quantity: cập nhật số lượng món ===== */
   const handleChangeQty = async (itemId, currentQty, note, delta) => {
     const newQty = currentQty + delta;
     if (newQty <= 0) {
@@ -309,7 +306,7 @@ function ClientMenu() {
     }
   };
 
-  /* ===== API remove-item ===== */
+  /* ===== API remove-item: xoá món khỏi giỏ ===== */
   const handleRemoveItem = async (itemId) => {
     setLoading(true);
     try {
@@ -323,6 +320,7 @@ function ClientMenu() {
     }
   };
 
+  /* Bấm "Gửi" trong modal Phản hồi (chưa có API phản hồi trong tài liệu) */
   const submitFeedback = (data) => {
     console.log("Phản hồi:", data);
     notify("Cảm ơn bạn đã gửi phản hồi!");
@@ -348,6 +346,7 @@ function ClientMenu() {
         </div>
       </header>
 
+      {/* Thông báo kết quả API */}
       {message && (
         <div className="api-message" role="status">
           {message}
@@ -357,6 +356,7 @@ function ClientMenu() {
       <main>
         <div className="main-content">
           <div className="menu">
+            {/* Thanh loại món nằm ngang, dính phía trên vùng cuộn menu */}
             <nav className="category-nav" aria-label="Loại dịch vụ">
               {categories.map((c) => (
                 <button
@@ -397,6 +397,7 @@ function ClientMenu() {
             </div>
           </div>
 
+          {/* Chi tiết đơn hàng (giỏ tạm PENDING từ server) */}
           <section className="order-detail">
             <h3>Bàn {tableId}</h3>
             <div className="order-header">
@@ -404,7 +405,9 @@ function ClientMenu() {
               <span className="order-header-title">Giá</span>
             </div>
 
+            {/* Một khung cuộn chung: món đã gọi ở trên, giỏ hàng ở dưới */}
             <div className="order-scroll">
+              {/* Món đã gọi xuống bếp — chỉ xem, không sửa/xoá được */}
               {historyRows.length > 0 && (
                 <div className="ordered-list" aria-label="Món đã gọi">
                   <div className="ordered-label">Món đã gọi</div>
@@ -446,6 +449,7 @@ function ClientMenu() {
                         <span className="order-name">{r.name}</span>
                         <span className="order-price">{fmt(r.price)}</span>
                       </div>
+                      {/*{r.note && <div className="order-item-note">Ghi chú: {r.note}</div>}*/}
                       <div className="order-bottom">
                         <div className="order-qty">
                           <button
@@ -480,6 +484,7 @@ function ClientMenu() {
               <span className="total-value">{fmt(total)}</span>
             </div>
 
+            {/* Phương thức thanh toán — enum backend yêu cầu viết hoa */}
             <div className="payment-method">
               <label htmlFor="payment-select" className="payment-label">
                 Phương thức thanh toán
@@ -539,6 +544,7 @@ function ClientMenu() {
         </footer>
       </main>
 
+      {/* 2 MODAL (component riêng) */}
       <AddDrinkModal
         item={selectedItem}
         onConfirm={confirmAddItem}

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import coffeeBeans from "../assets/coffee-beans.jpg";
-// Thêm addItemToCart vào đây
 import {
   getLatestItems,
   getBestSellerItems,
@@ -10,35 +9,44 @@ import {
 
 function Body() {
   const navigate = useNavigate();
+  const { tableId: urlTableId } = useParams();
   const [latestItems, setLatestItems] = useState([]);
   const [bestSellerItems, setBestSellerItems] = useState([]);
 
+  // --- BƯỚC 1: Bắt số bàn từ URL (nếu khách quét QR vào trang chủ) và lưu vào localStorage ---
+  useEffect(() => {
+    if (urlTableId) {
+      localStorage.setItem("tableId", urlTableId);
+    }
+  }, [urlTableId]);
+
+  // Lấy ra tableId đang lưu trong máy (mặc định là "1" nếu chưa quét QR)
+  const currentTableId = localStorage.getItem("tableId") || "1";
+
   useEffect(() => {
     getLatestItems().then((res) => {
-      console.log("Dữ liệu món mới:", res.data);
       setLatestItems(res.data || []);
     });
     getBestSellerItems().then((res) => {
-      console.log("Dữ liệu bán chạy:", res.data);
       setBestSellerItems(res.data || []);
     });
   }, []);
 
-  // --- CẬP NHẬT HÀM XỬ LÝ KHI BẤM VÀO MÓN ĂN ---
+  // --- BƯỚC 2: Xử lý khi bấm vào món ăn ---
   const handleItemClick = async (item) => {
     const itemId = item.itemId || item.id;
-    const tableId = 1; // Mặc định bàn số 1 theo quy ước của team backend
 
     try {
-      // 1. Gọi API thêm vào giỏ hàng thật trên server
-      await addItemToCart(tableId, itemId, 1, "");
-      console.log("Đã thêm món vào giỏ hàng thành công!");
+      // Gọi API thêm vào giỏ hàng thật trên server với đúng số bàn hiện tại
+      await addItemToCart(currentTableId, itemId, 1, "");
+      console.log(`Đã thêm món vào giỏ hàng của bàn ${currentTableId}!`);
     } catch (error) {
       console.error("Lỗi khi thêm vào giỏ hàng:", error);
     }
-    window.scrollTo(0, 0); // Cuộn lên đầu trang
-    // 2. Chuyển hướng sang trang menu của bàn số 1
-    navigate(`/menu/table/${tableId}`);
+    window.scrollTo(0, 0);
+
+    // Chuyển hướng sang trang menu sạch (không lộ ID bàn trên URL)
+    navigate("/menu");
   };
 
   return (
@@ -52,12 +60,14 @@ function Body() {
         />
         <div className="absolute inset-0 bg-black/40"></div>
         <div className="relative z-10 px-6 text-white font-['Inter']">
-          <p className="text-[16px] font-normal">Chào mừng bạn,</p>
+          <p className="text-[16px] font-normal">
+            Chào mừng bạn đến bàn {currentTableId},
+          </p>
           <h1 className="text-[24px] font-bold my-2">
             Trải nghiệm cà phê thông minh
           </h1>
           <button
-            onClick={() => navigate("/menu/table/1")}
+            onClick={() => navigate("/menu")}
             className="bg-white text-black px-6 py-2 rounded-full font-medium cursor-pointer hover:bg-gray-100"
           >
             Đặt món
@@ -70,7 +80,7 @@ function Body() {
         <div className="bg-[#EBE2CB] p-6 flex flex-col items-center">
           <h2 className="text-2xl font-bold mb-4">Top 4 món mới nhất</h2>
           <button
-            onClick={() => navigate("/menu/table/1")}
+            onClick={() => navigate("/menu")}
             className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium cursor-pointer"
           >
             Khám phá
@@ -117,7 +127,7 @@ function Body() {
             Top những món bán chạy nhất
           </h2>
           <button
-            onClick={() => navigate("/menu/table/1")}
+            onClick={() => navigate("/menu")}
             className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium cursor-pointer"
           >
             Khám phá
