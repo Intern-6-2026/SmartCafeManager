@@ -43,7 +43,11 @@ export default function AppRoutes() {
           }
         />
 
+        {/* Route nhận QR code có chứa ID bàn (sẽ bắt, lưu vào localStorage và tự động điều hướng) */}
         <Route path="/menu/table/:tableId" element={<ClientMenu />} />
+
+        {/* Route menu sạch hoàn toàn sau khi đã giấu ID trên thanh địa chỉ */}
+        <Route path="/menu" element={<ClientMenu />} />
 
         <Route path="/payment-success" element={<PaymentSuccess />} />
 

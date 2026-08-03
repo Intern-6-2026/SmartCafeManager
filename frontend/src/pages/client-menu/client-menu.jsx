@@ -4,7 +4,7 @@ import AddDrinkModal from "../../components/add-drink";
 import FeedbackModal from "../../components/feedback";
 import CheckoutModal from "../../components/checkout";
 import PaypalQrModal from "../../components/paypal-qr";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { logo } from "../../constants/assets";
 import Logo from "../../components/Logo";
 import {
@@ -24,12 +24,54 @@ import {
 
 /* Menu dự phòng khi không kết nối được server (giữ đúng shape đã chuẩn hoá) */
 const FALLBACK_MENU = [
-  { id: 1, name: "Cà phê đen", price: 25000, category: "Coffee", img: "/images/iced-black-coffee.png", isAvailable: true },
-  { id: 2, name: "Cà phê sữa", price: 30000, category: "Coffee", img: "/images/cafe-sua-da.png", isAvailable: true },
-  { id: 3, name: "Cà phê hạt dẻ", price: 35000, category: "Coffee", img: "/images/cà phê hạt dẻ.png", isAvailable: true },
-  { id: 4, name: "Cà phê muối", price: 35000, category: "Coffee", img: "/images/cà_phê_muối.png", isAvailable: true },
-  { id: 5, name: "Bạc xỉu", price: 30000, category: "Coffee", img: "/images/Bạc_xỉu.png", isAvailable: true },
-  { id: 6, name: "Cappuccino", price: 35000, category: "Coffee", img: "/images/cappuccino.png", isAvailable: true },
+  {
+    id: 1,
+    name: "Cà phê đen",
+    price: 25000,
+    category: "Coffee",
+    img: "/images/iced-black-coffee.png",
+    isAvailable: true,
+  },
+  {
+    id: 2,
+    name: "Cà phê sữa",
+    price: 30000,
+    category: "Coffee",
+    img: "/images/cafe-sua-da.png",
+    isAvailable: true,
+  },
+  {
+    id: 3,
+    name: "Cà phê hạt dẻ",
+    price: 35000,
+    category: "Coffee",
+    img: "/images/cà phê hạt dẻ.png",
+    isAvailable: true,
+  },
+  {
+    id: 4,
+    name: "Cà phê muối",
+    price: 35000,
+    category: "Coffee",
+    img: "/images/cà_phê_muối.png",
+    isAvailable: true,
+  },
+  {
+    id: 5,
+    name: "Bạc xỉu",
+    price: 30000,
+    category: "Coffee",
+    img: "/images/Bạc_xỉu.png",
+    isAvailable: true,
+  },
+  {
+    id: 6,
+    name: "Cappuccino",
+    price: 35000,
+    category: "Coffee",
+    img: "/images/cappuccino.png",
+    isAvailable: true,
+  },
 ];
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n) + "đ";
@@ -47,8 +89,20 @@ const normalizeItem = (it) => ({
 });
 
 function ClientMenu() {
-  /* Route: /menu/table/:tableId — tableId chính là tên bàn gửi lên API (vd: ban01) */
-  const { tableId } = useParams();
+  const { tableId: urlTableId } = useParams();
+  const navigate = useNavigate();
+
+  /* Xử lý giấu ID bàn trên URL và lưu vào localStorage theo yêu cầu */
+  useEffect(() => {
+    if (urlTableId) {
+      localStorage.setItem("tableId", urlTableId);
+      navigate("/menu", { replace: true });
+    }
+  }, [urlTableId, navigate]);
+
+  // Lấy tableId thực tế từ localStorage (nếu có)
+  const tableId = localStorage.getItem("tableId") || urlTableId || "1";
+
   const [menuItems, setMenuItems] = useState([]); // menu lấy từ server
   const [category, setCategory] = useState("");
   const [cart, setCart] = useState([]); // giỏ tạm PENDING lấy từ server
@@ -70,13 +124,15 @@ function ClientMenu() {
     setMessage(String(msg));
     setTimeout(() => setMessage(""), 4000);
   };
-  
+
   /* ===== API 1: Lấy toàn bộ menu ===== */
   useEffect(() => {
     (async () => {
       try {
         const res = await getAllItems();
-        const items = Array.isArray(res.data) ? res.data.map(normalizeItem) : [];
+        const items = Array.isArray(res.data)
+          ? res.data.map(normalizeItem)
+          : [];
         setMenuItems(items);
         if (items.length > 0) setCategory(items[0].category);
       } catch (err) {
@@ -91,19 +147,18 @@ function ClientMenu() {
   /* Danh mục sinh tự động từ menu server */
   const categories = useMemo(
     () => [...new Set(menuItems.map((m) => m.category))],
-    [menuItems]
+    [menuItems],
   );
 
   /* Lọc món theo danh mục đang chọn */
   const filtered = useMemo(
     () => menuItems.filter((m) => m.category === category),
-    [menuItems, category]
+    [menuItems, category],
   );
 
-  /* ===== API 5: Xem giỏ hàng =====
-     Response mới là 1 object gồm cả 2 danh sách:
-     { tableOrderId, tableName, currentTotalAmount, orderedItems[], pendingItems[] } */
+  /* ===== API 5: Xem giỏ hàng ===== */
   const loadCart = useCallback(async () => {
+    if (!tableId) return;
     try {
       const res = await getCart(tableId);
       const data = res.data ?? {};
@@ -112,7 +167,6 @@ function ClientMenu() {
       setBillTotal(data.currentTotalAmount ?? 0);
       setTableOrderId(data.tableOrderId ?? null);
     } catch (err) {
-      // 500 "Bàn hiện tại không có hóa đơn nào đang mở!" => bàn trống, không phải lỗi thật
       setCart([]);
       setHistory([]);
       setBillTotal(0);
@@ -127,7 +181,7 @@ function ClientMenu() {
     loadCart();
   }, [loadCart]);
 
-  /* Giỏ tạm (PENDING): { orderDetailId, itemId, itemName, price, quantity, note, status } */
+  /* Giỏ tạm (PENDING) */
   const cartRows = cart.map((c) => ({
     orderDetailId: c.orderDetailId,
     name: c.itemName ?? "—",
@@ -137,10 +191,10 @@ function ClientMenu() {
     note: c.note,
     status: c.status,
   }));
-  /* Tổng tiền cả hóa đơn do server tính (gồm cả món đã gọi lẫn món trong giỏ) */
+
   const total = billTotal;
 
-  /* Món đã gọi — chỉ hiển thị, không cho sửa/xoá */
+  /* Món đã gọi */
   const historyRows = history.map((h) => ({
     orderDetailId: h.orderDetailId,
     name: h.itemName ?? "—",
@@ -150,13 +204,7 @@ function ClientMenu() {
     status: h.status,
   }));
 
-  const STATUS_LABEL = {
-    CONFIRMED: "Đang pha chế",
-    SERVED: "Đã phục vụ",
-    CANCELLED: "Đã huỷ",
-  };
-
-  /* ===== API 4: Thêm món vào giỏ — bấm "Thêm" trong modal ===== */
+  /* ===== API 4: Thêm món vào giỏ ===== */
   const confirmAddItem = async (item, qty, note) => {
     setLoading(true);
     try {
@@ -177,7 +225,7 @@ function ClientMenu() {
     try {
       const res = await confirmOrder(tableId);
       notify(res.data);
-      await loadCart(); // giỏ tạm sẽ trống sau khi chốt
+      await loadCart();
     } catch (err) {
       notify(getApiErrorMessage(err, "Gọi món thất bại."));
     } finally {
@@ -185,7 +233,7 @@ function ClientMenu() {
     }
   };
 
-  /* ===== API 8: Bấm nút "Thanh toán" -> lấy hóa đơn, mở modal ===== */
+  /* ===== API 8: Bấm nút "Thanh toán" ===== */
   const handleThanhToan = async () => {
     setLoading(true);
     try {
@@ -199,12 +247,11 @@ function ClientMenu() {
     }
   };
 
-  /* ===== Bấm "Xác nhận" trong modal thanh toán =====
-     Tạo phiên thanh toán, lấy QR code rồi hiện lên cho khách quét. */
+  /* ===== Xác nhận thanh toán ===== */
   const confirmCheckout = async () => {
     if (paymentMethod === "CASH") {
       setLoading(true);
-      try { 
+      try {
         const res = await payWithCash(tableId);
         notify(res.data);
         await loadCart();
@@ -244,7 +291,7 @@ function ClientMenu() {
     }
   };
 
-  /* ===== API update-quantity: cập nhật số lượng món ===== */
+  /* ===== API update-quantity ===== */
   const handleChangeQty = async (itemId, currentQty, note, delta) => {
     const newQty = currentQty + delta;
     if (newQty <= 0) {
@@ -262,7 +309,7 @@ function ClientMenu() {
     }
   };
 
-  /* ===== API remove-item: xoá món khỏi giỏ ===== */
+  /* ===== API remove-item ===== */
   const handleRemoveItem = async (itemId) => {
     setLoading(true);
     try {
@@ -276,7 +323,6 @@ function ClientMenu() {
     }
   };
 
-  /* Bấm "Gửi" trong modal Phản hồi (chưa có API phản hồi trong tài liệu) */
   const submitFeedback = (data) => {
     console.log("Phản hồi:", data);
     notify("Cảm ơn bạn đã gửi phản hồi!");
@@ -302,13 +348,15 @@ function ClientMenu() {
         </div>
       </header>
 
-      {/* Thông báo kết quả API */}
-      {message && <div className="api-message" role="status">{message}</div>}
+      {message && (
+        <div className="api-message" role="status">
+          {message}
+        </div>
+      )}
 
       <main>
         <div className="main-content">
           <div className="menu">
-            {/* Thanh loại món nằm ngang, dính phía trên vùng cuộn menu */}
             <nav className="category-nav" aria-label="Loại dịch vụ">
               {categories.map((c) => (
                 <button
@@ -334,7 +382,9 @@ function ClientMenu() {
                   </div>
                   <div className="card-name">{m.name}</div>
                   <div className="card-price">{fmt(m.price)}</div>
-                  {!m.isAvailable && <div className="card-soldout">Hết món</div>}
+                  {!m.isAvailable && (
+                    <div className="card-soldout">Hết món</div>
+                  )}
                 </button>
               ))}
               {filtered.length === 0 && (
@@ -347,7 +397,6 @@ function ClientMenu() {
             </div>
           </div>
 
-          {/* Chi tiết đơn hàng (giỏ tạm PENDING từ server) */}
           <section className="order-detail">
             <h3>Bàn {tableId}</h3>
             <div className="order-header">
@@ -355,72 +404,75 @@ function ClientMenu() {
               <span className="order-header-title">Giá</span>
             </div>
 
-            {/* Một khung cuộn chung: món đã gọi ở trên, giỏ hàng ở dưới */}
             <div className="order-scroll">
-              {/* Món đã gọi xuống bếp — chỉ xem, không sửa/xoá được */}
               {historyRows.length > 0 && (
-              <div className="ordered-list" aria-label="Món đã gọi">
-                <div className="ordered-label">Món đã gọi</div>
-                {historyRows.map((r) => (
-                  <div className="ordered-row" key={r.orderDetailId}>
-                    <div className="ordered-info">
-                      <div className="ordered-top">
-                        <span className="ordered-name">{r.name}</span>
-                        <span className="ordered-price">{fmt(r.price)}</span>
+                <div className="ordered-list" aria-label="Món đã gọi">
+                  <div className="ordered-label">Món đã gọi</div>
+                  {historyRows.map((r) => (
+                    <div className="ordered-row" key={r.orderDetailId}>
+                      <div className="ordered-info">
+                        <div className="ordered-top">
+                          <span className="ordered-name">{r.name}</span>
+                          <span className="ordered-price">{fmt(r.price)}</span>
+                        </div>
+                        <div className="ordered-bottom">
+                          <span className="ordered-qty">x {r.qty}</span>
+                        </div>
                       </div>
-                      <div className="ordered-bottom">
-                        <span className="ordered-qty">x {r.qty}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="order-list">
+                {cartRows.length === 0 && (
+                  <div className="order-empty">Chưa có món nào mới.</div>
+                )}
+                {cartRows.map((r) => (
+                  <div className="order-row" key={r.orderDetailId}>
+                    <button
+                      className="remove-btn"
+                      aria-label={`Xoá ${r.name}`}
+                      onClick={() => handleRemoveItem(r.itemId)}
+                    >
+                      <img
+                        src="/images/Icon Remove.png"
+                        alt=""
+                        className="remove-icon"
+                      />
+                    </button>
+                    <div className="order-info">
+                      <div className="order-top">
+                        <span className="order-name">{r.name}</span>
+                        <span className="order-price">{fmt(r.price)}</span>
+                      </div>
+                      <div className="order-bottom">
+                        <div className="order-qty">
+                          <button
+                            className="qty-btn"
+                            aria-label={`Giảm số lượng ${r.name}`}
+                            onClick={() =>
+                              handleChangeQty(r.itemId, r.qty, r.note, -1)
+                            }
+                          >
+                            −
+                          </button>
+                          <span className="qty-value">{r.qty}</span>
+                          <button
+                            className="qty-btn"
+                            aria-label={`Tăng số lượng ${r.name}`}
+                            onClick={() =>
+                              handleChangeQty(r.itemId, r.qty, r.note, 1)
+                            }
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-
-            <div className="order-list">
-              {cartRows.length === 0 && (
-                <div className="order-empty">
-                  Chưa có món nào mới.
-                </div>
-              )}
-              {cartRows.map((r) => (
-                <div className="order-row" key={r.orderDetailId}>
-                  <button
-                    className="remove-btn"
-                    aria-label={`Xoá ${r.name}`}
-                    onClick={() => handleRemoveItem(r.itemId)}
-                  >
-                    <img src="/images/Icon Remove.png" alt="" className="remove-icon" />
-                  </button>
-                  <div className="order-info">
-                    <div className="order-top">
-                      <span className="order-name">{r.name}</span>
-                      <span className="order-price">{fmt(r.price)}</span>
-                    </div>
-                    {/*{r.note && <div className="order-item-note">Ghi chú: {r.note}</div>}*/}
-                    <div className="order-bottom">
-                      <div className="order-qty">
-                        <button
-                          className="qty-btn"
-                          aria-label={`Giảm số lượng ${r.name}`}
-                          onClick={() => handleChangeQty(r.itemId, r.qty, r.note, -1)}
-                        >
-                          −
-                        </button>
-                        <span className="qty-value">{r.qty}</span>
-                        <button
-                          className="qty-btn"
-                          aria-label={`Tăng số lượng ${r.name}`}
-                          onClick={() => handleChangeQty(r.itemId, r.qty, r.note, 1)}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
             </div>
 
             <div className="order-total">
@@ -428,7 +480,6 @@ function ClientMenu() {
               <span className="total-value">{fmt(total)}</span>
             </div>
 
-            {/* Phương thức thanh toán — enum backend yêu cầu viết hoa */}
             <div className="payment-method">
               <label htmlFor="payment-select" className="payment-label">
                 Phương thức thanh toán
@@ -445,16 +496,31 @@ function ClientMenu() {
             </div>
 
             <div className="order-actions">
-              <button className="btn-goimon" onClick={handleGoiMon} disabled={loading}>
+              <button
+                className="btn-goimon"
+                onClick={handleGoiMon}
+                disabled={loading}
+              >
                 Gọi món
               </button>
-              <button className="btn-thanhtoan" onClick={handleThanhToan} disabled={loading}>
+              <button
+                className="btn-thanhtoan"
+                onClick={handleThanhToan}
+                disabled={loading}
+              >
                 Thanh toán
               </button>
-              <button className="btn-goinhanvien" onClick={handleGoiNhanVien} disabled={loading}>
+              <button
+                className="btn-goinhanvien"
+                onClick={handleGoiNhanVien}
+                disabled={loading}
+              >
                 Gọi nhân viên
               </button>
-              <button className="btn-feedback" onClick={() => setFeedbackOpen(true)}>
+              <button
+                className="btn-feedback"
+                onClick={() => setFeedbackOpen(true)}
+              >
                 Phản hồi
               </button>
             </div>
@@ -467,12 +533,12 @@ function ClientMenu() {
             Chấp nhận : Visa, MasterCard, Vouchers <br />
             Phí giao dịch áp dụng cho thẻ tín dụng <br />
             Hotline/Số điện thoại: 19001900 <br />
-            Địa chỉ quán: Số 1 đường Võ Văn Ngân, phường Thủ Đức, thành phố Hồ Chí Minh
+            Địa chỉ quán: Số 1 đường Võ Văn Ngân, phường Thủ Đức, thành phố Hồ
+            Chí Minh
           </p>
         </footer>
       </main>
 
-      {/* 2 MODAL (component riêng) */}
       <AddDrinkModal
         item={selectedItem}
         onConfirm={confirmAddItem}
