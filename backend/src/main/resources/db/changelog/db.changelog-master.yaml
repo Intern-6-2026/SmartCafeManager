@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/versions/v1.0-generated.yaml
   - include:
       file: db/changelog/versions/v1.1-update-data.yaml
+  - include:
+      file: db/changelog/versions/v1.2-insert-data.sql

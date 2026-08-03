@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   shared-db:
     image: mysql:8.0
@@ -8,10 +6,10 @@ services:
       MYSQL_ROOT_PASSWORD: root_super_password
       MYSQL_DATABASE: smart_cafe_management
     ports:
-      - "3307:3306" 
+      - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./smart_cafe_management.sql:/docker-entrypoint-initdb.d/smart_cafe_management.sql
+      # - ./smart_cafe_management.sql:/docker-entrypoint-initdb.d/smart_cafe_management.sql
     networks:
       - smart_cafe_shared_net
 
