@@ -2,7 +2,9 @@ package com.codegym.backend.entity;
 
 import java.util.Date;
 
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.envers.Audited;
+import org.hibernate.type.SqlTypes;
 
 import com.codegym.backend.enums.Gender;
 
@@ -46,6 +48,7 @@ public class Customer extends BaseEntity {
     private Date dateOfBirth;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "gender")
     private Gender gender;
 

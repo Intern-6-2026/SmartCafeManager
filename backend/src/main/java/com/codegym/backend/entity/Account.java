@@ -2,7 +2,9 @@ package com.codegym.backend.entity;
 
 import java.util.Date;
 
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.envers.Audited;
+import org.hibernate.type.SqlTypes;
 
 import com.codegym.backend.enums.AccountStatus;
 
@@ -60,6 +62,7 @@ public class Account extends BaseEntity {
     private Role role;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false)
     private AccountStatus status;
 }

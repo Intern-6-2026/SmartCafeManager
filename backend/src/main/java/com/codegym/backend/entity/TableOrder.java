@@ -3,7 +3,9 @@ package com.codegym.backend.entity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.envers.Audited;
+import org.hibernate.type.SqlTypes;
 
 import com.codegym.backend.enums.PaymentMethod;
 import com.codegym.backend.enums.StatusTableOrder;
@@ -60,6 +62,7 @@ public class TableOrder extends BaseEntity {
     private BigDecimal totalAmount;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "payment_method")
     private PaymentMethod paymentMethod;
 
@@ -67,6 +70,7 @@ public class TableOrder extends BaseEntity {
     private LocalDateTime paidAt;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false)
     private StatusTableOrder status;
 }
