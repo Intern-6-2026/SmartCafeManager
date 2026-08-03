@@ -35,6 +35,7 @@ import lombok.Setter;
 public class News extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "news_id")
     private Long newsId;
 
     @Column(name = "title", nullable = false)
