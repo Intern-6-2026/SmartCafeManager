@@ -11,6 +11,8 @@ import Profile from "../pages/profile/Profile";
 import EditProfile from "../pages/profile/EditProfile";
 import ChangePassword from "../pages/profile/ChangePassword";
 import PaymentSuccess from "../pages/PaymentSuccess/paymentSuccess";
+import SaleManager from "../pages/sale-manager/SaleManager";
+import FeedbackManager from "../pages/feedback-manager/FeedbackManager";
 
 export default function AppRoutes() {
     return (
@@ -65,7 +67,20 @@ export default function AppRoutes() {
                     element={<ClientMenu />}
                 />
                 
-                <Route path="/payment-success" element={<PaymentSuccess />} />
+                <Route 
+                    path="/payment-success" 
+                    element={<PaymentSuccess />} 
+                />
+
+                <Route 
+                    path="/sale-manager" 
+                    element={<SaleManager />} 
+                />
+
+                <Route 
+                    path="/feedback-manager" 
+                    element={<FeedbackManager />} 
+                />
             </Routes>
         </BrowserRouter>
     );
