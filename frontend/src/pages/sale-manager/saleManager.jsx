@@ -1,138 +1,71 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import "../../styles/sale-manager.css";
+import PaymentModal from "../../components/PaymentModal";
+import PaymentDoneModal from "../../components/PaymentDoneModal";
 import {
-  getAllTables,
-  getInvoice,
-  payWithCash,
-  getApiErrorMessage,
-} from "../../services/apiService";
-
-const LABEL = {
-  empty: "Trống",
-  wait: "Chờ món",
-  serve: "Đang phục vụ",
-  call: "Gọi nhân viên",
-  bill: "Chờ tính tiền",
-};
-const CLS = {
-  empty: "tc-empty",
-  wait: "tc-wait",
-  serve: "tc-serve",
-  call: "tc-call",
-  bill: "tc-bill",
-};
-const BADGE = {
-  empty: ["#F1EFE8", "#6E5C4A"],
-  wait: ["#FAEEDA", "#854F0B"],
-  serve: ["#E1F5EE", "#0F6E56"],
-  call: ["#E6F1FB", "#185FA5"],
-  bill: ["#FBEAF0", "#993556"],
-};
-
-const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n ?? 0) + "đ";
-
-/* Quy đổi trạng thái backend -> khoá hiển thị.
-   Bàn chưa có khách (isOccupied = false) luôn coi là "Trống",
-   còn lại đọc theo serviceStatus. */
-const toStatusKey = (t) => {
-  if (t.isOccupied === false) return "empty";
-  switch (t.serviceStatus) {
-    case "WAITING_FOOD":
-      return "wait";
-    case "CALLING_WAITER":
-      return "call";
-    case "REQUESTING_BILL":
-      return "bill";
-    case "NORMAL":
-    default:
-      return "serve";
-  }
-};
+  LABEL, CLS, BADGE,
+  INITIAL_TABLES, INITIAL_BILLS, NEW_DRINKS, fmt,
+} from "../../data/saleData";
 
 function SaleManager() {
-  const [tables, setTables] = useState([]);
-  const [selected, setSelected] = useState(null); // tableId đang chọn
-  const [invoice, setInvoice] = useState(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [loadingTables, setLoadingTables] = useState(true);
-  const [loadingBill, setLoadingBill] = useState(false);
-  const [paying, setPaying] = useState(false);
+  const [tables, setTables] = useState(INITIAL_TABLES);
+  const [bills, setBills] = useState(INITIAL_BILLS);
+  const [selected, setSelected] = useState("03");
+  const [payOpen, setPayOpen] = useState(false);
+  const [doneOpen, setDoneOpen] = useState(false);
+  const [lastChange, setLastChange] = useState(0);
 
-  const notify = (msg) => {
-    setMessage(String(msg));
-    setTimeout(() => setMessage(""), 4000);
+  const table = tables.find((t) => t.n === selected);
+  const items = bills[selected] ?? null;
+  const total = useMemo(
+    () => (items ? items.reduce((s, it) => s + it.price, 0) : 0),
+    [items]
+  );
+
+  const patchTable = (n, patch) =>
+    setTables((prev) => prev.map((t) => (t.n === n ? { ...t, ...patch } : t)));
+
+  /* Nhận đơn: Đơn mới -> Đang phục vụ, mọi món thành đã nhận */
+  const acceptOrder = () => {
+    patchTable(selected, { s: "serve" });
+    setBills((prev) => ({
+      ...prev,
+      [selected]: (prev[selected] ?? []).map((it) => ({ ...it, isNew: false })),
+    }));
   };
 
-  /* Nạp danh sách bàn */
-  const loadTables = useCallback(async () => {
-    setLoadingTables(true);
-    try {
-      const res = await getAllTables();
-      const list = Array.isArray(res.data) ? res.data : [];
-      setTables(list);
-      // Tự chọn bàn đang có khách đầu tiên
-      const firstBusy = list.find((t) => toStatusKey(t) !== "empty");
-      if (firstBusy) setSelected(firstBusy.tableId);
-    } catch (err) {
-      setTables([]);
-      notify(getApiErrorMessage(err, "Không tải được danh sách bàn."));
-    } finally {
-      setLoadingTables(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadTables();
-  }, [loadTables]);
-
-  /* Nạp hóa đơn của bàn đang chọn */
-  const loadInvoice = useCallback(async (tableId) => {
-    if (!tableId) return;
-    setLoadingBill(true);
-    try {
-      const res = await getInvoice(tableId);
-      setInvoice(res.data ?? null);
-    } catch (err) {
-      // Bàn chưa có hóa đơn mở -> không phải lỗi thật
-      setInvoice(null);
-      if (err?.response?.status !== 500) {
-        notify(getApiErrorMessage(err, "Không tải được hóa đơn."));
-      }
-    } finally {
-      setLoadingBill(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadInvoice(selected);
-  }, [selected, loadInvoice]);
-
-  /* Xác nhận thu tiền */
-  const handleConfirmPayment = async () => {
-    setPaying(true);
-    try {
-      const res = await payWithCash(selected);
-      notify(res.data);
-      setConfirmOpen(false);
-      await loadTables();
-      await loadInvoice(selected);
-    } catch (err) {
-      notify(getApiErrorMessage(err, "Xác nhận thanh toán thất bại."));
-    } finally {
-      setPaying(false);
-    }
+  /* Demo: khách gọi thêm món -> bàn về Đơn mới, món cũ giữ nguyên (sẽ mờ), món mới isNew=true */
+  const demoAddItem = () => {
+    const pick = NEW_DRINKS[Math.floor(Math.random() * NEW_DRINKS.length)];
+    setBills((prev) => ({
+      ...prev,
+      [selected]: [...(prev[selected] ?? []), { ...pick }],
+    }));
+    if (table && table.s !== "bill") patchTable(selected, { s: "neworder" });
   };
 
-  const table = tables.find((t) => t.tableId === selected);
-  const statusKey = table ? toStatusKey(table) : "empty";
+  const openPay = () => setPayOpen(true);
 
-  /* Hóa đơn: gộp món đã gọi + món trong giỏ để nhân viên thấy toàn bộ */
-  const rows = [
-    ...(invoice?.orderedItems ?? []),
-    ...(invoice?.pendingItems ?? []),
-  ];
-  const total = invoice?.currentTotalAmount ?? 0;
+  const confirmPay = (change) => {
+    setPayOpen(false);
+    setLastChange(change);
+    setDoneOpen(true);
+  };
+
+  /* Đóng modal "đã thu tiền": bàn về trống, xoá hóa đơn */
+  const closeDone = () => {
+    setDoneOpen(false);
+    patchTable(selected, { s: "empty", meta: undefined });
+    setBills((prev) => {
+      const next = { ...prev };
+      delete next[selected];
+      return next;
+    });
+  };
+
+  const statusKey = table ? table.s : "empty";
+  const showAccept = statusKey === "neworder";
+  const showPay = statusKey === "bill";
 
   return (
     <div className="sale-manager">
@@ -142,11 +75,10 @@ function SaleManager() {
           <div className="brand-name">NEOCAFÉ</div>
         </div>
         <div className="topbar-right">
-          <span>Màn hình bán hàng</span>
+          <span>Ca sáng · 07:00–15:00</span>
+          <div className="staff"><div className="staff-avatar">TL</div>Thu Lan</div>
         </div>
       </div>
-
-      {message && <div className="sm-message" role="status">{message}</div>}
 
       <div className="layout">
         <div className="floor">
@@ -154,50 +86,37 @@ function SaleManager() {
             <div className="section-title">Sơ đồ bàn</div>
             <div className="legend">
               <span><i className="dot empty" />Trống</span>
-              <span><i className="dot wait" />Chờ món</span>
+              <span><i className="dot neworder" />Đơn mới</span>
               <span><i className="dot serve" />Đang phục vụ</span>
               <span><i className="dot call" />Gọi nhân viên</span>
               <span><i className="dot bill" />Chờ tính tiền</span>
             </div>
           </div>
-
-          {loadingTables ? (
-            <div className="sm-empty">Đang tải danh sách bàn...</div>
-          ) : tables.length === 0 ? (
-            <div className="sm-empty">Chưa có bàn nào.</div>
-          ) : (
-            <div className="grid">
-              {tables.map((t) => {
-                const k = toStatusKey(t);
-                return (
-                  <button
-                    key={t.tableId}
-                    className={`table-card ${CLS[k]} ${t.tableId === selected ? "selected" : ""}`}
-                    onClick={() => setSelected(t.tableId)}
-                  >
-                    <div className="tnum">{t.tableName}</div>
-                    <div className="tstatus">{LABEL[k]}</div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <div className="grid">
+            {tables.map((t) => (
+              <button
+                key={t.n}
+                className={`table-card ${CLS[t.s]} ${t.n === selected ? "selected" : ""}`}
+                onClick={() => setSelected(t.n)}
+              >
+                <div className="tnum">Bàn {t.n}</div>
+                <div className="tstatus">{LABEL[t.s]}</div>
+                {t.meta && <div className="tmeta">{t.meta}</div>}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="bill">
           <div className="bill-panel">
-            {!selected ? (
-              <div className="bill-empty">Chọn một bàn để xem hóa đơn.</div>
-            ) : loadingBill ? (
-              <div className="bill-empty">Đang tải hóa đơn...</div>
-            ) : rows.length === 0 ? (
+            {!items ? (
               <div className="bill-empty">
-                {table?.tableName} chưa có hóa đơn nào đang mở.
+                Bàn {selected} đang trống.<br />Chưa có hóa đơn nào được mở.
               </div>
             ) : (
               <>
                 <div className="bill-head">
-                  <div className="bill-title">{table?.tableName}</div>
+                  <div className="bill-title">Bàn {selected}</div>
                   <div
                     className="bill-badge"
                     style={{ background: BADGE[statusKey][0], color: BADGE[statusKey][1] }}
@@ -205,24 +124,25 @@ function SaleManager() {
                     {LABEL[statusKey]}
                   </div>
                 </div>
-                <div className="bill-meta">
-                  {invoice?.tableOrderId ? `Hóa đơn #${invoice.tableOrderId}` : ""}
-                </div>
+                <div className="bill-meta">{table?.meta || ""}</div>
 
                 <div className="bill-list">
-                  {rows.map((r) => (
-                    <div className="bill-row" key={r.orderDetailId}>
-                      <div>
-                        <div className="bn">{r.itemName}</div>
-                        {r.note && <div className="bill-note">{r.note}</div>}
-                        {r.status === "PENDING" && (
-                          <div className="bill-pending">Chưa gửi bếp</div>
-                        )}
+                  {items.map((it, i) => {
+                    const dim = statusKey === "neworder" && !it.isNew;
+                    return (
+                      <div className={`bill-row ${dim ? "dimmed" : ""}`} key={i}>
+                        <div>
+                          <div className="bn">
+                            {it.name}
+                            {it.isNew && <span className="item-new">Mới</span>}
+                          </div>
+                          {it.note && <div className="bill-note">{it.note}</div>}
+                        </div>
+                        <div className="bq">x{it.qty}</div>
+                        <div className="bp">{fmt(it.price)}</div>
                       </div>
-                      <div className="bq">x{r.quantity}</div>
-                      <div className="bp">{fmt(r.price * r.quantity)}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="bill-total">
@@ -230,43 +150,40 @@ function SaleManager() {
                   <span className="val">{fmt(total)}</span>
                 </div>
 
-                <div className="bill-actions">
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => setConfirmOpen(true)}
-                    disabled={paying}
-                  >
-                    Xác nhận thanh toán
-                  </button>
-                </div>
+                {showAccept ? (
+                  <div className="bill-actions">
+                    <button className="btn btn-primary" onClick={acceptOrder}>Nhận đơn</button>
+                  </div>
+                ) : showPay ? (
+                  <div className="bill-actions">
+                    <button className="btn btn-primary" onClick={openPay}>Xác nhận thanh toán</button>
+                  </div>
+                ) : (
+                  <div className="bill-hint">Bàn chưa yêu cầu thanh toán.</div>
+                )}
+
+                <button className="demo-add" onClick={demoAddItem}>
+                  ＋ Giả lập khách gọi thêm món (demo)
+                </button>
               </>
             )}
           </div>
         </div>
       </div>
 
-      {confirmOpen && (
-        <div
-          className="confirm-overlay"
-          onClick={(e) => e.target === e.currentTarget && setConfirmOpen(false)}
-        >
-          <div className="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-            <div className="confirm-title" id="confirm-title">Xác nhận thanh toán</div>
-            <p className="confirm-desc">
-              Xác nhận thu tiền cho <strong>{table?.tableName}</strong> với tổng{" "}
-              <strong>{fmt(total)}</strong>? Sau khi xác nhận, hóa đơn sẽ được đóng.
-            </p>
-            <div className="confirm-actions">
-              <button className="btn btn-primary" onClick={handleConfirmPayment} disabled={paying}>
-                {paying ? "Đang xử lý..." : "Xác nhận"}
-              </button>
-              <button className="btn btn-ghost" onClick={() => setConfirmOpen(false)} disabled={paying}>
-                Quay lại
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PaymentModal
+        open={payOpen}
+        tableName={`Bàn ${selected}`}
+        total={total}
+        onConfirm={confirmPay}
+        onClose={() => setPayOpen(false)}
+      />
+      <PaymentDoneModal
+        open={doneOpen}
+        tableName={`Bàn ${selected}`}
+        change={lastChange}
+        onClose={closeDone}
+      />
     </div>
   );
 }

@@ -1,77 +1,76 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import "../../styles/feedback-manager.css";
-import { getFeedbacks, getApiErrorMessage } from "../../services/apiService";
-
-const PAGE_SIZE = 10;
-
-/* Chuẩn hoá 1 phản hồi từ API về shape dùng trong bảng.
-   Đọc phòng thủ nhiều tên trường vì chưa chốt DTO với backend. */
-const normalize = (f, i) => ({
-  id: f.feedbackId ?? f.id ?? i,
-  name: f.fullName ?? f.customerName ?? f.name ?? "Khách",
-  email: f.email ?? "",
-  table: f.tableName ?? "",
-  content: f.content ?? f.message ?? f.feedback ?? "",
-  createdAt: f.createdAt ?? f.time ?? "",
-  images: Array.isArray(f.imageUrls)
-    ? f.imageUrls
-    : f.imageUrl
-    ? [f.imageUrl]
-    : [],
-});
-
-const fmtTime = (s) => {
-  if (!s) return "—";
-  const d = new Date(s);
-  if (Number.isNaN(d.getTime())) return s;
-  return d.toLocaleString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-  });
-};
+import ImageLightbox from "../../components/ImageLightbox";
+import { SAMPLE_FEEDBACKS, PAGE_SIZE } from "../../data/feedbackData";
 
 const initials = (name) =>
   name.split(" ").map((w) => w[0]).slice(-2).join("").toUpperCase();
 
+function Stars({ n }) {
+  return (
+    <div className="rating">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <span key={i} className={i <= n ? "" : "off"}>★</span>
+      ))}
+      <span className="rating-num">{n}/5</span>
+    </div>
+  );
+}
+
 function FeedbackManager() {
-  const [rows, setRows] = useState([]);
-  const [page, setPage] = useState(0); // API dùng index từ 0
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState("time"); // "time" | "rating"
+  const [sortDir, setSortDir] = useState("desc"); // "asc" | "desc"
+  const [filterItem, setFilterItem] = useState("");
+  const [filterTable, setFilterTable] = useState("");
   const [lightbox, setLightbox] = useState(null);
 
-  const loadFeedbacks = useCallback(async (p) => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await getFeedbacks(p, PAGE_SIZE);
-      const data = res.data;
-      // Hỗ trợ cả Spring Page lẫn mảng thuần
-      const list = Array.isArray(data) ? data : data?.content ?? [];
-      setRows(list.map(normalize));
-      setTotalPages(
-        Array.isArray(data) ? 1 : data?.totalPages ?? 1
-      );
-      setTotalItems(
-        Array.isArray(data) ? data.length : data?.totalElements ?? list.length
-      );
-    } catch (err) {
-      setRows([]);
-      setTotalPages(0);
-      setTotalItems(0);
-      setError(getApiErrorMessage(err, "Không tải được danh sách phản hồi."));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Danh sách món / bàn cho dropdown lọc (không trùng)
+  const itemOptions = useMemo(
+    () => [...new Set(SAMPLE_FEEDBACKS.map((r) => r.item))].sort(),
+    []
+  );
+  const tableOptions = useMemo(
+    () => [...new Set(SAMPLE_FEEDBACKS.map((r) => r.table))].sort(),
+    []
+  );
 
-  useEffect(() => {
-    loadFeedbacks(page);
-  }, [page, loadFeedbacks]);
+  // Lọc -> sắp xếp
+  const processed = useMemo(() => {
+    const filtered = SAMPLE_FEEDBACKS.filter(
+      (r) =>
+        (!filterItem || r.item === filterItem) &&
+        (!filterTable || r.table === filterTable)
+    );
+    const sorted = [...filtered].sort((a, b) => {
+      const va = sortKey === "rating" ? a.rating : a.ts;
+      const vb = sortKey === "rating" ? b.rating : b.ts;
+      return sortDir === "asc" ? va - vb : vb - va;
+    });
+    return sorted;
+  }, [filterItem, filterTable, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(processed.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const rows = processed.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+    setPage(1);
+  };
+
+  const sortInd = (key) => (sortKey === key ? (sortDir === "asc" ? "▲" : "▼") : "");
+
+  const resetFilters = () => {
+    setFilterItem("");
+    setFilterTable("");
+    setPage(1);
+  };
 
   return (
     <div className="feedback-manager">
@@ -81,56 +80,78 @@ function FeedbackManager() {
           <div className="brand-name">NEOCAFÉ</div>
         </div>
         <div className="topbar-right">
-          <span>Quản lý phản hồi</span>
+          <span>Quản lý</span>
+          <div className="staff"><div className="staff-avatar">QL</div>Minh Quân</div>
         </div>
       </div>
 
       <div className="wrap">
         <div className="page-head">
           <div className="page-title">Quản lý phản hồi</div>
-          <div className="page-count">
-            {totalItems > 0 ? `${totalItems} phản hồi` : ""}
-          </div>
+          <div className="page-count">{processed.length} phản hồi</div>
         </div>
 
-        {error && <div className="fb-error">{error}</div>}
+        <div className="filter-bar">
+          <div className="filter-field">
+            <label htmlFor="filterItem">Lọc theo món</label>
+            <select
+              id="filterItem"
+              value={filterItem}
+              onChange={(e) => { setFilterItem(e.target.value); setPage(1); }}
+            >
+              <option value="">Tất cả món</option>
+              {itemOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+          <div className="filter-field">
+            <label htmlFor="filterTable">Lọc theo bàn</label>
+            <select
+              id="filterTable"
+              value={filterTable}
+              onChange={(e) => { setFilterTable(e.target.value); setPage(1); }}
+            >
+              <option value="">Tất cả bàn</option>
+              {tableOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+          <button className="filter-clear" onClick={resetFilters}>Xóa lọc</button>
+        </div>
 
         <div className="table-scroll">
           <table className="fb-table">
             <thead>
               <tr>
-                <th style={{ width: "20%" }}>Khách hàng</th>
-                <th style={{ width: "9%" }}>Bàn</th>
+                <th style={{ width: "52px" }}>ID</th>
+                <th className="sortable" onClick={() => toggleSort("time")}>
+                  Gửi lúc <span className="sort-ind">{sortInd("time")}</span>
+                </th>
+                <th>Người tạo</th>
+                <th>Email</th>
+                <th>Bàn</th>
+                <th>Món</th>
+                <th className="sortable" onClick={() => toggleSort("rating")}>
+                  Rating <span className="sort-ind">{sortInd("rating")}</span>
+                </th>
                 <th>Nội dung</th>
-                <th style={{ width: "14%" }}>Hình ảnh</th>
-                <th style={{ width: "13%" }}>Thời gian</th>
+                <th>Hình ảnh</th>
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="fb-state">Đang tải phản hồi...</td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="fb-state">
-                    {error ? "Không có dữ liệu để hiển thị." : "Chưa có phản hồi nào."}
-                  </td>
+                  <td colSpan={9} className="fb-state">Không có phản hồi nào khớp bộ lọc.</td>
                 </tr>
               ) : (
                 rows.map((r) => (
                   <tr key={r.id}>
-                    <td>
-                      <div className="cust">
-                        <div className="cust-avatar">{initials(r.name)}</div>
-                        <div>
-                          <div className="cust-name">{r.name}</div>
-                          <div className="cust-email">{r.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{r.table || "—"}</td>
-                    <td className="fb-text">{r.content}</td>
+                    <td className="col-id">#{r.id}</td>
+                    <td className="col-time">{r.time}</td>
+                    <td className="col-name">{r.name}</td>
+                    <td className="col-email">{r.email}</td>
+                    <td className="col-table">{r.table}</td>
+                    <td className="col-item">{r.item}</td>
+                    <td><Stars n={r.rating} /></td>
+                    <td className="col-content">{r.content}</td>
                     <td>
                       {r.images.length === 0 ? (
                         <span className="no-img">—</span>
@@ -149,7 +170,6 @@ function FeedbackManager() {
                         </div>
                       )}
                     </td>
-                    <td className="fb-time">{fmtTime(r.createdAt)}</td>
                   </tr>
                 ))
               )}
@@ -161,8 +181,8 @@ function FeedbackManager() {
           <div className="pagination">
             <button
               className="pg-btn"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0 || loading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage === 1}
             >
               ← Trước
             </button>
@@ -170,9 +190,8 @@ function FeedbackManager() {
               {Array.from({ length: totalPages }).map((_, i) => (
                 <button
                   key={i}
-                  className={`pg-num ${page === i ? "active" : ""}`}
-                  onClick={() => setPage(i)}
-                  disabled={loading}
+                  className={`pg-num ${safePage === i + 1 ? "active" : ""}`}
+                  onClick={() => setPage(i + 1)}
                 >
                   {i + 1}
                 </button>
@@ -180,8 +199,8 @@ function FeedbackManager() {
             </div>
             <button
               className="pg-btn"
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1 || loading}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
             >
               Sau →
             </button>
@@ -189,14 +208,7 @@ function FeedbackManager() {
         )}
       </div>
 
-      {lightbox && (
-        <div className="lightbox" onClick={() => setLightbox(null)}>
-          <img src={lightbox} alt="Ảnh phản hồi" onClick={(e) => e.stopPropagation()} />
-          <button className="lightbox-close" onClick={() => setLightbox(null)} aria-label="Đóng">
-            ✕
-          </button>
-        </div>
-      )}
+      <ImageLightbox src={lightbox} onClose={() => setLightbox(null)} />
     </div>
   );
 }
