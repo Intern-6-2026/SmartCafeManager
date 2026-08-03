@@ -71,7 +71,7 @@ export default function AppRoutes() {
                     path="/payment-success" 
                     element={<PaymentSuccess />} 
                 />
-{/* 
+
                 <Route 
                     path="/sale-manager" 
                     element={<SaleManager />} 
@@ -80,7 +80,7 @@ export default function AppRoutes() {
                 <Route 
                     path="/feedback-manager" 
                     element={<FeedbackManager />} 
-                /> */}
+                />
             </Routes>
         </BrowserRouter>
     );
