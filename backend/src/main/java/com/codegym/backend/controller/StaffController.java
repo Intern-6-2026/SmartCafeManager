@@ -1,11 +1,11 @@
 package com.codegym.backend.controller;
 
-import com.codegym.backend.entity.OrderDetail;
+import org.springframework.http.ResponseEntity;
+import com.codegym.backend.dto.OrderDetailResponseDTO;
 import com.codegym.backend.entity.Tables;
 import com.codegym.backend.enums.ServiceStatus;
 import com.codegym.backend.service.StaffOrderService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -46,14 +46,11 @@ public class StaffController {
         return ResponseEntity.ok(staffOrderService.getActiveOrderByTable(tableId));
     }
 
-
-    //  * 4. Lấy danh sách món ăn chi tiết của bàn (Nếu muốn query món lẻ)
-
+// 4. Lấy danh sách món ăn chi tiết của bàn
     @GetMapping("/tables/{tableId}/order-details")
-    public ResponseEntity<List<OrderDetail>> getOrderDetailsByTable(@PathVariable Long tableId) {
+    public ResponseEntity<List<OrderDetailResponseDTO>> getOrderDetailsByTable(@PathVariable Long tableId) {
         return ResponseEntity.ok(staffOrderService.getOrderDetailsByTable(tableId));
     }
-
     // ==========================================
     // II. THAO TÁC XÁC NHẬN & CHỐT ĐƠN
     // ==========================================

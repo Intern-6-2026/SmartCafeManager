@@ -1,6 +1,7 @@
 package com.codegym.backend.service;
 
 import com.codegym.backend.dto.ActiveOrderDTO;
+import com.codegym.backend.dto.OrderDetailResponseDTO;
 import com.codegym.backend.entity.OrderDetail;
 import com.codegym.backend.entity.TableOrder;
 import com.codegym.backend.entity.Tables;
@@ -111,13 +112,31 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<OrderDetail> getOrderDetailsByTable(Long tableId) {
-        TableOrder activeOrder = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Bàn " + tableId + " hiện không có đơn hàng nào đang hoạt động!"));
+public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
+    TableOrder activeOrder = tableOrderRepository
+            .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+            .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có đơn hàng active!"));
 
-        return orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
-    }
+    List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
+
+    // Map từ OrderDetail (Entity) sang OrderDetailResponseDTO
+    return details.stream().map(item -> {
+        BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
+        BigDecimal total = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+
+        return OrderDetailResponseDTO.builder()
+                .orderDetailId(item.getOrderDetailId())
+                .itemId(item.getItem() != null ? item.getItem().getItemId() : null)
+                .itemName(item.getItem() != null ? item.getItem().getItemName() : "Món không xác định")
+                .itemImage(item.getItem() != null ? item.getItem().getImageUrl() : null)
+                .quantity(item.getQuantity())
+                .unitPrice(unitPrice)
+                .totalPrice(total)
+                .note(item.getNote())
+                .status(item.getStatus())
+                .build();
+    }).collect(Collectors.toList());
+}
 
     // ==========================================
     // II. THAO TÁC TRÊN ĐƠN HÀNG & THANH TOÁN

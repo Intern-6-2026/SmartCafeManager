@@ -14,7 +14,6 @@ public class ItemResponse {
     private Long itemId;
     private String itemCode;
     
-    // Đã đồng bộ chuẩn với JPQL Constructor của Repository:
     private Long categoryId;
     private String categoryName;
     

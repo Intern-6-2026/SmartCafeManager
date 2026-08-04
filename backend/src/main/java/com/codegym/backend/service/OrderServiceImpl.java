@@ -2,6 +2,7 @@ package com.codegym.backend.service;
 
 import com.codegym.backend.dto.CartItemResponse;
 import com.codegym.backend.dto.CartResponseDTO;
+import com.codegym.backend.dto.InvoiceDetailResponseDTO;
 import com.codegym.backend.entity.*;
 import com.codegym.backend.enums.*;
 import com.codegym.backend.repository.*;
@@ -11,8 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +27,7 @@ public class OrderServiceImpl implements OrderService {
     private final TableOrderRepository tableOrderRepository;
     private final OrderDetailRepository orderDetailRepository;
     private final ItemRepository itemRepository;
+    private final FeedbackRepository feedbackRepository; // 🟢 1. Đã bổ sung tiêm FeedbackRepository
 
     @Override
     @Transactional
@@ -75,10 +80,10 @@ public class OrderServiceImpl implements OrderService {
     public CartResponseDTO getCartOverview(Long tableId) {
         Tables table = tablesRepository.findById(tableId)
                 .orElseThrow(() -> new RuntimeException("Bàn không tồn tại với ID: " + tableId));
-    
+
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
                 .orElse(null);
-    
+
         if (order == null) {
             return CartResponseDTO.builder()
                     .tableId(table.getTableId())
@@ -88,24 +93,23 @@ public class OrderServiceImpl implements OrderService {
                     .pendingItems(List.of())
                     .build();
         }
-    
+
         List<OrderDetail> allDetails = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
         List<CartItemResponse> pendingItems = new ArrayList<>();
         List<CartItemResponse> orderedItems = new ArrayList<>();
-    
-        BigDecimal calculatedTotal = BigDecimal.ZERO; // 🟢 Tự tính tổng tiền từ tất cả món không bị CANCELLED
-    
+
+        BigDecimal calculatedTotal = BigDecimal.ZERO;
+
         for (OrderDetail detail : allDetails) {
             if (detail.getStatus() == StatusOrderDetail.PENDING) {
                 pendingItems.add(mapToCartItemResponse(detail));
-                // Cộng tiền các món tạm tính
                 calculatedTotal = calculatedTotal.add(detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity())));
             } else if (detail.getStatus() != StatusOrderDetail.CANCELLED) {
                 orderedItems.add(mapToCartItemResponse(detail));
                 calculatedTotal = calculatedTotal.add(detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity())));
             }
         }
-    
+
         return CartResponseDTO.builder()
                 .tableOrderId(order.getTableOrderId())
                 .tableId(table.getTableId())
@@ -212,6 +216,51 @@ public class OrderServiceImpl implements OrderService {
                 .status(detail.getStatus() != null ? detail.getStatus().name() : null)
                 .tableName(detail.getOrder() != null && detail.getOrder().getTable() != null 
                         ? detail.getOrder().getTable().getTableName() : null)
+                .build();
+    }
+
+    // 🟢 2. Đã thêm @Override và chuyển đổi LocalDateTime sang Date an toàn
+    @Override
+    @Transactional(readOnly = true)
+    public InvoiceDetailResponseDTO getInvoiceDetailForCustomer(Long orderId, Long customerId) {
+        TableOrder order = tableOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn ID: " + orderId));
+
+        List<OrderDetail> orderDetails = orderDetailRepository.findByOrderTableOrderId(orderId);
+
+        List<InvoiceDetailResponseDTO.OrderItemDTO> itemDTOs = orderDetails.stream()
+                .map(detail -> {
+                    Long itemId = detail.getItem().getItemId();
+
+                    boolean hasFeedback = false;
+                    if (customerId != null) {
+                        hasFeedback = feedbackRepository
+                                .existsByCustomerCustomerIdAndItemItemIdAndDeletedAtIsNull(customerId, itemId);
+                    }
+
+                    return InvoiceDetailResponseDTO.OrderItemDTO.builder()
+                            .itemId(itemId)
+                            .itemName(detail.getItem().getItemName())
+                            .itemImage(detail.getItem().getImageUrl())
+                            .price(detail.getUnitPrice() != null ? detail.getUnitPrice().doubleValue() : 0.0)
+                            .quantity(detail.getQuantity())
+                            .hasFeedback(hasFeedback)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // Chuyển đổi LocalDateTime (nếu có) sang java.util.Date cho paidAt
+        Date paidAt = order.getCloseAt() != null 
+                ? Date.from(order.getCloseAt().atZone(ZoneId.systemDefault()).toInstant()) 
+                : null;
+
+        return InvoiceDetailResponseDTO.builder()
+                .orderId(order.getTableOrderId())
+                .invoiceCode(String.format("#HD%04d", order.getTableOrderId()))
+                .tableName(order.getTable() != null ? order.getTable().getTableName() : "Mang về")
+                .totalAmount(order.getTotalAmount() != null ? order.getTotalAmount().doubleValue() : 0.0)
+                .paidAt(paidAt)
+                .items(itemDTOs)
                 .build();
     }
 }

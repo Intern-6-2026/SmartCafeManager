@@ -26,7 +26,7 @@ public class FeedbackServiceImpl implements FeedbackService {
     private final FeedbackRepository feedbackRepository;
     private final CustomerRepository customerRepository;
     private final ItemRepository itemRepository;
-    private final OrderDetailRepository orderDetailRepository; // 👈 Inject thêm repository này
+    private final OrderDetailRepository orderDetailRepository;
 
     @Override
     @Transactional
@@ -48,7 +48,7 @@ public class FeedbackServiceImpl implements FeedbackService {
         Item item = itemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn ID: " + dto.getItemId()));
 
-        // 3. KIỂM TRA MUA HÀNG & THANH TOÁN: Kiểm tra đơn hàng có món này và đã PAID chưa
+        // 3. KIỂM TRA MUA HÀNG & THANH TOÁN: Bắt buộc đơn hàng đã ở trạng thái PAID
         boolean hasPurchasedAndPaid = orderDetailRepository.existsByCustomerAndItemAndOrderStatus(
                 customer.getCustomerId(),
                 item.getItemId(),
@@ -59,19 +59,20 @@ public class FeedbackServiceImpl implements FeedbackService {
             throw new RuntimeException("Bạn chỉ có thể đánh giá sau khi đã thưởng thức và thanh toán thành công món này!");
         }
 
-        // 4. LƯU FEEDBACK (Nếu thỏa mãn toàn bộ điều kiện trên)
+        // 4. LƯU FEEDBACK
         Feedback feedback = Feedback.builder()
                 .content(dto.getContent())
                 .rating(dto.getRating())
                 .senderName(customer.getFullName())
                 .email(dto.getEmail())
                 .imageUrl(dto.getImageUrl())
+                .sentAt(new Date()) // 👈 Đã thêm: Đảm bảo thời gian tạo không bị null khi trả về DTO
                 .customer(customer)
                 .item(item)
                 .build();
 
-        Feedback saved = feedbackRepository.save(feedback);
-        return mapToResponseDTO(saved);
+        Feedback savedFeedback = feedbackRepository.save(feedback);
+        return mapToResponseDTO(savedFeedback);
     }
 
     @Override
@@ -102,6 +103,7 @@ public class FeedbackServiceImpl implements FeedbackService {
         feedbackRepository.save(feedback);
     }
 
+    // Helper Method: Mapper chuyển từ Entity sang Response DTO
     private FeedbackResponseDTO mapToResponseDTO(Feedback feedback) {
         return FeedbackResponseDTO.builder()
                 .feedbackId(feedback.getFeedbackId())

@@ -1,7 +1,7 @@
 package com.codegym.backend.service;
 
 import com.codegym.backend.dto.ActiveOrderDTO;
-import com.codegym.backend.entity.OrderDetail;
+import com.codegym.backend.dto.OrderDetailResponseDTO;
 import com.codegym.backend.entity.Tables;
 import com.codegym.backend.enums.ServiceStatus;
 
@@ -16,7 +16,8 @@ public interface StaffOrderService {
     // 💡 Đổi Map<String, Object> thành ActiveOrderDTO ở đây
     ActiveOrderDTO getActiveOrderByTable(Long tableId);
 
-    List<OrderDetail> getOrderDetailsByTable(Long tableId);
+    //  (trả về DTO):
+    List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId);
 
     void approveCashPayment(Long tableId);
 

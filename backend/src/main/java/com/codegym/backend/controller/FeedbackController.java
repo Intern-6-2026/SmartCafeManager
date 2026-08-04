@@ -3,6 +3,8 @@ package com.codegym.backend.controller;
 import com.codegym.backend.dto.FeedbackRequestDTO;
 import com.codegym.backend.dto.FeedbackResponseDTO;
 import com.codegym.backend.service.FeedbackService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +23,7 @@ public class FeedbackController {
      * 1. Khách gửi đánh giá/góp ý mới
      */
     @PostMapping
-    public ResponseEntity<FeedbackResponseDTO> createFeedback(@RequestBody FeedbackRequestDTO dto) {
+    public ResponseEntity<FeedbackResponseDTO> createFeedback(@Valid @RequestBody FeedbackRequestDTO dto) {
         return ResponseEntity.ok(feedbackService.createFeedback(dto));
     }
 

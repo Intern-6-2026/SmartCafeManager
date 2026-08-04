@@ -12,4 +12,7 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
 
     // Lấy tất cả feedback active (cho Admin)
     List<Feedback> findByDeletedAtIsNull();
+    
+    //  Kiểm tra khách hàng đã đánh giá món ăn này chưa
+    boolean existsByCustomerCustomerIdAndItemItemIdAndDeletedAtIsNull(Long customerId, Long itemId);
 }
