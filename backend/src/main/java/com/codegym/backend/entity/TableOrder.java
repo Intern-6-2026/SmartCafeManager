@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.envers.Audited;
 import org.hibernate.type.SqlTypes;
 
 import com.codegym.backend.enums.PaymentMethod;
@@ -28,7 +27,6 @@ import lombok.Setter;
 
 @Entity
 @jakarta.persistence.Table(name = "table_order")
-@Audited
 @Getter
 @Setter
 @NoArgsConstructor

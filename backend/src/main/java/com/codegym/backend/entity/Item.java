@@ -2,8 +2,6 @@ package com.codegym.backend.entity;
 
 import java.math.BigDecimal;
 
-import org.hibernate.envers.Audited;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -20,7 +18,6 @@ import lombok.Setter;
 
 @Entity
 @jakarta.persistence.Table(name = "item")
-@Audited
 @Getter
 @Setter
 @NoArgsConstructor

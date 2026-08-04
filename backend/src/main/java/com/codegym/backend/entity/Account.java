@@ -3,7 +3,6 @@ package com.codegym.backend.entity;
 import java.util.Date;
 
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.envers.Audited;
 import org.hibernate.type.SqlTypes;
 
 import com.codegym.backend.enums.AccountStatus;
@@ -27,7 +26,6 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "account")
-@Audited
 @Getter
 @Setter
 @NoArgsConstructor

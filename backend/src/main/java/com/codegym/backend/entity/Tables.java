@@ -1,7 +1,6 @@
 package com.codegym.backend.entity;
 
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.envers.Audited;
 import org.hibernate.type.SqlTypes;
 
 import com.codegym.backend.enums.PhysicalState;
@@ -23,7 +22,6 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "cafe_table")
-@Audited
 @Getter
 @Setter
 @NoArgsConstructor

@@ -2,7 +2,10 @@ package com.codegym.backend.service;
 
 import java.util.Date;
 import java.util.Objects;
+import java.util.Set;
 
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Safelist;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.codegym.backend.dto.NewsListResponse;
+import com.codegym.backend.dto.NewsRequest;
 import com.codegym.backend.entity.Account;
 import com.codegym.backend.entity.News;
 import com.codegym.backend.enums.NewsStatus;
@@ -60,16 +64,24 @@ public class NewsService {
         // ==========================================
 
         @Transactional(rollbackFor = Exception.class)
-        public News createNews(String title, String summary, String content, MultipartFile image) throws Exception {
+        public News createNews(NewsRequest request) throws Exception {
+                String title = normalizeText(request.getTitle());
+                String summary = normalizeOptionalText(request.getSummary());
+                String content = normalizeText(request.getContent());
+                MultipartFile image = request.getImage();
+
                 String imageUrl = null;
                 if (image != null && !image.isEmpty()) {
+                        validateImage(image);
                         imageUrl = cloudinaryService.uploadImage(image);
                 }
+
+                summary = sanitizeHtml(summary);
+                content = sanitizeHtml(content);
 
                 String username = SecurityContextHolder.getContext().getAuthentication().getName();
                 Account curentAccount = accountRepository.findByUsernameAndDeletedAtIsNull(username)
                                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản người đăng"));
-
                 boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                                 .stream().anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
 
@@ -92,8 +104,12 @@ public class NewsService {
         }
 
         @Transactional(rollbackFor = Exception.class)
-        public News updateNews(Long id, String title, String summary, String content, MultipartFile image)
-                        throws Exception {
+        public News updateNews(Long id, NewsRequest request) throws Exception {
+                String title = normalizeText(request.getTitle());
+                String summary = normalizeOptionalText(request.getSummary());
+                String content = normalizeText(request.getContent());
+                MultipartFile image = request.getImage();
+
                 String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
                 boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
@@ -108,11 +124,16 @@ public class NewsService {
                         throw new RuntimeException("Lỗi phân quyền: Bạn không có quyền sửa bài viết này");
                 }
 
+                // sanitize inputs before updating
+                summary = sanitizeHtml(summary);
+                content = sanitizeHtml(content);
+
                 news.setTitle(title);
                 news.setSummary(summary);
                 news.setContent(content);
 
                 if (image != null && !image.isEmpty()) {
+                        validateImage(image);
                         news.setImageUrl(cloudinaryService.uploadImage(image));
                 }
 
@@ -171,5 +192,50 @@ public class NewsService {
                 }
 
                 return updatedNews;
+        }
+
+        private String normalizeText(String value) {
+                if (value == null) {
+                        return null;
+                }
+                return value.trim();
+        }
+
+        private String normalizeOptionalText(String value) {
+                if (value == null) {
+                        return null;
+                }
+                return value.trim();
+        }
+
+        private String sanitizeHtml(String html) {
+                if (html == null) {
+                        return null;
+                }
+                return Jsoup.clean(html, Safelist.relaxed());
+        }
+
+        private void validateImage(MultipartFile image) {
+                String contentType = image.getContentType();
+                if (contentType == null || !contentType.startsWith("image/")) {
+                        throw new RuntimeException("File ảnh không hợp lệ, vui lòng tải lên file hình ảnh");
+                }
+
+                String originalFilename = image.getOriginalFilename();
+                if (originalFilename == null || !originalFilename.contains(".")) {
+                        throw new RuntimeException("Tên file ảnh không hợp lệ");
+                }
+
+                String ext = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
+                Set<String> allowedExt = Set.of("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "tiff", "tif",
+                                "heic");
+                if (!allowedExt.contains(ext)) {
+                        throw new RuntimeException("Định dạng file không được hỗ trợ");
+                }
+
+                long maxSizeBytes = 5L * 1024 * 1024;
+                if (image.getSize() > maxSizeBytes) {
+                        throw new RuntimeException("Dung lượng ảnh không được vượt quá 5MB");
+                }
         }
 }

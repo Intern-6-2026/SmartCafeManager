@@ -4,14 +4,12 @@ import java.util.Date;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.envers.Audited;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
 import lombok.Setter;
 
-@Audited
 @Getter
 @Setter
 @MappedSuperclass

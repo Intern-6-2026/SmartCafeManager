@@ -4,17 +4,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
+import com.codegym.backend.dto.NewsRequest;
 import com.codegym.backend.enums.NewsStatus;
 import com.codegym.backend.service.NewsService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -64,11 +66,8 @@ public class NewsController {
     @PostMapping(consumes = "multipart/form-data")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> createNews(
-            @RequestParam("title") String title,
-            @RequestParam(value = "summary", required = false) String summary,
-            @RequestParam("content") String content,
-            @RequestParam(value = "image", required = false) MultipartFile image) throws Exception {
-        return ResponseEntity.ok(newsService.createNews(title, summary, content, image));
+            @Valid @ModelAttribute NewsRequest request) throws Exception {
+        return ResponseEntity.ok(newsService.createNews(request));
     }
 
     /**
@@ -78,11 +77,8 @@ public class NewsController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> updateNews(
             @PathVariable Long id,
-            @RequestParam("title") String title,
-            @RequestParam(value = "summary", required = false) String summary,
-            @RequestParam("content") String content,
-            @RequestParam(value = "image", required = false) MultipartFile image) throws Exception {
-        return ResponseEntity.ok(newsService.updateNews(id, title, summary, content, image));
+            @Valid @ModelAttribute NewsRequest request) throws Exception {
+        return ResponseEntity.ok(newsService.updateNews(id, request));
     }
 
     /**

@@ -3,7 +3,6 @@ package com.codegym.backend.entity;
 import java.math.BigDecimal;
 
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.envers.Audited;
 import org.hibernate.type.SqlTypes;
 
 import com.codegym.backend.enums.StatusOrderDetail;
@@ -26,7 +25,6 @@ import lombok.Setter;
 
 @Entity
 @jakarta.persistence.Table(name = "order_detail")
-@Audited
 @Getter
 @Setter
 @NoArgsConstructor
