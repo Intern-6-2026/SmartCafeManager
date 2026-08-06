@@ -11,4 +11,6 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     Page<News> findByDeletedAtIsNullOrderByCreatedAtDesc(Pageable pageable);
 
     Page<News> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(NewsStatus status, Pageable pageable);
+
+    Page<News> findByAuthorAccountIdOrderByCreatedAtDesc(Long accountId, Pageable pageable);
 }

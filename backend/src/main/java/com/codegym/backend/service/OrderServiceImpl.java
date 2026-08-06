@@ -1,15 +1,5 @@
 package com.codegym.backend.service;
 
-import com.codegym.backend.dto.CartItemResponse;
-import com.codegym.backend.dto.CartResponseDTO;
-import com.codegym.backend.dto.InvoiceDetailResponseDTO;
-import com.codegym.backend.entity.*;
-import com.codegym.backend.enums.*;
-import com.codegym.backend.repository.*;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -17,6 +7,29 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.codegym.backend.dto.CartItemResponse;
+import com.codegym.backend.dto.CartResponseDTO;
+import com.codegym.backend.dto.InvoiceDetailResponseDTO;
+import com.codegym.backend.entity.Item;
+import com.codegym.backend.entity.OrderDetail;
+import com.codegym.backend.entity.TableOrder;
+import com.codegym.backend.entity.Tables;
+import com.codegym.backend.enums.ServiceStatus;
+import com.codegym.backend.enums.StatusOrderDetail;
+import com.codegym.backend.enums.StatusTableOrder;
+import com.codegym.backend.exception.AppException;
+import com.codegym.backend.repository.FeedbackRepository;
+import com.codegym.backend.repository.ItemRepository;
+import com.codegym.backend.repository.OrderDetailRepository;
+import com.codegym.backend.repository.TableOrderRepository;
+import com.codegym.backend.repository.TablesRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -33,10 +46,12 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void addItemToCart(Long tableId, Long itemId, Integer quantity, String note) {
         Tables table = tablesRepository.findById(tableId)
-                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại với ID: " + tableId));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Bàn không tồn tại với ID: " + tableId));
 
         Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Món ăn không tồn tại với ID: " + itemId));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Món ăn không tồn tại với ID: " + itemId));
 
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
                 .orElseGet(() -> {
@@ -53,7 +68,8 @@ public class OrderServiceImpl implements OrderService {
                 });
 
         List<OrderDetail> existingDetails = orderDetailRepository
-                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
+                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId,
+                        StatusOrderDetail.PENDING);
 
         if (!existingDetails.isEmpty()) {
             OrderDetail detail = existingDetails.get(0);
@@ -79,7 +95,8 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public CartResponseDTO getCartOverview(Long tableId) {
         Tables table = tablesRepository.findById(tableId)
-                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại với ID: " + tableId));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Bàn không tồn tại với ID: " + tableId));
 
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
                 .orElse(null);
@@ -103,10 +120,12 @@ public class OrderServiceImpl implements OrderService {
         for (OrderDetail detail : allDetails) {
             if (detail.getStatus() == StatusOrderDetail.PENDING) {
                 pendingItems.add(mapToCartItemResponse(detail));
-                calculatedTotal = calculatedTotal.add(detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity())));
+                calculatedTotal = calculatedTotal
+                        .add(detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity())));
             } else if (detail.getStatus() != StatusOrderDetail.CANCELLED) {
                 orderedItems.add(mapToCartItemResponse(detail));
-                calculatedTotal = calculatedTotal.add(detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity())));
+                calculatedTotal = calculatedTotal
+                        .add(detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity())));
             }
         }
 
@@ -125,18 +144,22 @@ public class OrderServiceImpl implements OrderService {
     public void updateCartItemDetail(Long tableId, Long itemId, Integer newQuantity, String newNote) {
         Tables table = tablesRepository.findById(tableId).orElseThrow();
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy hóa đơn đang mở!"));
 
         List<OrderDetail> existingDetails = orderDetailRepository
-                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
+                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId,
+                        StatusOrderDetail.PENDING);
 
         if (existingDetails.isEmpty()) {
-            throw new RuntimeException("Món ăn không tồn tại trong giỏ tạm!");
+            throw new AppException(HttpStatus.BAD_REQUEST, "Món ăn không tồn tại trong giỏ tạm!");
         }
 
         OrderDetail detail = existingDetails.get(0);
-        if (newQuantity != null && newQuantity > 0) detail.setQuantity(newQuantity);
-        if (newNote != null) detail.setNote(newNote);
+        if (newQuantity != null && newQuantity > 0)
+            detail.setQuantity(newQuantity);
+        if (newNote != null)
+            detail.setNote(newNote);
     }
 
     @Override
@@ -144,10 +167,12 @@ public class OrderServiceImpl implements OrderService {
     public void removeItemFromCart(Long tableId, Long itemId) {
         Tables table = tablesRepository.findById(tableId).orElseThrow();
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy hóa đơn đang mở!"));
 
         List<OrderDetail> existingDetails = orderDetailRepository
-                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
+                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId,
+                        StatusOrderDetail.PENDING);
 
         if (!existingDetails.isEmpty()) {
             orderDetailRepository.delete(existingDetails.get(0));
@@ -159,7 +184,8 @@ public class OrderServiceImpl implements OrderService {
     public void clearTemporaryCart(Long tableId) {
         Tables table = tablesRepository.findById(tableId).orElseThrow();
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy hóa đơn đang mở!"));
 
         List<OrderDetail> pendingDetails = orderDetailRepository
                 .findByOrderTableOrderIdAndStatus(order.getTableOrderId(), StatusOrderDetail.PENDING);
@@ -174,13 +200,14 @@ public class OrderServiceImpl implements OrderService {
     public void confirmOrder(Long tableId) {
         Tables table = tablesRepository.findById(tableId).orElseThrow();
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy hóa đơn đang mở!"));
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
         boolean hasPending = details.stream().anyMatch(d -> d.getStatus() == StatusOrderDetail.PENDING);
 
         if (!hasPending) {
-            throw new RuntimeException("Không có món mới nào trong giỏ hàng tạm!");
+            throw new AppException(HttpStatus.BAD_REQUEST, "Không có món mới nào trong giỏ hàng tạm!");
         }
 
         processPendingToOrderedAndRecalculateTotal(order, details);
@@ -214,8 +241,9 @@ public class OrderServiceImpl implements OrderService {
                 .quantity(detail.getQuantity())
                 .note(detail.getNote())
                 .status(detail.getStatus() != null ? detail.getStatus().name() : null)
-                .tableName(detail.getOrder() != null && detail.getOrder().getTable() != null 
-                        ? detail.getOrder().getTable().getTableName() : null)
+                .tableName(detail.getOrder() != null && detail.getOrder().getTable() != null
+                        ? detail.getOrder().getTable().getTableName()
+                        : null)
                 .build();
     }
 
@@ -224,7 +252,8 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public InvoiceDetailResponseDTO getInvoiceDetailForCustomer(Long orderId, Long customerId) {
         TableOrder order = tableOrderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn ID: " + orderId));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy hóa đơn ID: " + orderId));
 
         List<OrderDetail> orderDetails = orderDetailRepository.findByOrderTableOrderId(orderId);
 
@@ -250,8 +279,8 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
 
         // Chuyển đổi LocalDateTime (nếu có) sang java.util.Date cho paidAt
-        Date paidAt = order.getCloseAt() != null 
-                ? Date.from(order.getCloseAt().atZone(ZoneId.systemDefault()).toInstant()) 
+        Date paidAt = order.getCloseAt() != null
+                ? Date.from(order.getCloseAt().atZone(ZoneId.systemDefault()).toInstant())
                 : null;
 
         return InvoiceDetailResponseDTO.builder()

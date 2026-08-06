@@ -1,5 +1,17 @@
 package com.codegym.backend.service;
 
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.codegym.backend.dto.ActiveOrderDTO;
 import com.codegym.backend.dto.OrderDetailResponseDTO;
 import com.codegym.backend.entity.OrderDetail;
@@ -9,21 +21,13 @@ import com.codegym.backend.enums.PaymentMethod;
 import com.codegym.backend.enums.ServiceStatus;
 import com.codegym.backend.enums.StatusOrderDetail;
 import com.codegym.backend.enums.StatusTableOrder;
+import com.codegym.backend.exception.AppException;
 import com.codegym.backend.repository.OrderDetailRepository;
 import com.codegym.backend.repository.TableOrderRepository;
 import com.codegym.backend.repository.TablesRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -51,11 +55,13 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Transactional(readOnly = true)
     public Tables getTableInfo(Long tableId) {
         return tablesRepository.findById(tableId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin bàn ID: " + tableId));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy thông tin bàn ID: " + tableId));
     }
 
     /**
-     * Lấy dữ liệu chi tiết hóa đơn đang active cho Panel bên phải (Giao diện NeoCafé)
+     * Lấy dữ liệu chi tiết hóa đơn đang active cho Panel bên phải (Giao diện
+     * NeoCafé)
      * Trả về ActiveOrderDTO chuẩn hóa
      */
     @Override
@@ -82,22 +88,22 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         // Format giờ tạo đơn (Xử lý an toàn cho java.util.Date)
         SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
-        String formattedTime = activeOrder.getCreatedAt() != null 
-                ? timeFormatter.format(activeOrder.getCreatedAt()) 
+        String formattedTime = activeOrder.getCreatedAt() != null
+                ? timeFormatter.format(activeOrder.getCreatedAt())
                 : "";
 
         // Chuyển đổi danh sách món ăn sang DTO chuẩn
-        List<ActiveOrderDTO.OrderItemDto> itemDtos = details.stream().map(detail -> 
-            ActiveOrderDTO.OrderItemDto.builder()
-                    .orderDetailId(detail.getOrderDetailId())
-                    .itemName(detail.getItem().getItemName())
-                    .quantity(detail.getQuantity())
-                    .unitPrice(detail.getUnitPrice())
-                    .subTotal(detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity())))
-                    .status(detail.getStatus() != null ? detail.getStatus().name() : null)
-                    .note(detail.getNote())
-                    .build()
-        ).collect(Collectors.toList());
+        List<ActiveOrderDTO.OrderItemDto> itemDtos = details.stream()
+                .map(detail -> ActiveOrderDTO.OrderItemDto.builder()
+                        .orderDetailId(detail.getOrderDetailId())
+                        .itemName(detail.getItem().getItemName())
+                        .quantity(detail.getQuantity())
+                        .unitPrice(detail.getUnitPrice())
+                        .subTotal(detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity())))
+                        .status(detail.getStatus() != null ? detail.getStatus().name() : null)
+                        .note(detail.getNote())
+                        .build())
+                .collect(Collectors.toList());
 
         return ActiveOrderDTO.builder()
                 .tableId(table.getTableId())
@@ -112,45 +118,48 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     }
 
     @Override
-public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
-    TableOrder activeOrder = tableOrderRepository
-            .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-            .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có đơn hàng active!"));
+    public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
+        TableOrder activeOrder = tableOrderRepository
+                .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Bàn hiện tại không có đơn hàng active!"));
 
-    List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
+        List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
 
-    // Map từ OrderDetail (Entity) sang OrderDetailResponseDTO
-    return details.stream().map(item -> {
-        BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
-        BigDecimal total = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+        // Map từ OrderDetail (Entity) sang OrderDetailResponseDTO
+        return details.stream().map(item -> {
+            BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
+            BigDecimal total = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
 
-        return OrderDetailResponseDTO.builder()
-                .orderDetailId(item.getOrderDetailId())
-                .itemId(item.getItem() != null ? item.getItem().getItemId() : null)
-                .itemName(item.getItem() != null ? item.getItem().getItemName() : "Món không xác định")
-                .itemImage(item.getItem() != null ? item.getItem().getImageUrl() : null)
-                .quantity(item.getQuantity())
-                .unitPrice(unitPrice)
-                .totalPrice(total)
-                .note(item.getNote())
-                .status(item.getStatus())
-                .build();
-    }).collect(Collectors.toList());
-}
+            return OrderDetailResponseDTO.builder()
+                    .orderDetailId(item.getOrderDetailId())
+                    .itemId(item.getItem() != null ? item.getItem().getItemId() : null)
+                    .itemName(item.getItem() != null ? item.getItem().getItemName() : "Món không xác định")
+                    .itemImage(item.getItem() != null ? item.getItem().getImageUrl() : null)
+                    .quantity(item.getQuantity())
+                    .unitPrice(unitPrice)
+                    .totalPrice(total)
+                    .note(item.getNote())
+                    .status(item.getStatus())
+                    .build();
+        }).collect(Collectors.toList());
+    }
 
     // ==========================================
     // II. THAO TÁC TRÊN ĐƠN HÀNG & THANH TOÁN
     // ==========================================
 
     /**
-     * Duyệt thanh toán tiền mặt (Đổi trạng thái đơn -> PAID & giải phóng bàn về EMPTY)
+     * Duyệt thanh toán tiền mặt (Đổi trạng thái đơn -> PAID & giải phóng bàn về
+     * EMPTY)
      */
     @Override
     @Transactional
     public void approveCashPayment(Long tableId) {
         // 1. Tìm đơn hàng đang OPEN của bàn
         TableOrder activeOrder = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
 
         // 2. Chuyển trạng thái đơn hàng sang PAID
         activeOrder.setStatus(StatusTableOrder.PAID);
@@ -176,7 +185,8 @@ public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
     @Transactional
     public void cancelTableOrder(Long tableId, String reason) {
         TableOrder activeOrder = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Bàn không có hóa đơn nào đang mở để hủy!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Bàn không có hóa đơn nào đang mở để hủy!"));
 
         // 1. Cập nhật trạng thái đơn hàng sang CANCELLED
         activeOrder.setStatus(StatusTableOrder.CANCELLED);
@@ -219,7 +229,7 @@ public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
     public void confirmOrderItems(Long tableOrderId) {
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(tableOrderId);
         if (details.isEmpty()) {
-            throw new RuntimeException("Đơn hàng không có món nào!");
+            throw new AppException(HttpStatus.BAD_REQUEST, "Đơn hàng không có món nào!");
         }
 
         Long tableId = details.get(0).getOrder().getTable().getTableId();
@@ -238,7 +248,8 @@ public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
     @Transactional
     public void markItemAsServed(Long orderDetailId) {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy chi tiết đơn hàng!"));
 
         detail.setStatus(StatusOrderDetail.SERVED);
 
@@ -252,7 +263,8 @@ public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
     @Transactional
     public void cancelOrderItem(Long orderDetailId, String reason) {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy chi tiết đơn hàng!"));
 
         String cancelReason = (reason != null && !reason.trim().isEmpty()) ? reason : "Hết món / Hết nguyên liệu";
         detail.setStatus(StatusOrderDetail.CANCELLED);
@@ -271,10 +283,12 @@ public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
     @Transactional
     public void updateOrderItem(Long orderDetailId, Integer newQuantity, String newNote) {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy chi tiết đơn hàng!"));
 
         if (detail.getStatus() != StatusOrderDetail.ORDERED) {
-            throw new RuntimeException("Không thể sửa món đã được xác nhận hoặc đã chế biến!");
+            throw new AppException(HttpStatus.FORBIDDEN,
+                    "Không thể sửa món đã được xác nhận hoặc đã chế biến!");
         }
 
         if (newQuantity <= 0) {
@@ -291,7 +305,7 @@ public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
         recalculateOrderTotal(order);
 
         Long tableId = order.getTable().getTableId();
-        notifyCustomerTable(tableId, "ITEM_UPDATED", 
+        notifyCustomerTable(tableId, "ITEM_UPDATED",
                 "Món '" + detail.getItem().getItemName() + "' đã được thay đổi số lượng thành " + newQuantity);
     }
 
@@ -299,10 +313,12 @@ public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
     @Transactional
     public void deleteOrderItem(Long orderDetailId) {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy chi tiết đơn hàng!"));
 
         if (detail.getStatus() != StatusOrderDetail.ORDERED) {
-            throw new RuntimeException("Không thể xóa món đã được bếp xác nhận!");
+            throw new AppException(HttpStatus.FORBIDDEN,
+                    "Không thể xóa món đã được bếp xác nhận!");
         }
 
         TableOrder order = detail.getOrder();
@@ -323,9 +339,9 @@ public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
 
         BigDecimal newTotal = details.stream()
-                .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED 
-                          || d.getStatus() == StatusOrderDetail.CONFIRMED 
-                          || d.getStatus() == StatusOrderDetail.SERVED)
+                .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED
+                        || d.getStatus() == StatusOrderDetail.CONFIRMED
+                        || d.getStatus() == StatusOrderDetail.SERVED)
                 .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 

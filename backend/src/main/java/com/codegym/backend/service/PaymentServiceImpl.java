@@ -1,18 +1,29 @@
 package com.codegym.backend.service;
 
-import com.codegym.backend.dto.TableOrderInvoiceDTO;
-import com.codegym.backend.dto.TableOrderSummaryDTO;
-import com.codegym.backend.entity.*;
-import com.codegym.backend.enums.*;
-import com.codegym.backend.repository.*;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.codegym.backend.dto.TableOrderInvoiceDTO;
+import com.codegym.backend.dto.TableOrderSummaryDTO;
+import com.codegym.backend.entity.OrderDetail;
+import com.codegym.backend.entity.TableOrder;
+import com.codegym.backend.entity.Tables;
+import com.codegym.backend.enums.PaymentMethod;
+import com.codegym.backend.enums.ServiceStatus;
+import com.codegym.backend.enums.StatusOrderDetail;
+import com.codegym.backend.enums.StatusTableOrder;
+import com.codegym.backend.exception.AppException;
+import com.codegym.backend.repository.OrderDetailRepository;
+import com.codegym.backend.repository.TableOrderRepository;
+import com.codegym.backend.repository.TablesRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +39,8 @@ public class PaymentServiceImpl implements PaymentService {
     public void processCashPayment(Long tableId) {
         Tables table = tablesRepository.findById(tableId).orElseThrow();
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn đang mở!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy hóa đơn đang mở!"));
 
         order.setPaymentMethod(PaymentMethod.CASH);
         table.setServiceStatus(ServiceStatus.REQUESTING_BILL);
@@ -39,7 +51,8 @@ public class PaymentServiceImpl implements PaymentService {
     public void requestCheckout(Long tableId, PaymentMethod paymentMethod) {
         Tables table = tablesRepository.findById(tableId).orElseThrow();
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy hóa đơn!"));
 
         order.setPaymentMethod(paymentMethod);
         table.setServiceStatus(ServiceStatus.REQUESTING_BILL);
@@ -50,7 +63,8 @@ public class PaymentServiceImpl implements PaymentService {
     public void completeCheckout(Long tableId, PaymentMethod paymentMethod) {
         Tables table = tablesRepository.findById(tableId).orElseThrow();
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Bàn không có hóa đơn nào cần thanh toán!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Bàn không có hóa đơn nào cần thanh toán!"));
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
 
@@ -77,11 +91,13 @@ public class PaymentServiceImpl implements PaymentService {
     public TableOrderSummaryDTO getInvoiceSummaryDTO(Long tableId) {
         Tables table = tablesRepository.findById(tableId).orElseThrow();
         TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Bàn không có hóa đơn mở!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Bàn không có hóa đơn mở!"));
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
 
-        // 🟢 FIX 1: Chỉ lọc bỏ món CANCELLED, tính tiền cho cả món PENDING/ORDERED/CONFIRMED/SERVED
+        // 🟢 FIX 1: Chỉ lọc bỏ món CANCELLED, tính tiền cho cả món
+        // PENDING/ORDERED/CONFIRMED/SERVED
         BigDecimal calculatedTotal = details.stream()
                 .filter(d -> d.getStatus() != StatusOrderDetail.CANCELLED)
                 .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
@@ -120,11 +136,13 @@ public class PaymentServiceImpl implements PaymentService {
         Tables table = tablesRepository.findById(tableId).orElseThrow();
         TableOrder order = tableOrderRepository
                 .findByTableOrderIdAndTableTableIdAndStatus(tableOrderId, tableId, StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn mở!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy hóa đơn mở!"));
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
 
-        // 🟢 FIX 2: Tự động tính tổng tiền thực tế thay vì lấy order.getTotalAmount() đang bằng 0
+        // 🟢 FIX 2: Tự động tính tổng tiền thực tế thay vì lấy order.getTotalAmount()
+        // đang bằng 0
         BigDecimal calculatedTotal = details.stream()
                 .filter(d -> d.getStatus() != StatusOrderDetail.CANCELLED)
                 .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity())))

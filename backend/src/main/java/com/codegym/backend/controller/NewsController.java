@@ -82,6 +82,17 @@ public class NewsController {
     }
 
     /**
+     * STAFF: Lấy danh sách bài viết của chính mình.
+     */
+    @GetMapping("/my-news")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<?> getMyNews(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(newsService.getMyNews(page, size));
+    }
+
+    /**
      * Xóa mềm một bài viết tin tức.
      */
     @DeleteMapping("/{id}")
