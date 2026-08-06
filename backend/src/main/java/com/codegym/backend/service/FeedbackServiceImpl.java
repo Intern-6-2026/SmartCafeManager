@@ -5,11 +5,9 @@ import com.codegym.backend.dto.FeedbackResponseDTO;
 import com.codegym.backend.entity.Customer;
 import com.codegym.backend.entity.Feedback;
 import com.codegym.backend.entity.Item;
-import com.codegym.backend.enums.StatusTableOrder;
 import com.codegym.backend.repository.CustomerRepository;
 import com.codegym.backend.repository.FeedbackRepository;
 import com.codegym.backend.repository.ItemRepository;
-import com.codegym.backend.repository.OrderDetailRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,55 +24,48 @@ public class FeedbackServiceImpl implements FeedbackService {
     private final FeedbackRepository feedbackRepository;
     private final CustomerRepository customerRepository;
     private final ItemRepository itemRepository;
-    private final OrderDetailRepository orderDetailRepository;
 
     @Override
     @Transactional
     public FeedbackResponseDTO createFeedback(FeedbackRequestDTO dto) {
-
-        // 1. KIỂM TRA ĐĂNG NHẬP: Bắt buộc phải có customerId
-        if (dto.getCustomerId() == null) {
-            throw new RuntimeException("Bạn cần đăng nhập tài khoản để gửi đánh giá món ăn!");
+        // 1. Kiểm tra ID khách hàng (Bắt lỗi chưa đăng nhập)
+        if (dto.getCustomerId() == null || dto.getCustomerId() <= 0) {
+            throw new RuntimeException("bạn chưa đăng nhập , vui lòng đăng nhập để có thể đánh giá");
         }
 
+        // 2. Kiểm tra tài khoản khách hàng có tồn tại trong DB không
         Customer customer = customerRepository.findById(dto.getCustomerId())
-                .orElseThrow(() -> new RuntimeException("Tài khoản khách hàng không tồn tại!"));
+                .orElseThrow(() -> new RuntimeException("bạn chưa đăng nhập , vui lòng đăng nhập để có thể đánh giá"));
 
-        // 2. KIỂM TRA MÓN ĂN
-        if (dto.getItemId() == null) {
-            throw new RuntimeException("Vui lòng chọn món ăn cần đánh giá!");
-        }
-
+        // 3. Kiểm tra món ăn
         Item item = itemRepository.findById(dto.getItemId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn ID: " + dto.getItemId()));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn để đánh giá!"));
 
-        // 3. KIỂM TRA MUA HÀNG & THANH TOÁN: Bắt buộc đơn hàng đã ở trạng thái PAID
-        boolean hasPurchasedAndPaid = orderDetailRepository.existsByCustomerAndItemAndOrderStatus(
-                customer.getCustomerId(),
-                item.getItemId(),
-                StatusTableOrder.PAID
-        );
-
-        if (!hasPurchasedAndPaid) {
-            throw new RuntimeException("Bạn chỉ có thể đánh giá sau khi đã thưởng thức và thanh toán thành công món này!");
-        }
-
-        // 4. LƯU FEEDBACK
+        // 4. Tạo và lưu Feedback
         Feedback feedback = Feedback.builder()
-                .content(dto.getContent())
-                .rating(dto.getRating())
-                .senderName(customer.getFullName())
-                .email(dto.getEmail())
-                .imageUrl(dto.getImageUrl())
-                .sentAt(new Date()) // 👈 Đã thêm: Đảm bảo thời gian tạo không bị null khi trả về DTO
-                .customer(customer)
-                .item(item)
-                .build();
+        .content(dto.getContent())
+        .rating(dto.getRating())
+        .senderName(dto.getSenderName() != null ? dto.getSenderName() : customer.getFullName())
+        .email(dto.getEmail())
+        .imageUrl(dto.getImageUrl())
+        .customer(customer)
+        .item(item)
+        .build();
 
         Feedback savedFeedback = feedbackRepository.save(feedback);
-        return mapToResponseDTO(savedFeedback);
-    }
 
+        // 5. Trả về Response DTO
+        return FeedbackResponseDTO.builder()
+                .feedbackId(savedFeedback.getFeedbackId())
+                .content(savedFeedback.getContent())
+                .rating(savedFeedback.getRating())
+                .senderName(savedFeedback.getSenderName())
+                .email(savedFeedback.getEmail())
+                .imageUrl(savedFeedback.getImageUrl())
+                .customerId(customer.getCustomerId())
+                .itemId(item.getItemId())
+                .build();
+    }
     @Override
     @Transactional(readOnly = true)
     public List<FeedbackResponseDTO> getFeedbacksByItem(Long itemId) {
@@ -103,7 +94,6 @@ public class FeedbackServiceImpl implements FeedbackService {
         feedbackRepository.save(feedback);
     }
 
-    // Helper Method: Mapper chuyển từ Entity sang Response DTO
     private FeedbackResponseDTO mapToResponseDTO(Feedback feedback) {
         return FeedbackResponseDTO.builder()
                 .feedbackId(feedback.getFeedbackId())

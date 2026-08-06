@@ -1,5 +1,6 @@
 package com.codegym.backend.dto;
 
+import com.codegym.backend.enums.StatusTableOrder;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,13 +14,17 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InvoiceDetailResponseDTO {
-
     private Long orderId;
-    private String invoiceCode;      // VD: #HD0001
-    private String tableName;        // VD: Bàn 01
-    private Double totalAmount;      // Tổng tiền
-    private Date paidAt;             // Thời gian thanh toán
-    private List<OrderItemDTO> items; // Danh sách món đã gọi
+    private String invoiceCode;
+    private Long tableId;
+    private String tableName;
+    private Double totalAmount;
+    private Date createdAt;
+    private Date openAt;
+    private Date paidAt;
+    private StatusTableOrder status;
+    private String paymentMethod;
+    private List<OrderItemDTO> items;
 
     @Data
     @Builder
@@ -29,8 +34,9 @@ public class InvoiceDetailResponseDTO {
         private Long itemId;
         private String itemName;
         private String itemImage;
-        private Double price;
         private Integer quantity;
-        private Boolean hasFeedback; // 👈 true: Đã đánh giá rồi | false: Chưa đánh giá (FE hiện nút click)
+        private Double price;
+        private Double totalPrice;
+        private Boolean hasFeedback; // Phục vụ luồng đánh giá món của Khách hàng
     }
 }
