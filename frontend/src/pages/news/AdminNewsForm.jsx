@@ -77,15 +77,9 @@ export default function AdminNewsForm() {
           </Link>
 
           <div className="page-head">
-            <div>
-              <h1 className="page-title">
-                {isEdit ? "Sửa tin tức" : "Tạo tin mới"}
-              </h1>
-              <p className="page-sub">
-                Dùng font Be Vietnam Pro cho nội dung. Tiêu đề nên ngắn gọn, rõ
-                nghĩa.
-              </p>
-            </div>
+            <h1 className="page-title">
+              {isEdit ? "Sửa tin tức" : "Tạo tin mới"}
+            </h1>
           </div>
 
           {loading && <div className="news-loading">Đang tải…</div>}
