@@ -2,6 +2,7 @@ package com.codegym.backend.service;
 
 import java.util.Date;
 import java.util.Objects;
+import java.util.Set;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,10 +26,52 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class NewsService {
 
+        private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
+        private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
+                        "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif");
+
         private final NewsRepository newsRepository;
         private final CloudinaryService cloudinaryService;
         private final SimpMessagingTemplate messagingTemplate;
         private final AccountRepository accountRepository;
+
+        private String requireText(String value, String fieldLabel, int min, int max) {
+                String trimmed = value == null ? "" : value.trim();
+                if (trimmed.isEmpty()) {
+                        throw new RuntimeException(fieldLabel + " không được để trống");
+                }
+                if (trimmed.length() < min || trimmed.length() > max) {
+                        throw new RuntimeException(fieldLabel + " phải từ " + min + " đến " + max + " ký tự");
+                }
+                return trimmed;
+        }
+
+        private String optionalText(String value, int max) {
+                if (value == null) {
+                        return null;
+                }
+                String trimmed = value.trim();
+                if (trimmed.isEmpty()) {
+                        return null;
+                }
+                if (trimmed.length() > max) {
+                        throw new RuntimeException("Tóm tắt tối đa " + max + " ký tự");
+                }
+                return trimmed;
+        }
+
+        private void validateImage(MultipartFile image) {
+                if (image == null || image.isEmpty()) {
+                        return;
+                }
+                if (image.getSize() > MAX_IMAGE_BYTES) {
+                        throw new RuntimeException("Ảnh tối đa 5MB");
+                }
+                String contentType = image.getContentType();
+                if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
+                        throw new RuntimeException("Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF");
+                }
+        }
 
         // ==========================================
         // 1. NHÓM TÁC VỤ PUBLIC (KHÁCH HÀNG / VÃNG LAI)
@@ -61,6 +104,11 @@ public class NewsService {
 
         @Transactional(rollbackFor = Exception.class)
         public News createNews(String title, String summary, String content, MultipartFile image) throws Exception {
+                String safeTitle = requireText(title, "Tiêu đề", 5, 255);
+                String safeSummary = optionalText(summary, 500);
+                String safeContent = requireText(content, "Nội dung", 20, 10000);
+                validateImage(image);
+
                 String imageUrl = null;
                 if (image != null && !image.isEmpty()) {
                         imageUrl = cloudinaryService.uploadImage(image);
@@ -74,9 +122,9 @@ public class NewsService {
                                 .stream().anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
 
                 News news = News.builder()
-                                .title(title)
-                                .summary(summary)
-                                .content(content)
+                                .title(safeTitle)
+                                .summary(safeSummary)
+                                .content(safeContent)
                                 .imageUrl(imageUrl)
                                 .author(curentAccount)
                                 .status(isAdmin ? NewsStatus.PUBLISHED : NewsStatus.PENDING)
@@ -94,6 +142,11 @@ public class NewsService {
         @Transactional(rollbackFor = Exception.class)
         public News updateNews(Long id, String title, String summary, String content, MultipartFile image)
                         throws Exception {
+                String safeTitle = requireText(title, "Tiêu đề", 5, 255);
+                String safeSummary = optionalText(summary, 500);
+                String safeContent = requireText(content, "Nội dung", 20, 10000);
+                validateImage(image);
+
                 String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
                 boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
@@ -108,9 +161,9 @@ public class NewsService {
                         throw new RuntimeException("Lỗi phân quyền: Bạn không có quyền sửa bài viết này");
                 }
 
-                news.setTitle(title);
-                news.setSummary(summary);
-                news.setContent(content);
+                news.setTitle(safeTitle);
+                news.setSummary(safeSummary);
+                news.setContent(safeContent);
 
                 if (image != null && !image.isEmpty()) {
                         news.setImageUrl(cloudinaryService.uploadImage(image));
@@ -155,6 +208,12 @@ public class NewsService {
         public Page<News> getAllNewsForAdmin(int page, int size) {
                 Pageable pageable = PageRequest.of(page, size);
                 return newsRepository.findByDeletedAtIsNullOrderByCreatedAtDesc(pageable);
+        }
+
+        public News getNewsByIdForAdmin(Long id) {
+                return newsRepository.findWithAuthorByNewsIdAndDeletedAtIsNull(Objects.requireNonNull(id))
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Không tìm thấy tin tức hoặc tin tức đã bị xóa!"));
         }
 
         @Transactional(rollbackFor = Exception.class)

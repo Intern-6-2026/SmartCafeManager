@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { Formik, Form, Field } from "formik";
 import Header from "../../components/header";
 import Footer from "../../components/footer";
 import {
@@ -9,24 +10,26 @@ import {
   getApiErrorMessage,
 } from "../../services/apiService";
 import { canEditOrDeleteNews, isAdminRole } from "../../utils/newsHelpers";
+import { newsFormSchema } from "../../validation/newsSchemas";
 import "../../styles/news.css";
 
-const emptyForm = {
+const emptyValues = {
   title: "",
   summary: "",
   content: "",
+  image: null,
 };
 
 export default function AdminNewsForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
-  const [form, setForm] = useState(emptyForm);
-  const [image, setImage] = useState(null);
+  const [initialValues, setInitialValues] = useState(emptyValues);
   const [preview, setPreview] = useState("");
+  const [existingImageUrl, setExistingImageUrl] = useState("");
   const [loading, setLoading] = useState(isEdit);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     if (!isEdit) return undefined;
@@ -37,19 +40,23 @@ export default function AdminNewsForm() {
         if (cancelled) return;
         const n = res.data || {};
         if (!canEditOrDeleteNews(n.authorUsername) && !isAdminRole()) {
-          setError("Bạn không có quyền sửa bài viết này (chỉ tác giả hoặc admin).");
+          setLoadError(
+            "Bạn không có quyền sửa bài viết này (chỉ tác giả hoặc admin)."
+          );
           return;
         }
-        setForm({
+        setInitialValues({
           title: n.title || "",
           summary: n.summary || "",
           content: n.content || "",
+          image: null,
         });
+        setExistingImageUrl(n.imageUrl || "");
         setPreview(n.imageUrl || "");
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(getApiErrorMessage(err, "Không tải được bài viết."));
+          setLoadError(getApiErrorMessage(err, "Không tải được bài viết."));
         }
       })
       .finally(() => {
@@ -59,49 +66,6 @@ export default function AdminNewsForm() {
       cancelled = true;
     };
   }, [id, isEdit]);
-
-  const onChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const onFile = (e) => {
-    const file = e.target.files?.[0];
-    setImage(file || null);
-    if (file) {
-      setPreview(URL.createObjectURL(file));
-    }
-  };
-
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    if (!form.title.trim() || !form.content.trim()) {
-      setError("Vui lòng nhập tiêu đề và nội dung.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const payload = {
-        title: form.title.trim(),
-        summary: form.summary.trim(),
-        content: form.content.trim(),
-        image,
-      };
-      if (isEdit) {
-        await updateNews(id, payload);
-        navigate(`/admin/news/${id}`);
-      } else {
-        const res = await createNews(payload);
-        const newId = res.data?.newsId;
-        navigate(newId ? `/admin/news/${newId}` : "/admin/news");
-      }
-    } catch (err) {
-      setError(getApiErrorMessage(err, "Lưu tin tức thất bại."));
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <>
@@ -113,86 +77,195 @@ export default function AdminNewsForm() {
           </Link>
 
           <div className="page-head">
-            <h1 className="page-title">
-              {isEdit ? "Sửa tin tức" : "Tạo tin mới"}
-            </h1>
+            <div>
+              <h1 className="page-title">
+                {isEdit ? "Sửa tin tức" : "Tạo tin mới"}
+              </h1>
+              <p className="page-sub">
+                Dùng font Be Vietnam Pro cho nội dung. Tiêu đề nên ngắn gọn, rõ
+                nghĩa.
+              </p>
+            </div>
           </div>
 
           {loading && <div className="news-loading">Đang tải…</div>}
 
-          {!loading && error && isEdit && !form.title && (
+          {!loading && loadError && (
             <div className="news-error">
-              {error}{" "}
+              {loadError}{" "}
               <Link to="/admin/news" className="news-card-more">
                 Quay lại danh sách
               </Link>
             </div>
           )}
 
-          {!loading && !(error && isEdit && !form.title) && (
-            <form className="news-form" onSubmit={onSubmit}>
-              {error && <div className="news-error">{error}</div>}
+          {!loading && !loadError && (
+            <Formik
+              initialValues={initialValues}
+              enableReinitialize
+              validationSchema={newsFormSchema}
+              validateOnBlur
+              validateOnChange={false}
+              onSubmit={async (values, { setSubmitting, setFieldError }) => {
+                setSubmitError("");
+                try {
+                  const payload = {
+                    title: values.title.trim(),
+                    summary: (values.summary || "").trim(),
+                    content: values.content.trim(),
+                    image: values.image || null,
+                  };
+                  if (isEdit) {
+                    await updateNews(id, payload);
+                    navigate(`/admin/news/${id}`);
+                  } else {
+                    const res = await createNews(payload);
+                    const newId = res.data?.newsId;
+                    navigate(newId ? `/admin/news/${newId}` : "/admin/news");
+                  }
+                } catch (err) {
+                  const validationErrors = err?.response?.data?.validationErrors;
+                  if (validationErrors && typeof validationErrors === "object") {
+                    Object.entries(validationErrors).forEach(([field, msg]) => {
+                      setFieldError(field, msg);
+                    });
+                  }
+                  setSubmitError(getApiErrorMessage(err, "Lưu tin tức thất bại."));
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+            >
+              {({
+                errors,
+                touched,
+                isSubmitting,
+                setFieldValue,
+                values,
+                submitCount,
+              }) => {
+                const showErr = (name) =>
+                  Boolean(errors[name] && (touched[name] || submitCount > 0));
 
-              <label className="news-form-field">
-                <span>Tiêu đề *</span>
-                <input
-                  name="title"
-                  value={form.title}
-                  onChange={onChange}
-                  maxLength={255}
-                  required
-                />
-              </label>
+                return (
+                  <Form className="news-form" noValidate>
+                    {submitError && (
+                      <div className="news-error">{submitError}</div>
+                    )}
 
-              <label className="news-form-field">
-                <span>Tóm tắt</span>
-                <textarea
-                  name="summary"
-                  value={form.summary}
-                  onChange={onChange}
-                  rows={3}
-                />
-              </label>
+                    <label className="news-form-field">
+                      <span className="news-form-label">
+                        Tiêu đề <em>*</em>
+                      </span>
+                      <Field
+                        name="title"
+                        type="text"
+                        className={`news-input news-input-title ${showErr("title") ? "is-invalid" : ""}`}
+                        placeholder="Ví dụ: Ra mắt menu mùa hè NEOCAFÉ"
+                        maxLength={255}
+                      />
+                      <span className="news-form-hint">
+                        5–255 ký tự · {(values.title || "").trim().length}/255
+                      </span>
+                      {showErr("title") && (
+                        <span className="news-field-error">{errors.title}</span>
+                      )}
+                    </label>
 
-              <label className="news-form-field">
-                <span>Nội dung *</span>
-                <textarea
-                  name="content"
-                  value={form.content}
-                  onChange={onChange}
-                  rows={10}
-                  required
-                />
-              </label>
+                    <label className="news-form-field">
+                      <span className="news-form-label">Tóm tắt</span>
+                      <Field
+                        as="textarea"
+                        name="summary"
+                        rows={3}
+                        className={`news-input ${showErr("summary") ? "is-invalid" : ""}`}
+                        placeholder="Mô tả ngắn để hiện trên danh sách tin (tùy chọn)"
+                        maxLength={500}
+                      />
+                      <span className="news-form-hint">
+                        Tối đa 500 ký tự · {(values.summary || "").trim().length}/500
+                      </span>
+                      {showErr("summary") && (
+                        <span className="news-field-error">{errors.summary}</span>
+                      )}
+                    </label>
 
-              <label className="news-form-field">
-                <span>Hình ảnh {isEdit ? "(để trống nếu giữ ảnh cũ)" : ""}</span>
-                <input type="file" accept="image/*" onChange={onFile} />
-              </label>
+                    <label className="news-form-field">
+                      <span className="news-form-label">
+                        Nội dung <em>*</em>
+                      </span>
+                      <Field
+                        as="textarea"
+                        name="content"
+                        rows={10}
+                        className={`news-input news-input-content ${showErr("content") ? "is-invalid" : ""}`}
+                        placeholder="Nhập nội dung chi tiết bài viết..."
+                        maxLength={10000}
+                      />
+                      <span className="news-form-hint">
+                        Ít nhất 20 ký tự · {(values.content || "").trim().length}/10000
+                      </span>
+                      {showErr("content") && (
+                        <span className="news-field-error">{errors.content}</span>
+                      )}
+                    </label>
 
-              {preview ? (
-                <div className="news-form-preview">
-                  <img src={preview} alt="Xem trước" />
-                </div>
-              ) : null}
+                    <div className="news-form-field">
+                      <span className="news-form-label">
+                        Hình ảnh {isEdit ? "(để trống nếu giữ ảnh cũ)" : ""}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className={`news-input news-input-file ${showErr("image") ? "is-invalid" : ""}`}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setFieldValue("image", file);
+                          if (file) {
+                            setPreview(URL.createObjectURL(file));
+                          } else {
+                            setPreview(existingImageUrl || "");
+                          }
+                        }}
+                      />
+                      <span className="news-form-hint">
+                        JPG, PNG, WEBP, GIF · tối đa 5MB
+                      </span>
+                      {showErr("image") && (
+                        <span className="news-field-error">{errors.image}</span>
+                      )}
+                    </div>
 
-              <div className="news-form-actions">
-                <button
-                  type="button"
-                  className="news-btn news-btn-ghost"
-                  onClick={() => navigate("/admin/news")}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="news-btn news-btn-primary"
-                  disabled={saving}
-                >
-                  {saving ? "Đang lưu…" : isEdit ? "Cập nhật" : "Tạo bài viết"}
-                </button>
-              </div>
-            </form>
+                    {preview ? (
+                      <div className="news-form-preview">
+                        <img src={preview} alt="Xem trước" />
+                      </div>
+                    ) : null}
+
+                    <div className="news-form-actions">
+                      <button
+                        type="button"
+                        className="news-btn news-btn-ghost"
+                        onClick={() => navigate("/admin/news")}
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="submit"
+                        className="news-btn news-btn-primary"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting
+                          ? "Đang lưu…"
+                          : isEdit
+                            ? "Cập nhật"
+                            : "Tạo bài viết"}
+                      </button>
+                    </div>
+                  </Form>
+                );
+              }}
+            </Formik>
           )}
         </div>
       </main>

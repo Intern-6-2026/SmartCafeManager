@@ -60,7 +60,7 @@ public class SecurityConfig {
                                 "/ws-news/**")
                         .permitAll()
 
-                        .requestMatchers("/api/v1/items/**", "/api/v1/news")
+                        .requestMatchers("/api/v1/items/**", "/api/v1/news", "/api/v1/news/*")
                         .permitAll()
 
                         .requestMatchers("/api/v1/customer/**")

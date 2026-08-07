@@ -4,6 +4,7 @@ import com.codegym.backend.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,12 +17,14 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex,
+    private ResponseEntity<ErrorResponse> buildValidationResponse(
+            org.springframework.validation.BindingResult bindingResult,
             HttpServletRequest request) {
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
+        bindingResult.getAllErrors().forEach((error) -> {
+            String fieldName = error instanceof FieldError fieldError
+                    ? fieldError.getField()
+                    : error.getObjectName();
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
@@ -29,12 +32,23 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(new Date())
                 .status(HttpStatus.UNPROCESSABLE_ENTITY.value())
-            .error("Xác thực thất bại")
-            .message("Dữ liệu đầu vào không hợp lệ, vui lòng kiểm tra lại.")
+                .error("Xác thực thất bại")
+                .message("Dữ liệu đầu vào không hợp lệ, vui lòng kiểm tra lại.")
                 .path(request.getRequestURI())
                 .validationErrors(errors)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex,
+            HttpServletRequest request) {
+        return buildValidationResponse(ex.getBindingResult(), request);
+    }
+
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ErrorResponse> handleBindException(BindException ex, HttpServletRequest request) {
+        return buildValidationResponse(ex.getBindingResult(), request);
     }
 
     @ExceptionHandler(RuntimeException.class)

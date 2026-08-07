@@ -658,37 +658,91 @@ table.fb-table {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: 24px;
+  padding: 28px 28px 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+  font-family: "Be Vietnam Pro", sans-serif;
 }
 
 .news-form-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
+}
+
+.news-form-label {
+  font-family: "Be Vietnam Pro", sans-serif;
   font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+.news-form-label em {
+  color: #a14832;
+  font-style: normal;
+}
+
+.news-input {
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 14.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 13px;
+  background: #fff;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.news-input::placeholder {
+  color: #a89886;
+  font-weight: 400;
+}
+
+.news-input:focus {
+  border-color: var(--tan-deep);
+  box-shadow: 0 0 0 3px rgba(156, 107, 58, 0.12);
+}
+
+.news-input.is-invalid {
+  border-color: #c45c45;
+  box-shadow: 0 0 0 3px rgba(196, 92, 69, 0.12);
+}
+
+.news-input-title {
+  font-family: "Fraunces", serif;
+  font-size: 20px;
   font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 12px 14px;
+}
+
+.news-input-content {
+  min-height: 220px;
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.news-input-file {
+  padding: 10px;
+  font-size: 13px;
+}
+
+.news-form-hint {
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-soft);
 }
 
-.news-form-field input,
-.news-form-field textarea {
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: #fff;
-  outline: none;
-}
-
-.news-form-field input:focus,
-.news-form-field textarea:focus {
-  border-color: var(--tan-deep);
+.news-field-error {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #a14832;
 }
 
 .news-form-preview {

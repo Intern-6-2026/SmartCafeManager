@@ -2,6 +2,7 @@ package com.codegym.backend.entity;
 
 import com.codegym.backend.enums.NewsStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -52,4 +53,9 @@ public class News extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private NewsStatus status;
+
+    @JsonProperty("authorUsername")
+    public String getAuthorUsername() {
+        return author != null ? author.getUsername() : null;
+    }
 }
