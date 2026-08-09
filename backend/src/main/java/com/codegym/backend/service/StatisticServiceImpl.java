@@ -3,13 +3,14 @@ package com.codegym.backend.service;
 import com.codegym.backend.dto.DashboardStatsDTO;
 import com.codegym.backend.dto.InvoiceResponseDTO;
 import com.codegym.backend.entity.TableOrder;
-import com.codegym.backend.enums.StatusTableOrder;
 import com.codegym.backend.repository.TableOrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
@@ -24,50 +25,71 @@ public class StatisticServiceImpl implements StatisticService {
 
     private final TableOrderRepository tableOrderRepository;
 
-    // --- 1. LẤY DANH SÁCH HÓA ĐƠN ---
+    // 🟢 1. HÀM CHÍNH: LẤY HÓA ĐƠN THEO BÀN, TYPE (TODAY/MONTH) VÀ NGÀY
     @Override
-    public List<InvoiceResponseDTO> getInvoices(Long tableId) {
-        List<TableOrder> orders = tableOrderRepository.findInvoicesByTableAndStatus(tableId, StatusTableOrder.PAID);
+    @Transactional(readOnly = true)
+    public List<InvoiceResponseDTO> getInvoices(Long tableId, String type, Date date) {
+        LocalDateTime startDate;
+        LocalDateTime endDate;
 
-        return orders.stream().map(order -> InvoiceResponseDTO.builder()
-                .orderId(order.getTableOrderId())
-                .invoiceCode(String.format("#HD%04d", order.getTableOrderId()))
-                .tableId(order.getTable() != null ? order.getTable().getTableId() : null)
-                .tableName(order.getTable() != null ? order.getTable().getTableName() : "Mang về")
-                .totalAmount(order.getTotalAmount() != null ? order.getTotalAmount().doubleValue() : 0.0)
-                .createdAt(order.getCreatedAt())
-                .status("Đã thanh toán")
-                .build()
-        ).collect(Collectors.toList());
+        if (date != null) {
+            LocalDate targetLocalDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            startDate = targetLocalDate.atStartOfDay();
+            endDate = targetLocalDate.atTime(LocalTime.MAX);
+        } else if ("MONTH".equalsIgnoreCase(type)) {
+            LocalDate today = LocalDate.now();
+            startDate = today.with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay();
+            endDate = today.with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
+        } else {
+            LocalDate today = LocalDate.now();
+            startDate = today.atStartOfDay();
+            endDate = today.atTime(LocalTime.MAX);
+        }
+
+        List<TableOrder> orders = tableOrderRepository.findInvoicesByTableAndDateRange(tableId, startDate, endDate);
+
+        return orders.stream().map(this::mapToInvoiceDTO).collect(Collectors.toList());
     }
 
-    // --- 2. LẤY DỮ LIỆU BẢNG THỐNG KÊ DOANH THU ---
+    //2. CÁC HÀM OVERLOAD DÙNG CHO CÁC NƠI KHÁC TRONG DỰ ÁN
     @Override
+    @Transactional(readOnly = true)
+    public List<InvoiceResponseDTO> getInvoices(Long tableId, Date date) {
+        return getInvoices(tableId, null, date);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InvoiceResponseDTO> getInvoices(Long tableId) {
+        return getInvoices(tableId, "TODAY", null);
+    }
+
+    //3. LẤY DỮ LIỆU DASHBOARD THỐNG KÊ
+    @Override
+    @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
         LocalDate today = LocalDate.now();
 
-        // Khoảng thời gian Hôm nay (00:00:00 -> 23:59:59)
-        Date startOfToday = Date.from(today.atStartOfDay(ZoneId.systemDefault()).toInstant());
-        Date endOfToday = Date.from(today.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant());
+        LocalDateTime startOfToday = today.atStartOfDay();
+        LocalDateTime endOfToday = today.atTime(LocalTime.MAX);
 
-        // Khoảng thời gian Tháng này (Đầu tháng -> Cuối tháng)
-        Date startOfMonth = Date.from(today.with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay(ZoneId.systemDefault()).toInstant());
-        Date endOfMonth = Date.from(today.with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant());
+        LocalDateTime startOfMonth = today.with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay();
+        LocalDateTime endOfMonth = today.with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
 
         // A. 3 Thẻ Tổng quan
         Double todayRevenue = tableOrderRepository.sumRevenueBetween(startOfToday, endOfToday);
         Long todayOrderCount = tableOrderRepository.countOrdersBetween(startOfToday, endOfToday);
         Double monthRevenue = tableOrderRepository.sumRevenueBetween(startOfMonth, endOfMonth);
 
-        // B. Biểu đồ đường theo tuần (Từ Thứ 2 -> Chủ Nhật của tuần hiện tại)
+        // B. Biểu đồ đường theo tuần (Thứ 2 -> Chủ Nhật)
         LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         List<DashboardStatsDTO.WeeklyRevenueDTO> weeklyRevenueList = new ArrayList<>();
         String[] dayNames = {"Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"};
 
         for (int i = 0; i < 7; i++) {
             LocalDate currentDay = startOfWeek.plusDays(i);
-            Date start = Date.from(currentDay.atStartOfDay(ZoneId.systemDefault()).toInstant());
-            Date end = Date.from(currentDay.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant());
+            LocalDateTime start = currentDay.atStartOfDay();
+            LocalDateTime end = currentDay.atTime(LocalTime.MAX);
 
             Double dayRev = tableOrderRepository.sumRevenueBetween(start, end);
             weeklyRevenueList.add(new DashboardStatsDTO.WeeklyRevenueDTO(dayNames[i], dayRev != null ? dayRev : 0.0));
@@ -76,7 +98,11 @@ public class StatisticServiceImpl implements StatisticService {
         // C. Biểu đồ tròn theo danh mục
         List<Object[]> rawCategorySales = tableOrderRepository.getSalesGroupedByCategory();
         List<DashboardStatsDTO.CategorySalesDTO> categorySalesList = rawCategorySales.stream()
-                .map(row -> new DashboardStatsDTO.CategorySalesDTO((String) row[0], (Long) row[1]))
+                .map(row -> {
+                    String categoryName = row[0] != null ? row[0].toString() : "Khác";
+                    Long count = row[1] != null ? ((Number) row[1]).longValue() : 0L;
+                    return new DashboardStatsDTO.CategorySalesDTO(categoryName, count);
+                })
                 .collect(Collectors.toList());
 
         return DashboardStatsDTO.builder()
@@ -86,5 +112,34 @@ public class StatisticServiceImpl implements StatisticService {
                 .weeklyRevenue(weeklyRevenueList)
                 .categorySales(categorySalesList)
                 .build();
+    }
+
+    // --- HELPER METHODS ---
+    private InvoiceResponseDTO mapToInvoiceDTO(TableOrder order) {
+        Long tId = (order.getTable() != null) ? order.getTable().getTableId() : null;
+        String tableName = (order.getTable() != null) ? order.getTable().getTableName() : "Mang về";
+        Double total = (order.getTotalAmount() != null) ? order.getTotalAmount().doubleValue() : 0.0;
+
+        return InvoiceResponseDTO.builder()
+                .orderId(order.getTableOrderId())
+                .invoiceCode(String.format("#HD%04d", order.getTableOrderId()))
+                .tableId(tId)
+                .tableName(tableName)
+                .totalAmount(total)
+                .createdAt(toDate(order.getCreatedAt()))
+                .openAt(toDate(order.getOpenAt()))
+                .paidAt(toDate(order.getPaidAt()))
+                .status(order.getStatus())
+                .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
+                .build();
+    }
+
+    private Date toDate(Object timeObj) {
+        if (timeObj == null) return null;
+        if (timeObj instanceof Date) return (Date) timeObj;
+        if (timeObj instanceof LocalDateTime) {
+            return Date.from(((LocalDateTime) timeObj).atZone(ZoneId.systemDefault()).toInstant());
+        }
+        return null;
     }
 }

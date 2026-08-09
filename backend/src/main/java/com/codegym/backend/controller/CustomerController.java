@@ -16,11 +16,13 @@ import com.codegym.backend.service.PaymentService;
 import com.codegym.backend.service.StaffOrderService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/v1/customer")
 @CrossOrigin("*")
 @RequiredArgsConstructor
+@Slf4j
 public class CustomerController {
 
     private final OrderService orderService;
@@ -37,10 +39,23 @@ public class CustomerController {
     @PostMapping("/call-service")
     public ResponseEntity<String> callService(
             @RequestParam Long tableId,
-            @RequestParam ServiceStatus status) {
-        staffOrderService.updateTableServiceStatus(tableId, status);
-        sendWebSocketNotification(tableId, "CALL_SERVICE", "Bàn " + tableId + " yêu cầu: " + status);
-        return ResponseEntity.ok("Hệ thống đã ghi nhận yêu cầu: " + status);
+            @RequestParam ServiceStatus status
+    ) {
+        if (status != ServiceStatus.CALL_STAFF && status != ServiceStatus.REQUESTING_BILL) {
+            return ResponseEntity.badRequest().body("Yêu cầu không hợp lệ!");
+        }
+
+        orderService.updateTableServiceStatus(tableId, status);
+
+        // Bổ sung phát thông báo WebSocket tới màn hình nhân viên
+        String type = (status == ServiceStatus.CALL_STAFF) ? "CALL_STAFF" : "REQUESTING_BILL";
+        String message = (status == ServiceStatus.CALL_STAFF) 
+                ? "Bàn " + tableId + " đang gọi nhân viên!" 
+                : "Bàn " + tableId + " yêu cầu thanh toán!";
+        
+        sendWebSocketNotification(tableId, type, message);
+
+        return ResponseEntity.ok(message);
     }
 
     // --- 2. GIỎ HÀNG TẠM ---
@@ -110,12 +125,16 @@ public class CustomerController {
         return ResponseEntity.ok(paymentService.getInvoiceSummaryDTO(tableId));
     }
 
-    // Helper WebSocket
+    // Helper WebSocket an toàn - Bọc try-catch tránh làm crash API (HTTP 500) khi socket lỗi
     private void sendWebSocketNotification(Long tableId, String type, String message) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("tableId", tableId);
-        payload.put("type", type);
-        payload.put("message", message);
-        messagingTemplate.convertAndSend("/topic/staff-requests", payload);
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("tableId", tableId);
+            payload.put("type", type);
+            payload.put("message", message);
+            messagingTemplate.convertAndSend("/topic/staff-requests", payload);
+        } catch (Exception e) {
+            log.error("Lỗi gửi WebSocket tới /topic/staff-requests: {}", e.getMessage());
+        }
     }
 }

@@ -2,177 +2,146 @@ package com.codegym.backend.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.codegym.backend.dto.TableOrderInvoiceDTO;
 import com.codegym.backend.dto.TableOrderSummaryDTO;
+import com.codegym.backend.dto.TableOrderSummaryDTO.OrderDetailDTO;
 import com.codegym.backend.entity.OrderDetail;
 import com.codegym.backend.entity.TableOrder;
-import com.codegym.backend.entity.Tables;
 import com.codegym.backend.enums.PaymentMethod;
-import com.codegym.backend.enums.ServiceStatus;
-import com.codegym.backend.enums.StatusOrderDetail;
 import com.codegym.backend.enums.StatusTableOrder;
-import com.codegym.backend.exception.AppException;
 import com.codegym.backend.repository.OrderDetailRepository;
 import com.codegym.backend.repository.TableOrderRepository;
-import com.codegym.backend.repository.TablesRepository;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class PaymentServiceImpl implements PaymentService {
 
-    private final TablesRepository tablesRepository;
-    private final TableOrderRepository tableOrderRepository;
-    private final OrderDetailRepository orderDetailRepository;
+        private final TableOrderRepository tableOrderRepository;
+        private final OrderDetailRepository orderDetailRepository;
 
-    @Override
-    @Transactional
-    public void processCashPayment(Long tableId) {
-        Tables table = tablesRepository.findById(tableId).orElseThrow();
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy hóa đơn đang mở!"));
-
-        order.setPaymentMethod(PaymentMethod.CASH);
-        table.setServiceStatus(ServiceStatus.REQUESTING_BILL);
-    }
-
-    @Override
-    @Transactional
-    public void requestCheckout(Long tableId, PaymentMethod paymentMethod) {
-        Tables table = tablesRepository.findById(tableId).orElseThrow();
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy hóa đơn!"));
-
-        order.setPaymentMethod(paymentMethod);
-        table.setServiceStatus(ServiceStatus.REQUESTING_BILL);
-    }
-
-    @Override
-    @Transactional
-    public void completeCheckout(Long tableId, PaymentMethod paymentMethod) {
-        Tables table = tablesRepository.findById(tableId).orElseThrow();
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Bàn không có hóa đơn nào cần thanh toán!"));
-
-        List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
-
-        BigDecimal totalAmount = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
-        for (OrderDetail detail : details) {
-            if (detail.getStatus() == StatusOrderDetail.PENDING) {
-                detail.setStatus(StatusOrderDetail.ORDERED);
-                BigDecimal itemTotal = detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity()));
-                totalAmount = totalAmount.add(itemTotal);
-            }
+        @Override
+        @Transactional
+        public void processCashPayment(Long tableId) {
+                requestCheckout(tableId, PaymentMethod.CASH);
         }
 
-        order.setTotalAmount(totalAmount);
-        order.setPaymentMethod(paymentMethod);
-        order.setStatus(StatusTableOrder.PAID);
-        order.setCloseAt(LocalDateTime.now());
+        @Override
+        @Transactional
+        public void requestCheckout(Long tableId, PaymentMethod paymentMethod) {
+                TableOrder order = tableOrderRepository
+                                .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                                .orElseThrow(() -> new RuntimeException("Bàn " + tableId + " không có hóa đơn mở!"));
 
-        table.setIsOccupied(false);
-        table.setServiceStatus(ServiceStatus.NORMAL);
-    }
+                order.setPaymentMethod(paymentMethod);
+                tableOrderRepository.save(order);
+        }
 
-    @Override
-    @Transactional(readOnly = true)
-    public TableOrderSummaryDTO getInvoiceSummaryDTO(Long tableId) {
-        Tables table = tablesRepository.findById(tableId).orElseThrow();
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Bàn không có hóa đơn mở!"));
+        @Override
+        @Transactional
+        public void completeCheckout(Long tableId, PaymentMethod paymentMethod) {
+                TableOrder order = tableOrderRepository
+                                .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Bàn " + tableId + " không có hóa đơn mở để hoàn tất thanh toán!"));
 
-        List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
+                order.setStatus(StatusTableOrder.PAID);
+                order.setPaymentMethod(paymentMethod);
+                order.setPaidAt(LocalDateTime.now());
+                order.setCloseAt(LocalDateTime.now());
 
-        // 🟢 FIX 1: Chỉ lọc bỏ món CANCELLED, tính tiền cho cả món
-        // PENDING/ORDERED/CONFIRMED/SERVED
-        BigDecimal calculatedTotal = details.stream()
-                .filter(d -> d.getStatus() != StatusOrderDetail.CANCELLED)
-                .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                tableOrderRepository.save(order);
+        }
 
-        List<TableOrderSummaryDTO.OrderDetailDTO> detailDTOs = details.stream().map(d -> {
-            TableOrderSummaryDTO.OrderDetailDTO dto = new TableOrderSummaryDTO.OrderDetailDTO();
-            dto.setOrderDetailId(d.getOrderDetailId());
-            dto.setQuantity(d.getQuantity());
-            dto.setUnitPrice(d.getUnitPrice() != null ? d.getUnitPrice().longValue() : 0L);
-            dto.setNote(d.getNote());
-            dto.setStatus(d.getStatus().name());
-            if (d.getItem() != null) {
-                dto.setItemId(d.getItem().getItemId());
-                dto.setItemName(d.getItem().getItemName());
-                dto.setImageUrl(d.getItem().getImageUrl());
-            }
-            return dto;
-        }).collect(Collectors.toList());
+        @Override
+        @Transactional(readOnly = true)
+        public TableOrderSummaryDTO getInvoiceSummaryDTO(Long tableId) {
+                TableOrder order = tableOrderRepository
+                                .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                                .orElseThrow(() -> new RuntimeException("Bàn " + tableId + " không có hóa đơn mở!"));
 
-        TableOrderSummaryDTO summary = new TableOrderSummaryDTO();
-        summary.setTableOrderId(order.getTableOrderId());
-        summary.setTableName(table.getTableName());
-        summary.setTotalAmount(calculatedTotal);
-        summary.setOrderStatus(order.getStatus().name());
-        summary.setServiceStatus(table.getServiceStatus().name());
-        summary.setOpenAt(order.getOpenAt());
-        summary.setOrderDetails(detailDTOs);
+                BigDecimal total = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
+                List<OrderDetail> details = orderDetailRepository.findByOrder(order);
 
-        return summary;
-    }
+                return TableOrderSummaryDTO.builder()
+                                .tableOrderId(order.getTableOrderId())
+                                .tableId(tableId)
+                                .tableName(order.getTable() != null ? order.getTable().getTableName()
+                                                : "Bàn " + tableId)
+                                .totalAmount(total)
+                                .orderStatus(order.getStatus() != null ? order.getStatus().name() : null)
+                                .openAt(order.getOpenAt())
+                                .orderDetails(mapToOrderDetailDTOList(details)) // Bổ sung nạp danh sách món
+                                .build();
+        }
 
-    @Override
-    @Transactional(readOnly = true)
-    public TableOrderInvoiceDTO getCurrentInvoice(Long tableId, Long tableOrderId) {
-        Tables table = tablesRepository.findById(tableId).orElseThrow();
-        TableOrder order = tableOrderRepository
-                .findByTableOrderIdAndTableTableIdAndStatus(tableOrderId, tableId, StatusTableOrder.OPEN)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy hóa đơn mở!"));
+        @Override
+        @Transactional(readOnly = true)
+        public TableOrderInvoiceDTO getCurrentInvoice(Long tableId, Long tableOrderId) {
+                TableOrder order;
 
-        List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
+                if (tableOrderId != null) {
+                        order = tableOrderRepository.findById(tableOrderId)
+                                        .orElseThrow(() -> new RuntimeException(
+                                                        "Không tìm thấy hóa đơn mã: " + tableOrderId));
+                } else {
+                        order = tableOrderRepository
+                                        .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                                        .orElseThrow(() -> new RuntimeException(
+                                                        "Bàn " + tableId + " không có hóa đơn mở!"));
+                }
 
-        // 🟢 FIX 2: Tự động tính tổng tiền thực tế thay vì lấy order.getTotalAmount()
-        // đang bằng 0
-        BigDecimal calculatedTotal = details.stream()
-                .filter(d -> d.getStatus() != StatusOrderDetail.CANCELLED)
-                .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                List<OrderDetail> details = orderDetailRepository.findByOrder(order);
+                List<OrderDetailDTO> itemDTOs = mapToOrderDetailDTOList(details);
+                BigDecimal finalTotal = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
 
-        List<TableOrderInvoiceDTO.OrderItemDTO> itemDTOs = details.stream().map(d -> {
-            BigDecimal totalPrice = d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity()));
-            return TableOrderInvoiceDTO.OrderItemDTO.builder()
-                    .orderDetailId(d.getOrderDetailId())
-                    .itemId(d.getItem() != null ? d.getItem().getItemId() : null)
-                    .itemName(d.getItem() != null ? d.getItem().getItemName() : null)
-                    .quantity(d.getQuantity())
-                    .unitPrice(d.getUnitPrice())
-                    .totalPrice(totalPrice)
-                    .note(d.getNote())
-                    .status(d.getStatus().name())
-                    .imageUrl(d.getItem() != null ? d.getItem().getImageUrl() : null)
-                    .build();
-        }).collect(Collectors.toList());
+                return TableOrderInvoiceDTO.builder()
+                                .tableOrderId(order.getTableOrderId())
+                                .tableName(order.getTable() != null ? order.getTable().getTableName() : null)
+                                .totalAmount(finalTotal)
+                                .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name()
+                                                : null)
+                                .status(order.getStatus() != null ? order.getStatus().name() : null)
+                                .createdAt(order.getOpenAt())
+                                .paidAt(order.getPaidAt())
+                                .items(itemDTOs)
+                                .build();
+        }
 
-        return TableOrderInvoiceDTO.builder()
-                .tableOrderId(order.getTableOrderId())
-                .tableId(table.getTableId())
-                .tableName(table.getTableName())
-                .totalAmount(calculatedTotal)
-                .status(order.getStatus().name())
-                .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
-                .openAt(order.getOpenAt())
-                .closeAt(order.getCloseAt())
-                .orderDetails(itemDTOs)
-                .build();
-    }
+        // 🟢 Hàm phụ trợ map từ Entity OrderDetail sang OrderDetailDTO
+        private List<OrderDetailDTO> mapToOrderDetailDTOList(List<OrderDetail> details) {
+                if (details == null || details.isEmpty()) {
+                        return Collections.emptyList();
+                }
+
+                return details.stream()
+                                .map(detail -> {
+                                        BigDecimal priceBD = detail.getUnitPrice() != null ? detail.getUnitPrice()
+                                                        : BigDecimal.ZERO;
+
+                                        return OrderDetailDTO.builder()
+                                                        .orderDetailId(detail.getOrderDetailId())
+                                                        .itemName(detail.getItem() != null
+                                                                        ? detail.getItem().getItemName()
+                                                                        : "Món ăn")
+                                                        .unitPrice(priceBD.longValue())
+                                                        .quantity(detail.getQuantity() != null ? detail.getQuantity()
+                                                                        : 0)
+                                                        .note(detail.getNote())
+                                                        .status(detail.getStatus() != null ? detail.getStatus().name()
+                                                                        : null)
+                                                        .itemId(detail.getItem() != null ? detail.getItem().getItemId()
+                                                                        : null)
+                                                        .build();
+                                })
+                                .collect(Collectors.toList());
+        }
 }
