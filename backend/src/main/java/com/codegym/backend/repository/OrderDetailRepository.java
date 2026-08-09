@@ -40,5 +40,10 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> 
     "JOIN od.order o " +
     "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
     "GROUP BY c.categoryId, c.categoryName")
-List<Object[]> getSalesByCategories();
-}
+        List<Object[]> getSalesByCategories();
+        boolean existsByOrderTableOrderIdAndItemItemIdAndOrderStatus(
+                Long orderId, 
+                Long itemId, 
+                StatusTableOrder status
+        );
+        }

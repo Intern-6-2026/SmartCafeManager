@@ -67,7 +67,7 @@ public class SecurityConfig {
                         .permitAll()
 
                         .requestMatchers("/api/v1/staff/**", "/api/v1/admin/**")
-                        .permitAll()
+                        .authenticated()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

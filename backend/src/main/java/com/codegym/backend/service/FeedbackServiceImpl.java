@@ -5,13 +5,20 @@ import com.codegym.backend.dto.FeedbackResponseDTO;
 import com.codegym.backend.entity.Customer;
 import com.codegym.backend.entity.Feedback;
 import com.codegym.backend.entity.Item;
+import com.codegym.backend.enums.StatusTableOrder;
 import com.codegym.backend.repository.CustomerRepository;
 import com.codegym.backend.repository.FeedbackRepository;
 import com.codegym.backend.repository.ItemRepository;
+import com.codegym.backend.repository.OrderDetailRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,48 +31,76 @@ public class FeedbackServiceImpl implements FeedbackService {
     private final FeedbackRepository feedbackRepository;
     private final CustomerRepository customerRepository;
     private final ItemRepository itemRepository;
+    private final OrderDetailRepository orderDetailRepository;
 
+    // 🟢 1. TẠO FEEDBACK VÀ TRẢ VỀ DTO
     @Override
     @Transactional
     public FeedbackResponseDTO createFeedback(FeedbackRequestDTO dto) {
-        // 1. Kiểm tra ID khách hàng (Bắt lỗi chưa đăng nhập)
-        if (dto.getCustomerId() == null || dto.getCustomerId() <= 0) {
-            throw new RuntimeException("bạn chưa đăng nhập , vui lòng đăng nhập để có thể đánh giá");
-        }
-
-        // 2. Kiểm tra tài khoản khách hàng có tồn tại trong DB không
-        Customer customer = customerRepository.findById(dto.getCustomerId())
-                .orElseThrow(() -> new RuntimeException("bạn chưa đăng nhập , vui lòng đăng nhập để có thể đánh giá"));
-
-        // 3. Kiểm tra món ăn
+        // Kiểm tra itemId
         Item item = itemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn để đánh giá!"));
 
-        // 4. Tạo và lưu Feedback
+        // Kiểm tra đơn hàng đã thanh toán và có món ăn này hay không (nếu có truyền orderId)
+        if (dto.getOrderId() != null) {
+            boolean isOrderValid = orderDetailRepository.existsByOrderTableOrderIdAndItemItemIdAndOrderStatus(
+                    dto.getOrderId(),
+                    dto.getItemId(),
+                    StatusTableOrder.PAID
+            );
+
+            if (!isOrderValid) {
+                throw new RuntimeException("Đơn hàng #" + dto.getOrderId() + " chưa thanh toán hoặc không chứa món ăn này!");
+            }
+        }
+
+        // Kiểm tra đăng nhập để lấy thông tin Customer
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Customer customer = null;
+        String email = dto.getEmail();
+        String senderName = dto.getSenderName();
+
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+            customer = customerRepository.findByAccountUsername(auth.getName()).orElse(null);
+            
+            // Nếu đã đăng nhập mà form chưa có email hoặc tên, tự động lấy từ thông tin Customer
+            if (customer != null) {
+                if (!StringUtils.hasText(email) && customer.getAccount() != null) {
+                    email = customer.getAccount().getEmail();
+                }
+                if (!StringUtils.hasText(senderName)) {
+                    senderName = customer.getFullName();
+                }
+            }
+        }
+
+        if (!StringUtils.hasText(senderName)) {
+            senderName = "Khách hàng";
+        }
+
+        // Lưu Feedback
         Feedback feedback = Feedback.builder()
-        .content(dto.getContent())
-        .rating(dto.getRating())
-        .senderName(dto.getSenderName() != null ? dto.getSenderName() : customer.getFullName())
-        .email(dto.getEmail())
-        .imageUrl(dto.getImageUrl())
-        .customer(customer)
-        .item(item)
-        .build();
+                .content(dto.getContent())
+                .rating(dto.getRating())
+                .senderName(senderName)
+                .email(email)
+                .imageUrl(dto.getImageUrl())
+                .sentAt(LocalDateTime.now())
+                .customer(customer)
+                .item(item)
+                .build();
 
         Feedback savedFeedback = feedbackRepository.save(feedback);
-
-        // 5. Trả về Response DTO
-        return FeedbackResponseDTO.builder()
-                .feedbackId(savedFeedback.getFeedbackId())
-                .content(savedFeedback.getContent())
-                .rating(savedFeedback.getRating())
-                .senderName(savedFeedback.getSenderName())
-                .email(savedFeedback.getEmail())
-                .imageUrl(savedFeedback.getImageUrl())
-                .customerId(customer.getCustomerId())
-                .itemId(item.getItemId())
-                .build();
+        return mapToResponseDTO(savedFeedback);
     }
+
+    // 🟢 2. ALIAS METHOD CHO CONTROLLER / INTERFACE ĐẶT TÊN LÀ saveFeedback
+    @Override
+    @Transactional
+    public void saveFeedback(FeedbackRequestDTO dto) {
+        createFeedback(dto);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<FeedbackResponseDTO> getFeedbacksByItem(Long itemId) {
@@ -94,7 +129,13 @@ public class FeedbackServiceImpl implements FeedbackService {
         feedbackRepository.save(feedback);
     }
 
+    // --- HELPER METHOD ---
     private FeedbackResponseDTO mapToResponseDTO(Feedback feedback) {
+        Date sentAtDate = null;
+        if (feedback.getSentAt() != null) {
+            sentAtDate = Date.from(feedback.getSentAt().atZone(ZoneId.systemDefault()).toInstant());
+        }
+
         return FeedbackResponseDTO.builder()
                 .feedbackId(feedback.getFeedbackId())
                 .content(feedback.getContent())
@@ -102,7 +143,7 @@ public class FeedbackServiceImpl implements FeedbackService {
                 .senderName(feedback.getSenderName())
                 .email(feedback.getEmail())
                 .imageUrl(feedback.getImageUrl())
-                .sentAt(feedback.getSentAt())
+                .sentAt(sentAtDate)
                 .customerId(feedback.getCustomer() != null ? feedback.getCustomer().getCustomerId() : null)
                 .itemId(feedback.getItem() != null ? feedback.getItem().getItemId() : null)
                 .itemName(feedback.getItem() != null ? feedback.getItem().getItemName() : null)

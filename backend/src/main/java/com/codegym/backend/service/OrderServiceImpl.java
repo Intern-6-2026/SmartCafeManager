@@ -43,7 +43,7 @@ public class OrderServiceImpl implements OrderService {
         Tables table = getTableEntity(tableId);
         table.setServiceStatus(status);
 
-        // Cập nhật trạng thái occupies đồng bộ
+        // Cập nhật trạng thái occupied đồng bộ với trạng thái EMPTY
         table.setIsOccupied(status != ServiceStatus.EMPTY);
 
         tablesRepository.save(table);
@@ -163,7 +163,7 @@ public class OrderServiceImpl implements OrderService {
         OrderDetail detail = existingDetails.get(0);
         if (newQuantity != null && newQuantity > 0) detail.setQuantity(newQuantity);
         if (newNote != null) detail.setNote(newNote);
-        
+
         orderDetailRepository.save(detail);
     }
 
@@ -209,7 +209,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         processPendingToOrderedAndRecalculateTotal(order, details);
-        
+
         table.setServiceStatus(ServiceStatus.WAITING_FOOD);
         tablesRepository.save(table);
     }
@@ -254,9 +254,8 @@ public class OrderServiceImpl implements OrderService {
                 })
                 .collect(Collectors.toList());
 
-        Date paidAt = order.getCloseAt() != null 
-                ? Date.from(order.getCloseAt().atZone(ZoneId.systemDefault()).toInstant()) 
-                : null;
+        // 🟢 CẢI TIẾN: Ưu tiên lấy paidAt, nếu null thì fallback sang closeAt
+        LocalDateTime paidDateTime = order.getPaidAt() != null ? order.getPaidAt() : order.getCloseAt();
 
         return InvoiceDetailResponseDTO.builder()
                 .orderId(order.getTableOrderId())
@@ -266,7 +265,7 @@ public class OrderServiceImpl implements OrderService {
                 .totalAmount(order.getTotalAmount() != null ? order.getTotalAmount().doubleValue() : 0.0)
                 .status(order.getStatus())
                 .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
-                .paidAt(paidAt)
+                .paidAt(toDate(paidDateTime))
                 .items(itemDTOs)
                 .build();
     }
@@ -324,5 +323,10 @@ public class OrderServiceImpl implements OrderService {
                 .tableName(detail.getOrder() != null && detail.getOrder().getTable() != null 
                         ? detail.getOrder().getTable().getTableName() : null)
                 .build();
+    }
+
+    private Date toDate(LocalDateTime localDateTime) {
+        if (localDateTime == null) return null;
+        return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 }
