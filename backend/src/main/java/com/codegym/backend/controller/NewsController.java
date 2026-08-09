@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.codegym.backend.dto.NewsFormRequest;
+import com.codegym.backend.dto.NewsRequest;
 import com.codegym.backend.enums.NewsStatus;
 import com.codegym.backend.service.NewsService;
 
@@ -65,12 +65,9 @@ public class NewsController {
      */
     @PostMapping(consumes = "multipart/form-data")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public ResponseEntity<?> createNews(@Valid @ModelAttribute NewsFormRequest request) throws Exception {
-        return ResponseEntity.ok(newsService.createNews(
-                request.getTitle(),
-                request.getSummary(),
-                request.getContent(),
-                request.getImage()));
+    public ResponseEntity<?> createNews(
+            @Valid @ModelAttribute NewsRequest request) throws Exception {
+        return ResponseEntity.ok(newsService.createNews(request));
     }
 
     /**
@@ -80,13 +77,8 @@ public class NewsController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> updateNews(
             @PathVariable Long id,
-            @Valid @ModelAttribute NewsFormRequest request) throws Exception {
-        return ResponseEntity.ok(newsService.updateNews(
-                id,
-                request.getTitle(),
-                request.getSummary(),
-                request.getContent(),
-                request.getImage()));
+            @Valid @ModelAttribute NewsRequest request) throws Exception {
+        return ResponseEntity.ok(newsService.updateNews(id, request));
     }
 
     /**

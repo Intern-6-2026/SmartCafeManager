@@ -6,7 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
 import com.paypal.api.payments.Amount;
 import com.paypal.api.payments.Links;
@@ -19,19 +21,22 @@ import com.paypal.base.rest.APIContext;
 import com.paypal.base.rest.PayPalRESTException;
 
 @Service
+@RequiredArgsConstructor
 public class PayPalService {
 
-    private APIContext apiContext;
+    private final APIContext apiContext;
 
-    private static final BigDecimal EXCHANGE_RATE_VND_TO_USD = new BigDecimal("25000");
+    @Value("${paypal.exchange-rate:25000}")
+    private BigDecimal exchangeRate;
 
-    public String createPayPalOrder(BigDecimal totalAmountVnd, String returnUrl, String cancelUrl)
+    public String createPayPalOrder(BigDecimal totalAmountVnd, String returnUrl, String cancelUrl) 
             throws PayPalRESTException {
-        BigDecimal totalAmountUsd = totalAmountVnd.divide(EXCHANGE_RATE_VND_TO_USD, 2, RoundingMode.HALF_UP);
+        
+        // Quy đổi VND sang USD và làm tròn 2 chữ số thập phân
+        BigDecimal totalAmountUsd = totalAmountVnd.divide(exchangeRate, 2, RoundingMode.HALF_UP);
 
         Amount amount = new Amount();
         amount.setCurrency("USD");
-        // FIX LỖI Ở DÒNG NÀY: Dùng Locale.US để ép định dạng dấu chấm (.)
         amount.setTotal(String.format(Locale.US, "%.2f", totalAmountUsd));
 
         Transaction transaction = new Transaction();
@@ -56,12 +61,15 @@ public class PayPalService {
 
         Payment createdPayment = payment.create(apiContext);
 
-        for (Links link : createdPayment.getLinks()) {
-            if (link.getRel().equalsIgnoreCase("approval_url")) {
-                return link.getHref();
+        if (createdPayment.getLinks() != null) {
+            for (Links link : createdPayment.getLinks()) {
+                if ("approval_url".equalsIgnoreCase(link.getRel())) {
+                    return link.getHref();
+                }
             }
         }
-        return null;
+
+        throw new PayPalRESTException("Không tìm thấy đường dẫn thanh toán (approval_url) từ PayPal.");
     }
 
     public boolean executePayment(String paymentId, String payerId) throws PayPalRESTException {

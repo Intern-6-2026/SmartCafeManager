@@ -4,6 +4,8 @@ import java.util.Date;
 import java.util.Objects;
 import java.util.Set;
 
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Safelist;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.codegym.backend.dto.NewsListResponse;
+import com.codegym.backend.dto.NewsRequest;
 import com.codegym.backend.entity.Account;
 import com.codegym.backend.entity.News;
 import com.codegym.backend.enums.NewsStatus;
@@ -26,52 +29,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class NewsService {
 
-        private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
-        private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
-                        "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif");
-
         private final NewsRepository newsRepository;
         private final CloudinaryService cloudinaryService;
         private final SimpMessagingTemplate messagingTemplate;
         private final AccountRepository accountRepository;
-
-        private String requireText(String value, String fieldLabel, int min, int max) {
-                String trimmed = value == null ? "" : value.trim();
-                if (trimmed.isEmpty()) {
-                        throw new RuntimeException(fieldLabel + " không được để trống");
-                }
-                if (trimmed.length() < min || trimmed.length() > max) {
-                        throw new RuntimeException(fieldLabel + " phải từ " + min + " đến " + max + " ký tự");
-                }
-                return trimmed;
-        }
-
-        private String optionalText(String value, int max) {
-                if (value == null) {
-                        return null;
-                }
-                String trimmed = value.trim();
-                if (trimmed.isEmpty()) {
-                        return null;
-                }
-                if (trimmed.length() > max) {
-                        throw new RuntimeException("Tóm tắt tối đa " + max + " ký tự");
-                }
-                return trimmed;
-        }
-
-        private void validateImage(MultipartFile image) {
-                if (image == null || image.isEmpty()) {
-                        return;
-                }
-                if (image.getSize() > MAX_IMAGE_BYTES) {
-                        throw new RuntimeException("Ảnh tối đa 5MB");
-                }
-                String contentType = image.getContentType();
-                if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
-                        throw new RuntimeException("Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF");
-                }
-        }
 
         // ==========================================
         // 1. NHÓM TÁC VỤ PUBLIC (KHÁCH HÀNG / VÃNG LAI)
@@ -103,28 +64,31 @@ public class NewsService {
         // ==========================================
 
         @Transactional(rollbackFor = Exception.class)
-        public News createNews(String title, String summary, String content, MultipartFile image) throws Exception {
-                String safeTitle = requireText(title, "Tiêu đề", 5, 255);
-                String safeSummary = optionalText(summary, 500);
-                String safeContent = requireText(content, "Nội dung", 20, 10000);
-                validateImage(image);
+        public News createNews(NewsRequest request) throws Exception {
+                String title = normalizeText(request.getTitle());
+                String summary = normalizeOptionalText(request.getSummary());
+                String content = normalizeText(request.getContent());
+                MultipartFile image = request.getImage();
 
                 String imageUrl = null;
                 if (image != null && !image.isEmpty()) {
+                        validateImage(image);
                         imageUrl = cloudinaryService.uploadImage(image);
                 }
+
+                summary = sanitizeHtml(summary);
+                content = sanitizeHtml(content);
 
                 String username = SecurityContextHolder.getContext().getAuthentication().getName();
                 Account curentAccount = accountRepository.findByUsernameAndDeletedAtIsNull(username)
                                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản người đăng"));
-
                 boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                                 .stream().anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
 
                 News news = News.builder()
-                                .title(safeTitle)
-                                .summary(safeSummary)
-                                .content(safeContent)
+                                .title(title)
+                                .summary(summary)
+                                .content(content)
                                 .imageUrl(imageUrl)
                                 .author(curentAccount)
                                 .status(isAdmin ? NewsStatus.PUBLISHED : NewsStatus.PENDING)
@@ -140,12 +104,11 @@ public class NewsService {
         }
 
         @Transactional(rollbackFor = Exception.class)
-        public News updateNews(Long id, String title, String summary, String content, MultipartFile image)
-                        throws Exception {
-                String safeTitle = requireText(title, "Tiêu đề", 5, 255);
-                String safeSummary = optionalText(summary, 500);
-                String safeContent = requireText(content, "Nội dung", 20, 10000);
-                validateImage(image);
+        public News updateNews(Long id, NewsRequest request) throws Exception {
+                String title = normalizeText(request.getTitle());
+                String summary = normalizeOptionalText(request.getSummary());
+                String content = normalizeText(request.getContent());
+                MultipartFile image = request.getImage();
 
                 String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
@@ -161,11 +124,15 @@ public class NewsService {
                         throw new RuntimeException("Lỗi phân quyền: Bạn không có quyền sửa bài viết này");
                 }
 
-                news.setTitle(safeTitle);
-                news.setSummary(safeSummary);
-                news.setContent(safeContent);
+                summary = sanitizeHtml(summary);
+                content = sanitizeHtml(content);
+
+                news.setTitle(title);
+                news.setSummary(summary);
+                news.setContent(content);
 
                 if (image != null && !image.isEmpty()) {
+                        validateImage(image);
                         news.setImageUrl(cloudinaryService.uploadImage(image));
                 }
 
@@ -230,5 +197,50 @@ public class NewsService {
                 }
 
                 return updatedNews;
+        }
+
+        private String normalizeText(String value) {
+                if (value == null) {
+                        return null;
+                }
+                return value.trim();
+        }
+
+        private String normalizeOptionalText(String value) {
+                if (value == null) {
+                        return null;
+                }
+                return value.trim();
+        }
+
+        private String sanitizeHtml(String html) {
+                if (html == null) {
+                        return null;
+                }
+                return Jsoup.clean(html, Safelist.relaxed());
+        }
+
+        private void validateImage(MultipartFile image) {
+                String contentType = image.getContentType();
+                if (contentType == null || !contentType.startsWith("image/")) {
+                        throw new RuntimeException("File ảnh không hợp lệ, vui lòng tải lên file hình ảnh");
+                }
+
+                String originalFilename = image.getOriginalFilename();
+                if (originalFilename == null || !originalFilename.contains(".")) {
+                        throw new RuntimeException("Tên file ảnh không hợp lệ");
+                }
+
+                String ext = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
+                Set<String> allowedExt = Set.of("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "tiff", "tif",
+                                "heic");
+                if (!allowedExt.contains(ext)) {
+                        throw new RuntimeException("Định dạng file không được hỗ trợ");
+                }
+
+                long maxSizeBytes = 5L * 1024 * 1024;
+                if (image.getSize() > maxSizeBytes) {
+                        throw new RuntimeException("Dung lượng ảnh không được vượt quá 5MB");
+                }
         }
 }
