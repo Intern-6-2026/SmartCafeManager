@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import Peer from "peerjs";
 import "../../styles/sale-manager.css";
 import { Link } from "react-router-dom";
 import Logo from "../../components/Logo";
@@ -7,6 +8,8 @@ import {
   getTablesInvoice,
   approvePayment,
   getApiErrorMessage,
+  getActiveOrder,
+  staffConfirmOrder,
 } from "../../services/apiService";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + "đ";
@@ -18,19 +21,13 @@ const REFRESH_MS = 15000;
    Mới xác nhận được "EMPTY" từ tài liệu API, các giá trị còn lại là suy đoán
    -> nếu màu thẻ bàn sai thì sửa bảng này. */
 const STATUS_MAP = {
+  NORMAL: "empty",
   EMPTY: "empty",
-  NEW_ORDER: "neworder",
-  ORDERING: "neworder",
-  PENDING: "neworder",
-  OCCUPIED: "serve",
+  WAITING_FOOD: "neworder",
   SERVING: "serve",
-  IN_SERVICE: "serve",
-  CALLING_WAITER: "call",
-  CALLING: "call",
-  REQUESTING_PAYMENT: "bill",
+  CALL_STAFF: "call",
   WAITING_PAYMENT: "bill",
-  REQUEST_CHECKOUT: "bill",
-  CHECKOUT: "bill",
+  REQUESTING_BILL: "bill",
 };
 
 const STATUS_LABEL = {
@@ -59,10 +56,10 @@ const normalizeTable = (t) => ({
    status: PENDING -> CONFIRMED -> SERVED | CANCELLED */
 const normalizeDetail = (d) => ({
   id: d.orderDetailId,
-  name: d.item?.itemName ?? "—",
+  name: d.itemName ?? "—",
   qty: d.quantity ?? 0,
-  price: d.unitPrice ?? d.item?.price ?? 0,
-  total: (d.unitPrice ?? d.item?.price ?? 0) * (d.quantity ?? 0),
+  price: d.price ?? d.unitPrice ?? d.item?.price ?? 0,
+  total: (d.price ?? d.unitPrice ?? d.item?.price ?? 0) * (d.quantity ?? 0),
   note: d.note ?? "",
   status: d.status,
 });
@@ -77,6 +74,7 @@ function SaleManager() {
   const [doneOpen, setDoneOpen] = useState(false); // modal đã thu tiền
   const [cash, setCash] = useState(""); // tiền khách đưa
   const [lastChange, setLastChange] = useState(0); // tiền thối vừa trả
+  const [showNhanDon, setShowNhanDon] = useState(false); // hiển thị nút nhận đơn
   const [message, setMessage] = useState(""); // thông báo kết quả API
   const [loading, setLoading] = useState(false);
 
@@ -135,6 +133,11 @@ function SaleManager() {
       /* Bỏ món đã huỷ và đã xoá mềm khỏi hóa đơn */
       const visible = raw.filter((d) => !d.deleted && d.status !== "CANCELLED");
       setDetails(visible.map(normalizeDetail));
+      if (visible.filter((d) => d.status === "ORDERED").length > 0) {
+        setShowNhanDon(true);
+      } else {
+        setShowNhanDon(false);
+      }
 
       const order = raw[0]?.order;
       if (order?.openAt) {
@@ -181,8 +184,23 @@ function SaleManager() {
      confirmOrder() trong apiService.js nằm dưới /customer, là hành động của khách
      khi chốt giỏ hàng, không phải nhân viên nhận đơn.
      Cần backend bổ sung, ví dụ: POST /staff/tables/{tableId}/serve-order */
-  const handleNhanDon = () => {
-    notify("Chưa có API cho thao tác Nhận đơn. Cần backend bổ sung endpoint.");
+  const handleNhanDon = async () => {
+    setLoading(true);
+    try {
+      const res = await getActiveOrder(selectedTable.id);
+      const order = res.data; // axios bọc dữ liệu trong .data
+      if (!order?.tableOrderId) {
+        notify("Không tìm thấy đơn đang mở của bàn này.");
+        return;
+      }
+      const confirmRes = await staffConfirmOrder(order.tableOrderId);
+      notify("Đã xác nhận món.");
+      await loadDetails(selectedTable.id); // tải lại để cập nhật trạng thái món
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Xác nhận món thất bại."));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openPayModal = () => {
@@ -195,6 +213,11 @@ function SaleManager() {
     if (!canFinish || !selectedTable) return;
     setLoading(true);
     try {
+      // const order = await getActiveOrder(selectedTable.id);
+      // if (!order?.tableOrderId) {
+      //   notify("Không tìm thấy đơn đang mở của bàn này.");
+      //   return;
+      // }
       const res = await approvePayment(selectedTable.id);
       notify(res.data || "Đã xác nhận thanh toán.");
       setLastChange(change);
@@ -224,10 +247,49 @@ function SaleManager() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   });
+  /* ===== WebRTC PeerJS để nhận thông báo từ client-menu ===== */
+  const peerRef = useRef(null);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    const peer = new Peer("staff");
+
+    peerRef.current = peer;
+
+    peer.on("open", (id) => {
+      console.log("Staff Peer ID:", id);
+    });
+
+    peer.on("connection", (conn) => {
+      console.log("Client connected:", conn.peer);
+
+      conn.on("data", (data) => {
+        console.log("Received:", data);
+
+        const notification = {
+          id: Date.now(),
+          tableId: data.tableId,
+          message: data.message,
+        };
+
+        setNotifications((prev) => [
+          ...prev,
+          notification,
+        ]);
+
+        // Browser notification nếu muốn
+        alert(data.message);
+      });
+    });
+
+    return () => {
+      peer.destroy();
+    };
+  }, []);
 
   const showAccept = selectedTable?.status === "neworder";
   const showPay = selectedTable?.status === "bill";
-
+  
   return (
     <div className="sale-manager">
       <header>
@@ -240,7 +302,11 @@ function SaleManager() {
             <h1 className="brand-name-not-bold">CAFÉ</h1>
           </div>
           <div className="header-title">MÀN HÌNH BÁN HÀNG</div>
-          
+          {notifications.map((notification) => (
+            <div key={notification.id}>
+              🔔 {notification.message}
+            </div>
+          ))}
         </div>
       </header>
 
@@ -252,7 +318,13 @@ function SaleManager() {
           {/* ----------------------------- Lưới bàn ----------------------------- */}
           <div className="floor">
             <div className="section-head">
-              <h3 className="section-title">Danh sách bàn</h3>
+              <div className="section-title-row">
+                <h3 className="section-title">Danh sách bàn</h3>
+                <button className="btn-reload" onClick={loadTables} disabled={loading}>
+                  Tải lại
+                </button>
+              </div>
+              
               <div className="legend">
                 {["empty", "neworder", "serve", "call", "bill"].map((s) => (
                   <span className="legend-item" key={s}>
@@ -319,22 +391,24 @@ function SaleManager() {
                     <div className="order-list">
                       {details.map((d) => (
                         <div
-                          className={`order-row ${
-                            selectedTable.status === "neworder" && d.status !== "CONFIRMED"
-                              ? "dimmed"
-                              : ""
-                          }`}
+                          className={`order-row`}
                           key={d.id}
                         >
                           <div className="order-info">
                             <div className="order-top">
                               <span className="order-name">
                                 {d.name}
-                                {d.status === "CONFIRMED" && (
+                                {d.status === "ORDERED" && (
                                   <span className="tag tag-new">Mới</span>
                                 )}
+                                {d.status === "CONFIRMED" && (
+                                  <span className="tag tag-confirmed">Đã gửi bếp</span>
+                                )}
+                                {d.status === "SERVED" && (
+                                  <span className="tag tag-served">Đã phục vụ</span>
+                                )}
                                 {d.status === "PENDING" && (
-                                  <span className="tag tag-pending">Chưa gửi bếp</span>
+                                  <span className="tag tag-pending">Chưa gọi</span>
                                 )}
                               </span>
                               <span className="order-price">{fmt(d.total)}</span>
@@ -357,12 +431,11 @@ function SaleManager() {
                 </div>
 
                 <div className="order-actions">
-                  {showAccept && (
+                  {showNhanDon && (
                     <>
-                      <button className="btn-nhandon" onClick={handleNhanDon} disabled>
+                      <button className="btn-nhandon" onClick={handleNhanDon}>
                         Nhận đơn
                       </button>
-                      <div className="action-hint">Chưa có API cho thao tác này.</div>
                     </>
                   )}
 

@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import Peer from "peerjs";
 import "../../styles/client-menu.css";
 import AddDrinkModal from "../../components/add-drink";
 import FeedbackModal from "../../components/feedback";
@@ -12,7 +13,6 @@ import {
   addItemToCart,
   getCart,
   confirmOrder,
-  requestCheckout,
   getPaymentQRCode,
   getInvoice,
   callService,
@@ -20,6 +20,7 @@ import {
   updateItemQuantity,
   removeItem,
   payWithCash,
+  sentFeedback,
 } from "../../services/apiService";
 
 /* Menu dự phòng khi không kết nối được server (giữ đúng shape đã chuẩn hoá) */
@@ -106,6 +107,9 @@ function ClientMenu() {
   const [paypalLoading, setPaypalLoading] = useState(false);
   const [message, setMessage] = useState(""); // thông báo kết quả API
   const [loading, setLoading] = useState(false);
+  /* PeerJS: kết nối với staff */
+  const peerRef = useRef(null);
+  const connectionRef = useRef(null);
 
   const notify = (msg) => {
     setMessage(String(msg));
@@ -220,6 +224,14 @@ function ClientMenu() {
     try {
       const res = await confirmOrder(tableId);
       notify(res.data);
+      await callService(tableId, "WAITING_FOOD"); //set status bàn thành "Đang chờ món"
+      if (connectionRef.current?.open) {
+        connectionRef.current.send({
+          type: "WAITING_FOOD",
+          tableId: tableId,
+          message: `Bàn ${tableId} vừa gọi món`,
+        });
+      }
       await loadCart(); // giỏ tạm sẽ trống sau khi chốt
     } catch (err) {
       notify(getApiErrorMessage(err, "Gọi món thất bại."));
@@ -250,6 +262,14 @@ function ClientMenu() {
       try {
         const res = await payWithCash(tableId);
         notify(res.data);
+        await callService(tableId, "REQUESTING_BILL"); // tự động gọi nhân viên sau khi bấm Thanh toán
+        if (connectionRef.current?.open) {
+          connectionRef.current.send({
+            type: "REQUESTING_BILL",
+            tableId: tableId,
+            message: `Bàn ${tableId} yêu cầu thanh toán tiền mặt`,
+          });
+        }
         await loadCart();
       } catch (err) {
         notify(getApiErrorMessage(err, "Thanh toán tiền mặt thất bại."));
@@ -278,8 +298,16 @@ function ClientMenu() {
   const handleGoiNhanVien = async () => {
     setLoading(true);
     try {
-      const res = await callService(tableId, "CALLING_WAITER");
+      const res = await callService(tableId, "CALL_STAFF");
       notify(res.data);
+      if (connectionRef.current?.open) {
+        connectionRef.current.send({
+          type: "CALL_STAFF",
+          tableId: tableId,
+          message: `Bàn ${tableId} vừa gọi nhân viên`,
+        });
+      }
+
     } catch (err) {
       notify(getApiErrorMessage(err, "Gọi nhân viên thất bại."));
     } finally {
@@ -320,15 +348,58 @@ function ClientMenu() {
   };
 
   /* Bấm "Gửi" trong modal Phản hồi (chưa có API phản hồi trong tài liệu) */
-  const submitFeedback = (data) => {
-    console.log("Phản hồi:", data);
-    notify("Cảm ơn bạn đã gửi phản hồi!");
-    setFeedbackOpen(false);
+  const submitFeedback = async (data) => {
+    try {
+      const res = await sentFeedback(
+        data.noidung,
+        data.rating,
+        tableOrderId,
+        data.hoten,
+        data.email,
+        data.image,
+        data.itemId
+      );
+      setLoading(true);
+      notify(res.data);
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Gửi phản hồi thất bại."));
+    } finally {
+      setLoading(false);
+      setFeedbackOpen(false);
+    }
   };
 
+  /* Chọn danh mục món (nút nằm ngang) */
   const pickCategory = (c) => {
     setCategory(c);
   };
+
+  /* ===== PeerJS: kết nối với staff ===== */
+  useEffect(() => {
+    const peer = new Peer();
+
+    peerRef.current = peer;
+
+    peer.on("open", (id) => {
+      console.log("Client Peer ID:", id);
+
+      const conn = peer.connect("staff");
+
+      connectionRef.current = conn;
+
+      conn.on("open", () => {
+        console.log("Connected to staff");
+      });
+
+      conn.on("error", (err) => {
+        console.error("Peer connection error:", err);
+      });
+    });
+
+    return () => {
+      peer.destroy();
+    };
+  }, []);
 
   return (
     <div className="client-menu">
@@ -476,51 +547,6 @@ function ClientMenu() {
                   </div>
                 ))}
               </div>
-
-            <div className="order-list">
-              {cartRows.length === 0 && (
-                <div className="order-empty">
-                  Chưa có món nào mới.
-                </div>
-              )}
-              {cartRows.map((r) => (
-                <div className="order-row" key={r.orderDetailId}>
-                  <button
-                    className="remove-btn"
-                    aria-label={`Xoá ${r.name}`}
-                    onClick={() => handleRemoveItem(r.itemId)}
-                  >
-                    <img src="/images/Icon Remove.png" alt="" className="remove-icon" />
-                  </button>
-                  <div className="order-info">
-                    <div className="order-top">
-                      <span className="order-name">{r.name}</span>
-                      <span className="order-price">{fmt(r.price)}</span>
-                    </div>
-                    {/*{r.note && <div className="order-item-note">Ghi chú: {r.note}</div>}*/}
-                    <div className="order-bottom">
-                      <div className="order-qty">
-                        <button
-                          className="qty-btn"
-                          aria-label={`Giảm số lượng ${r.name}`}
-                          onClick={() => handleChangeQty(r.itemId, r.qty, r.note, -1)}
-                        >
-                          −
-                        </button>
-                        <span className="qty-value">{r.qty}</span>
-                        <button
-                          className="qty-btn"
-                          aria-label={`Tăng số lượng ${r.name}`}
-                          onClick={() => handleChangeQty(r.itemId, r.qty, r.note, 1)}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
             </div>
 
             <div className="order-total">
@@ -598,6 +624,7 @@ function ClientMenu() {
         open={feedbackOpen}
         onSubmit={submitFeedback}
         onClose={() => setFeedbackOpen(false)}
+        orderedItems={history}
       />
       <CheckoutModal
         open={checkoutOpen}

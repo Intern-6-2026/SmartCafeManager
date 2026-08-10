@@ -12,9 +12,13 @@ function PaymentSuccess() {
   const paymentId = params.get("paymentId");
   const payerId = params.get("PayerID");//sửa lại payer id sau
   
-
   // Có PayerID nghĩa là khách đã duyệt thanh toán trên PayPal
   const approved = Boolean(tableId);
+  
+  useEffect(() => {
+    callService(tableId, "NORMAL"); // tự động gọi nhân viên sau khi bấm Thanh toán
+    return;
+  }, []);
 
   return (
     <div className="payment-success">
