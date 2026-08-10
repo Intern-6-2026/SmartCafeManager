@@ -118,9 +118,9 @@ const CUSTOMER_URL = `${API_BASE_URL}/customer`;
  
 // API 1: Thêm món vào giỏ tạm thời (note là tuỳ chọn)
 export const addItemToCart = async (tableId, itemId, quantity, note) => {
-  const params = { tableId, itemId, quantity };
+  const params = { tableId, itemId, quantity, note };
   if (note) params.note = note;
-  return await axios.post(`${CUSTOMER_URL}/cart/add`, null, { params });
+  return await axios.post(`${CUSTOMER_URL}/cart/add`, params, { headers: { "Content-Type": "application/json", }, });
 };
  
 // API 2: Xem tất cả món trong giỏ hàng tạm thời (PENDING)
@@ -144,18 +144,10 @@ export const getOrderHistory = async (tableId) => {
 export const getInvoice = async (tableId, tableOrderId) => {
   return await axios.get(`${CUSTOMER_URL}/invoice-summary/${tableId}`);
 };
- 
-// API 6: Yêu cầu thanh toán
-// paymentMethod: "CASH" | "BANK_TRANSFER" | "MOMO" | "VNPAY" (bắt buộc VIẾT HOA)
-export const requestCheckout = async (tableId, paymentMethod) => {
-  return await axios.post(`${CUSTOMER_URL}/request-checkout`, null, {
-    params: { tableId, paymentMethod },
-  });
-};
- 
+  
 // API 7: Các yêu cầu dịch vụ khác (gọi nhân viên...)
-// status: vd "CALLING_WAITER"
-export const callService = async (tableId, status = "CALLING_WAITER") => {
+// status: vd "CALL_STAFF" 
+export const callService = async (tableId, status = "CALL_STAFF") => {
   return await axios.post(`${CUSTOMER_URL}/call-service`, null, {
     params: { tableId, status },
   });
@@ -188,6 +180,57 @@ export const payWithCash = async (tableId) => {
     params: { tableId },
   });
 };
+
+// API 11: thanh toán tiền mặt 
+export const sentFeedback = async (content, rating, orderId, senderName, email, imageUrl, itemId) => {
+  return await axios.post(`${CUSTOMER_URL}/feedbacks`, {
+    content,
+    rating,
+    orderId,
+    senderName,
+    email,
+    imageUrl,
+    itemId
+  }, 
+  { headers: { "Content-Type": "application/json", }, });
+};
+// API cho nhân viên
+
+// API 12: lấy thông tin tất cả các bàn 
+export const getAllTableInfo = async () => {
+  return await axios.get(`${API_BASE_URL}/staff/tables`);
+};
+
+// API 13: xác nhận thanh toán
+export const approvePayment = async (tableId) => {
+  return await axios.post(`${API_BASE_URL}/staff/tables/${tableId}/approve-payment`);
+};
+
+// API 14: lấy thông tin chi tiết hóa đơn của bàn
+export const getTablesInvoice = async (tableId) => {
+  return await axios.get(`${API_BASE_URL}/staff/tables/${tableId}/order-details`);
+};
+
+// API 15: lấy thông tin chi tiết các đơn còn active
+export const getActiveOrder = async (tableId) => {
+  return await axios.get(`${API_BASE_URL}/staff/tables/${tableId}/active-order`);
+};
+
+// API 16: lấy toan bộ feedbacks của khách hàng
+export const getAllFeedbacks = async () => {
+  return await axios.get(`${API_BASE_URL}/staff/feedbacks`);
+};
+
+// API 17: lấy feedbacks của một món cụ thể
+export const getItemFeedbacks = async (itemId) => {
+  return await axios.get(`${API_BASE_URL}/feedbacks/item/${itemId}`);
+};
+
+// API 18: xác nhận đơn hàng của khách (chuyển trạng thái từ PENDING -> CONFIRMED)
+export const staffConfirmOrder = async (tableOrderId) => {
+  return await axios.put(`${API_BASE_URL}/staff/orders/${tableOrderId}/confirm`);
+};
+
 /* Helper: rút thông báo lỗi từ axios error để hiển thị lên UI */
 const ERROR_MESSAGE_MAP = {
   "Old password is incorrect!": "Mật khẩu hiện tại không đúng.",

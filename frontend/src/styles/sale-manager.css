@@ -1,0 +1,806 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap');
+
+/* ==========================================================================
+   Trang Màn hình bán hàng (nhân viên)
+   ========================================================================== */
+
+.sale-manager {
+  --bg: #F6EEE1;
+  --tan-light: #E7C9A1;
+  --tan: #D5A874;
+  --tan-deep: #9C6B3A;
+  --ink: #33261A;
+  --ink-soft: #6E5C4A;
+  --card: #FFFDF9;
+  --line: #E4D2B8;
+  --footer-bg: #39291F;
+  --footer-soft: #C9B29B;
+
+  --s-empty-bg: #fffdf9;
+  --s-empty-bd: #d3d1c7;
+  --s-empty-fg: #6e5c4a;
+  --s-serve-bg: #e1f5ee;
+  --s-serve-bd: #1d9e75;
+  --s-serve-fg: #0f6e56;
+  --s-call-bg: #f5b4b4;
+  --s-call-bd: #f32c2c;
+  --s-call-fg: #a51717;
+  --s-new-bg: #fbf0c9;
+  --s-new-bd: #e0b33a;
+  --s-new-fg: #8a6410;
+  --s-bill-bg: #fbeaf0;
+  --s-bill-bd: #d4537e;
+  --s-bill-fg: #993556;
+
+  --radius: 12px;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Be Vietnam Pro', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sale-manager * {
+  box-sizing: border-box;
+}
+
+/* ------------------------------- Header ---------------------------------- */
+
+.sale-manager header {
+  background: var(--tan);
+  padding: 16px 18px 18px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.sale-manager .header-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sale-manager .brand {
+  display: flex;
+  align-items: center;
+}
+
+.sale-manager .brand-logo {
+  height: 40px;
+  width: 40px;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.sale-manager .brand-name-bold,
+.sale-manager .brand-name-not-bold {
+  font-family: 'Fraunces', serif;
+  line-height: 1;
+  margin: 0;
+  letter-spacing: .3px;
+  color: var(--ink);
+  display: inline-block;
+}
+
+.sale-manager .brand-name-bold {
+  font-size: 24px;
+  font-weight: bolder;
+}
+
+.sale-manager .brand-name-not-bold {
+  font-size: 19px;
+  font-weight: lighter;
+}
+
+.sale-manager .header-title {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: #4A3627;
+}
+
+.sale-manager .btn-reload {
+  padding: 7px 14px;
+  border: 1px solid rgba(51, 38, 26, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.5);
+  color: #4a3627;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sale-manager .btn-reload:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.sale-manager .btn-reload:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --------------------------- Thông báo API -------------------------------- */
+
+.sale-manager .api-message {
+  margin: 12px 22px 0;
+  padding: 11px 16px;
+  border-radius: 10px;
+  background: #fbeaea;
+  border: 1px solid #d07a7a;
+  color: #8b2c2c;
+  font-size: 13px;
+}
+
+/* -------------------------------- Layout ---------------------------------- */
+
+.sale-manager main {
+  flex: 1;
+  min-width: 0; /* chặn tràn ngang do .order-detail có min-width */
+  padding: 20px 22px;
+}
+
+.sale-manager .main-content {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.sale-manager .floor {
+  flex: 1.6;
+  min-width: 0;
+}
+
+.sale-manager .order-detail {
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+  position: sticky;
+  top: 20px;
+  padding: 18px 20px 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+/* ------------------------------ Lưới bàn ---------------------------------- */
+
+.sale-manager .section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.sale-manager .section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.sale-manager .section-title {
+  margin: 0;
+  font-family: "Fraunces", serif;
+  font-size: 25px;
+  font-weight: 600;
+}
+
+.sale-manager .legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.sale-manager .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.sale-manager .dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  border: 1px solid;
+}
+
+.sale-manager .dot-empty {
+  background: var(--s-empty-bg);
+  border-color: var(--s-empty-bd);
+}
+
+.sale-manager .dot-neworder {
+  background: var(--s-new-bg);
+  border-color: var(--s-new-bd);
+}
+
+.sale-manager .dot-serve {
+  background: var(--s-serve-bg);
+  border-color: var(--s-serve-bd);
+}
+
+.sale-manager .dot-call {
+  background: var(--s-call-bg);
+  border-color: var(--s-call-bd);
+}
+
+.sale-manager .dot-bill {
+  background: var(--s-bill-bg);
+  border-color: var(--s-bill-bd);
+}
+
+.sale-manager .floor-empty {
+  padding: 50px 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}
+
+.sale-manager .grid-table {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.sale-manager .table-card {
+  padding: 14px 14px 12px;
+  border: 1.5px solid;
+  border-radius: var(--radius);
+  background: var(--card);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.sale-manager .table-card:hover {
+  transform: translateY(-2px);
+}
+
+.sale-manager .table-card.selected {
+  outline: 2.5px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.sale-manager .table-num {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.sale-manager .table-status {
+  margin-top: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.sale-manager .table-meta {
+  margin-top: 8px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.sale-manager .tc-empty {
+  background: var(--s-empty-bg);
+  border-color: var(--s-empty-bd);
+  color: var(--s-empty-fg);
+}
+
+.sale-manager .tc-neworder {
+  background: var(--s-new-bg);
+  border-color: var(--s-new-bd);
+  color: var(--s-new-fg);
+}
+
+.sale-manager .tc-serve {
+  background: var(--s-serve-bg);
+  border-color: var(--s-serve-bd);
+  color: var(--s-serve-fg);
+}
+
+.sale-manager .tc-call {
+  background: var(--s-call-bg);
+  border-color: var(--s-call-bd);
+  color: var(--s-call-fg);
+}
+
+.sale-manager .tc-bill {
+  background: var(--s-bill-bg);
+  border-color: var(--s-bill-bd);
+  color: var(--s-bill-fg);
+}
+
+/* ------------------------------- Hóa đơn ---------------------------------- */
+
+.sale-manager .order-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sale-manager .order-title {
+  margin: 0;
+  font-family: "Fraunces", serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.sale-manager .order-badge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sale-manager .badge-empty {
+  background: #f1efe8;
+  color: var(--s-empty-fg);
+}
+
+.sale-manager .badge-neworder {
+  background: var(--s-new-bg);
+  color: var(--s-new-fg);
+}
+
+.sale-manager .badge-serve {
+  background: var(--s-serve-bg);
+  color: var(--s-serve-fg);
+}
+
+.sale-manager .badge-call {
+  background: var(--s-call-bg);
+  color: var(--s-call-fg);
+}
+
+.sale-manager .badge-bill {
+  background: var(--s-bill-bg);
+  color: var(--s-bill-fg);
+}
+
+.sale-manager .order-meta {
+  min-height: 16px;
+  margin: 4px 0 14px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.sale-manager .order-header {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sale-manager .order-header-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--ink-soft);
+}
+
+.sale-manager .order-scroll {
+  max-height: 42vh;
+  overflow-y: auto;
+}
+
+.sale-manager .order-empty {
+  padding: 40px 10px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}
+
+.sale-manager .order-row {
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.sale-manager .order-row.dimmed {
+  opacity: 0.4;
+}
+
+.sale-manager .order-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sale-manager .order-name {
+  font-size: 13.5px;
+}
+
+.sale-manager .order-price {
+  min-width: 78px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tan-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+.sale-manager .order-item-note {
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.sale-manager .order-bottom {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.sale-manager .order-qty,
+.sale-manager .order-unit {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.sale-manager .tag {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+
+.sale-manager .tag-new {
+  background: var(--s-new-bg);
+  border: 1px solid var(--s-new-bd);
+  color: var(--s-new-fg);
+}
+
+.sale-manager .tag-pending {
+  background: #f1efe8;
+  border: 1px solid #d3d1c7;
+  color: var(--ink-soft);
+}
+
+.sale-manager .tag-confirmed {
+  background: #d6cbfd;
+  border: 1px solid #7b99ed;
+  color: var(--ink-soft);
+}
+
+.sale-manager .tag-served {
+  background: var(--s-serve-bg);
+  border: 1px solid var(--s-serve-bd);
+  color: var(--s-serve-fg);
+}
+/* ------------------------------ Tổng tiền --------------------------------- */
+
+.sale-manager .order-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 2px solid var(--ink);
+}
+
+.sale-manager .total-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.sale-manager .total-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------ Hành động --------------------------------- */
+
+.sale-manager .order-actions {
+  margin-top: 16px;
+}
+
+.sale-manager .action-hint {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.sale-manager .btn-nhandon,
+.sale-manager .btn-thanhtoan,
+.sale-manager .btn-primary,
+.sale-manager .btn-ghost {
+  width: 100%;
+  padding: 12px;
+  border: 1.5px solid var(--tan-deep);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sale-manager .btn-nhandon,
+.sale-manager .btn-thanhtoan,
+.sale-manager .btn-primary {
+  background: var(--tan-deep);
+  color: #fff;
+}
+
+.sale-manager .btn-ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.sale-manager .btn-nhandon:hover:not(:disabled),
+.sale-manager .btn-thanhtoan:hover:not(:disabled),
+.sale-manager .btn-primary:hover:not(:disabled),
+.sale-manager .btn-ghost:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+.sale-manager .btn-nhandon:disabled,
+.sale-manager .btn-thanhtoan:disabled,
+.sale-manager .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* -------------------------------- Modal ----------------------------------- */
+
+.sale-manager .modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(51, 38, 26, 0.5);
+}
+
+.sale-manager .modal-box {
+  width: 100%;
+  max-width: 360px;
+  padding: 20px 22px 22px;
+  background: var(--card);
+  border: 1px solid var(--tan-deep);
+  border-radius: 16px;
+}
+
+.sale-manager .modal-title {
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  font-family: "Fraunces", serif;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.sale-manager .modal-title.done-title {
+  padding: 0;
+  margin-bottom: 10px;
+  border: none;
+  text-align: center;
+}
+
+.sale-manager .pay-table {
+  font-size: 14px;
+}
+
+.sale-manager .pay-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+}
+
+.sale-manager .pay-row + .pay-row {
+  border-top: 1px dashed var(--line);
+}
+
+.sale-manager .pay-label {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.sale-manager .pay-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sale-manager .pay-change {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 2px solid var(--ink);
+}
+
+.sale-manager .pay-change .pay-label {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.sale-manager .pay-change .pay-value {
+  font-size: 22px;
+  color: var(--tan-deep);
+}
+
+.sale-manager .pay-input {
+  width: 150px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--tan-deep);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: right;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.sale-manager .pay-input:focus {
+  border-color: var(--ink);
+}
+
+.sale-manager .pay-quick {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 12px 0 4px;
+}
+
+.sale-manager .quick-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sale-manager .quick-btn:hover {
+  border-color: var(--tan-deep);
+  background: var(--tan-light);
+}
+
+.sale-manager .pay-warn {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid #d07a7a;
+  border-radius: 8px;
+  background: #fbeaea;
+  color: #8b2c2c;
+  font-size: 12.5px;
+}
+
+.sale-manager .modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.sale-manager .modal-actions > button {
+  flex: 1;
+}
+
+/* ---------------------------- Modal đã thu tiền ---------------------------- */
+
+.sale-manager .done-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: #3f9e5a;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.sale-manager .done-text {
+  margin: 0 0 4px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.sale-manager .done-muted {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.sale-manager .done-change {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--tan-deep);
+}
+
+/* ------------------------------- Footer ----------------------------------- */
+
+.sale-manager footer {
+  /* margin PHẢI bằng 0: có margin thì footer không sát mép dưới màn hình */
+  margin: 100px 0 0;
+  width: 100%;
+  flex-shrink: 0; /* không bị co lại khi main dài */
+  /* Cần position + z-index để không bị .order-detail (position: sticky) đè lên.
+     Phần tử có position luôn được vẽ trên phần tử tĩnh trong cùng stacking context. */
+  position: relative;
+  z-index: 1;
+  background: var(--footer-bg);
+  color: var(--footer-soft);
+  padding: 24px 20px 26px;
+  text-align: left;
+}
+
+.sale-manager footer .brand-logo {
+  height: 48px;
+  width: 48px;
+  margin-right: 0;
+  margin-bottom: 14px;
+}
+
+/* KHÔNG đặt display:flex ở đây. Thẻ <p> này xuống dòng bằng <br>;
+   khi thành flex container, mỗi <br> biến thành một flex item rỗng và các
+   đoạn text bị tách thành item riêng -> layout vỡ, mất dòng. */
+.sale-manager .contact-infor {
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: var(--footer-soft);
+  margin: 0;
+}
+
+/* ------------------------------ Responsive -------------------------------- */
+
+@media (max-width: 820px) {
+  .sale-manager .main-content {
+    flex-direction: column;
+  }
+
+  .sale-manager .order-detail {
+    position: static;
+    max-width: none;
+    width: 100%;
+  }
+}
+
+.feedback-manager .btn-reload {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}

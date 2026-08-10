@@ -17,98 +17,109 @@ import AdminNewsList from "../pages/news/AdminNewsList";
 import AdminNewsForm from "../pages/news/AdminNewsForm";
 import AdminNewsDetail from "../pages/news/AdminNewsDetail";
 import RequireRole from "../components/RequireRole";
+import InvoiceManagement from "../pages/InvoiceManagement/InvoiceManagement";
+import RevenueDashboard from "../pages/RevenueDashboard/RevenueDashboard";
+import SaleManager from "../pages/sale-manager/SaleManager";
+import FeedbackManager from "../pages/feedback-manager/FeedbackManager";
 
 export default function AppRoutes() {
-    return (
-        <BrowserRouter>
-            <Routes>
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
 
-                <Route path="/" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
-                <Route
-                    path="/forgot-password"
-                    element={<ForgotPassword />}
-                />
+        <Route path="/otp" element={<Otp />} />
 
-                <Route
-                    path="/otp"
-                    element={<Otp />}
-                />
+        <Route path="/new-password" element={<NewPassword />} />
 
-                <Route
-                    path="/new-password"
-                    element={<NewPassword />}
-                />
+        <Route path="/profile" element={<Profile />} />
 
-                <Route
-                    path="/profile"
-                    element={<Profile />}
-                />
+        <Route path="/edit-profile" element={<EditProfile />} />
 
-                <Route
-                    path="/edit-profile"
-                    element={<EditProfile />}
-                />
+        <Route path="/change-password" element={<ChangePassword />} />
 
-                <Route
-                    path="/change-password"
-                    element={<ChangePassword />}
-                />
-                
-                <Route
-                    path="/home"
-                    element={
-                        <>
-                            <Header/>
-                            <Body/>
-                            <Footer/>
-                        </>
-                    }
-                />
+        {/* Route trang chủ nhận QR code quét vào (VD: /home/1 hoặc /home/2) để lưu vào localStorage */}
+        <Route
+          path="/home/:tableId?"
+          element={
+            <>
+              <Header />
+              <Body />
+              <Footer />
+            </>
+          }
+        />
 
-                <Route
-                    path="/menu/table/:tableId"
-                    element={<ClientMenu />}
-                />
+        <Route
+            path="/menu/table/:tableId"
+            element={<ClientMenu />}
+        />
 
-                <Route path="/news" element={<NewsList />} />
-                <Route path="/news/:id" element={<NewsDetail />} />
+        <Route path="/news" element={<NewsList />} />
+        <Route path="/news/:id" element={<NewsDetail />} />
 
-                <Route
-                    path="/admin/news"
-                    element={
-                        <RequireRole roles={["ADMIN", "STAFF"]}>
-                            <AdminNewsList />
-                        </RequireRole>
-                    }
-                />
-                <Route
-                    path="/admin/news/new"
-                    element={
-                        <RequireRole roles={["ADMIN", "STAFF"]}>
-                            <AdminNewsForm />
-                        </RequireRole>
-                    }
-                />
-                <Route
-                    path="/admin/news/:id/edit"
-                    element={
-                        <RequireRole roles={["ADMIN", "STAFF"]}>
-                            <AdminNewsForm />
-                        </RequireRole>
-                    }
-                />
-                <Route
-                    path="/admin/news/:id"
-                    element={
-                        <RequireRole roles={["ADMIN", "STAFF"]}>
-                            <AdminNewsDetail />
-                        </RequireRole>
-                    }
-                />
-                
-                <Route path="/payment-success" element={<PaymentSuccess />} />
-            </Routes>
-        </BrowserRouter>
+        <Route
+            path="/admin/news"
+            element={
+                <RequireRole roles={["ADMIN", "STAFF"]}>
+                    <AdminNewsList />
+                </RequireRole>
+            }
+        />
+        <Route
+            path="/admin/news/new"
+            element={
+                <RequireRole roles={["ADMIN", "STAFF"]}>
+                    <AdminNewsForm />
+                </RequireRole>
+            }
+        />
+        <Route
+            path="/admin/news/:id/edit"
+            element={
+                <RequireRole roles={["ADMIN", "STAFF"]}>
+                    <AdminNewsForm />
+                </RequireRole>
+            }
+        />
+        <Route
+            path="/admin/news/:id"
+            element={
+                <RequireRole roles={["ADMIN", "STAFF"]}>
+                    <AdminNewsDetail />
+                </RequireRole>
+            }
+        />
+        
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+
+        {/* --- CÁC ROUTE CHO ADMIN / QUẢN LÝ --- */}
+        <Route path="/admin/invoices" element={<InvoiceManagement />} />
+        <Route path="/admin/revenue" element={<RevenueDashboard />} />
+  
+        <Route
+            path="/menu"
+            element={<ClientMenu />}
+        />
+        
+        <Route 
+            path="/payment-success" 
+            element={<PaymentSuccess />} 
+        />
+
+        <Route 
+            path="/sale-manager" 
+            element={<SaleManager />} 
+        />
+
+        <Route 
+            path="/feedback-manager" 
+            element={<FeedbackManager />} 
+          />
+        </Routes>
+    </BrowserRouter>
     );
 }

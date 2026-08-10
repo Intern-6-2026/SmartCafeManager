@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import Peer from "peerjs";
 import "../../styles/client-menu.css";
 import AddDrinkModal from "../../components/add-drink";
 import FeedbackModal from "../../components/feedback";
@@ -12,7 +13,6 @@ import {
   addItemToCart,
   getCart,
   confirmOrder,
-  requestCheckout,
   getPaymentQRCode,
   getInvoice,
   callService,
@@ -20,16 +20,59 @@ import {
   updateItemQuantity,
   removeItem,
   payWithCash,
+  sentFeedback,
 } from "../../services/apiService";
 
 /* Menu dự phòng khi không kết nối được server (giữ đúng shape đã chuẩn hoá) */
 const FALLBACK_MENU = [
-  { id: 1, name: "Cà phê đen", price: 25000, category: "Coffee", img: "/images/iced-black-coffee.png", isAvailable: true },
-  { id: 2, name: "Cà phê sữa", price: 30000, category: "Coffee", img: "/images/cafe-sua-da.png", isAvailable: true },
-  { id: 3, name: "Cà phê hạt dẻ", price: 35000, category: "Coffee", img: "/images/cà phê hạt dẻ.png", isAvailable: true },
-  { id: 4, name: "Cà phê muối", price: 35000, category: "Coffee", img: "/images/cà_phê_muối.png", isAvailable: true },
-  { id: 5, name: "Bạc xỉu", price: 30000, category: "Coffee", img: "/images/Bạc_xỉu.png", isAvailable: true },
-  { id: 6, name: "Cappuccino", price: 35000, category: "Coffee", img: "/images/cappuccino.png", isAvailable: true },
+  {
+    id: 1,
+    name: "Cà phê đen",
+    price: 25000,
+    category: "Coffee",
+    img: "/images/iced-black-coffee.png",
+    isAvailable: true,
+  },
+  {
+    id: 2,
+    name: "Cà phê sữa",
+    price: 30000,
+    category: "Coffee",
+    img: "/images/cafe-sua-da.png",
+    isAvailable: true,
+  },
+  {
+    id: 3,
+    name: "Cà phê hạt dẻ",
+    price: 35000,
+    category: "Coffee",
+    img: "/images/cà phê hạt dẻ.png",
+    isAvailable: true,
+  },
+  {
+    id: 4,
+    name: "Cà phê muối",
+    price: 35000,
+    category: "Coffee",
+    img: "/images/cà_phê_muối.png",
+    isAvailable: true,
+  },
+  {
+    id: 5,
+    name: "Bạc xỉu",
+    price: 30000,
+    category: "Coffee",
+    img: "/images/Bạc_xỉu.png",
+    isAvailable: true,
+  },
+  {
+    id: 6,
+    name: "Cappuccino",
+    price: 35000,
+    category: "Coffee",
+    img: "/images/cappuccino.png",
+    isAvailable: true,
+  },
 ];
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n) + "đ";
@@ -47,8 +90,7 @@ const normalizeItem = (it) => ({
 });
 
 function ClientMenu() {
-  /* Route: /menu/table/:tableId — tableId chính là tên bàn gửi lên API (vd: ban01) */
-  const { tableId } = useParams();
+  const tableId = localStorage.getItem("tableId") || "1";
   const [menuItems, setMenuItems] = useState([]); // menu lấy từ server
   const [category, setCategory] = useState("");
   const [cart, setCart] = useState([]); // giỏ tạm PENDING lấy từ server
@@ -65,18 +107,23 @@ function ClientMenu() {
   const [paypalLoading, setPaypalLoading] = useState(false);
   const [message, setMessage] = useState(""); // thông báo kết quả API
   const [loading, setLoading] = useState(false);
+  /* PeerJS: kết nối với staff */
+  const peerRef = useRef(null);
+  const connectionRef = useRef(null);
 
   const notify = (msg) => {
     setMessage(String(msg));
     setTimeout(() => setMessage(""), 4000);
   };
-  
+
   /* ===== API 1: Lấy toàn bộ menu ===== */
   useEffect(() => {
     (async () => {
       try {
         const res = await getAllItems();
-        const items = Array.isArray(res.data) ? res.data.map(normalizeItem) : [];
+        const items = Array.isArray(res.data)
+          ? res.data.map(normalizeItem)
+          : [];
         setMenuItems(items);
         if (items.length > 0) setCategory(items[0].category);
       } catch (err) {
@@ -91,13 +138,13 @@ function ClientMenu() {
   /* Danh mục sinh tự động từ menu server */
   const categories = useMemo(
     () => [...new Set(menuItems.map((m) => m.category))],
-    [menuItems]
+    [menuItems],
   );
 
   /* Lọc món theo danh mục đang chọn */
   const filtered = useMemo(
     () => menuItems.filter((m) => m.category === category),
-    [menuItems, category]
+    [menuItems, category],
   );
 
   /* ===== API 5: Xem giỏ hàng =====
@@ -177,6 +224,14 @@ function ClientMenu() {
     try {
       const res = await confirmOrder(tableId);
       notify(res.data);
+      await callService(tableId, "WAITING_FOOD"); //set status bàn thành "Đang chờ món"
+      if (connectionRef.current?.open) {
+        connectionRef.current.send({
+          type: "WAITING_FOOD",
+          tableId: tableId,
+          message: `Bàn ${tableId} vừa gọi món`,
+        });
+      }
       await loadCart(); // giỏ tạm sẽ trống sau khi chốt
     } catch (err) {
       notify(getApiErrorMessage(err, "Gọi món thất bại."));
@@ -204,9 +259,17 @@ function ClientMenu() {
   const confirmCheckout = async () => {
     if (paymentMethod === "CASH") {
       setLoading(true);
-      try { 
+      try {
         const res = await payWithCash(tableId);
         notify(res.data);
+        await callService(tableId, "REQUESTING_BILL"); // tự động gọi nhân viên sau khi bấm Thanh toán
+        if (connectionRef.current?.open) {
+          connectionRef.current.send({
+            type: "REQUESTING_BILL",
+            tableId: tableId,
+            message: `Bàn ${tableId} yêu cầu thanh toán tiền mặt`,
+          });
+        }
         await loadCart();
       } catch (err) {
         notify(getApiErrorMessage(err, "Thanh toán tiền mặt thất bại."));
@@ -235,8 +298,16 @@ function ClientMenu() {
   const handleGoiNhanVien = async () => {
     setLoading(true);
     try {
-      const res = await callService(tableId, "CALLING_WAITER");
+      const res = await callService(tableId, "CALL_STAFF");
       notify(res.data);
+      if (connectionRef.current?.open) {
+        connectionRef.current.send({
+          type: "CALL_STAFF",
+          tableId: tableId,
+          message: `Bàn ${tableId} vừa gọi nhân viên`,
+        });
+      }
+
     } catch (err) {
       notify(getApiErrorMessage(err, "Gọi nhân viên thất bại."));
     } finally {
@@ -277,15 +348,58 @@ function ClientMenu() {
   };
 
   /* Bấm "Gửi" trong modal Phản hồi (chưa có API phản hồi trong tài liệu) */
-  const submitFeedback = (data) => {
-    console.log("Phản hồi:", data);
-    notify("Cảm ơn bạn đã gửi phản hồi!");
-    setFeedbackOpen(false);
+  const submitFeedback = async (data) => {
+    try {
+      const res = await sentFeedback(
+        data.noidung,
+        data.rating,
+        tableOrderId,
+        data.hoten,
+        data.email,
+        data.image,
+        data.itemId
+      );
+      setLoading(true);
+      notify(res.data);
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Gửi phản hồi thất bại."));
+    } finally {
+      setLoading(false);
+      setFeedbackOpen(false);
+    }
   };
 
+  /* Chọn danh mục món (nút nằm ngang) */
   const pickCategory = (c) => {
     setCategory(c);
   };
+
+  /* ===== PeerJS: kết nối với staff ===== */
+  useEffect(() => {
+    const peer = new Peer();
+
+    peerRef.current = peer;
+
+    peer.on("open", (id) => {
+      console.log("Client Peer ID:", id);
+
+      const conn = peer.connect("staff");
+
+      connectionRef.current = conn;
+
+      conn.on("open", () => {
+        console.log("Connected to staff");
+      });
+
+      conn.on("error", (err) => {
+        console.error("Peer connection error:", err);
+      });
+    });
+
+    return () => {
+      peer.destroy();
+    };
+  }, []);
 
   return (
     <div className="client-menu">
@@ -303,7 +417,11 @@ function ClientMenu() {
       </header>
 
       {/* Thông báo kết quả API */}
-      {message && <div className="api-message" role="status">{message}</div>}
+      {message && (
+        <div className="api-message" role="status">
+          {message}
+        </div>
+      )}
 
       <main>
         <div className="main-content">
@@ -334,7 +452,9 @@ function ClientMenu() {
                   </div>
                   <div className="card-name">{m.name}</div>
                   <div className="card-price">{fmt(m.price)}</div>
-                  {!m.isAvailable && <div className="card-soldout">Hết món</div>}
+                  {!m.isAvailable && (
+                    <div className="card-soldout">Hết món</div>
+                  )}
                 </button>
               ))}
               {filtered.length === 0 && (
@@ -359,68 +479,74 @@ function ClientMenu() {
             <div className="order-scroll">
               {/* Món đã gọi xuống bếp — chỉ xem, không sửa/xoá được */}
               {historyRows.length > 0 && (
-              <div className="ordered-list" aria-label="Món đã gọi">
-                <div className="ordered-label">Món đã gọi</div>
-                {historyRows.map((r) => (
-                  <div className="ordered-row" key={r.orderDetailId}>
-                    <div className="ordered-info">
-                      <div className="ordered-top">
-                        <span className="ordered-name">{r.name}</span>
-                        <span className="ordered-price">{fmt(r.price)}</span>
+                <div className="ordered-list" aria-label="Món đã gọi">
+                  <div className="ordered-label">Món đã gọi</div>
+                  {historyRows.map((r) => (
+                    <div className="ordered-row" key={r.orderDetailId}>
+                      <div className="ordered-info">
+                        <div className="ordered-top">
+                          <span className="ordered-name">{r.name}</span>
+                          <span className="ordered-price">{fmt(r.price)}</span>
+                        </div>
+                        <div className="ordered-bottom">
+                          <span className="ordered-qty">x {r.qty}</span>
+                        </div>
                       </div>
-                      <div className="ordered-bottom">
-                        <span className="ordered-qty">x {r.qty}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="order-list">
+                {cartRows.length === 0 && (
+                  <div className="order-empty">Chưa có món nào mới.</div>
+                )}
+                {cartRows.map((r) => (
+                  <div className="order-row" key={r.orderDetailId}>
+                    <button
+                      className="remove-btn"
+                      aria-label={`Xoá ${r.name}`}
+                      onClick={() => handleRemoveItem(r.itemId)}
+                    >
+                      <img
+                        src="/images/Icon Remove.png"
+                        alt=""
+                        className="remove-icon"
+                      />
+                    </button>
+                    <div className="order-info">
+                      <div className="order-top">
+                        <span className="order-name">{r.name}</span>
+                        <span className="order-price">{fmt(r.price)}</span>
+                      </div>
+                      {/*{r.note && <div className="order-item-note">Ghi chú: {r.note}</div>}*/}
+                      <div className="order-bottom">
+                        <div className="order-qty">
+                          <button
+                            className="qty-btn"
+                            aria-label={`Giảm số lượng ${r.name}`}
+                            onClick={() =>
+                              handleChangeQty(r.itemId, r.qty, r.note, -1)
+                            }
+                          >
+                            −
+                          </button>
+                          <span className="qty-value">{r.qty}</span>
+                          <button
+                            className="qty-btn"
+                            aria-label={`Tăng số lượng ${r.name}`}
+                            onClick={() =>
+                              handleChangeQty(r.itemId, r.qty, r.note, 1)
+                            }
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-
-            <div className="order-list">
-              {cartRows.length === 0 && (
-                <div className="order-empty">
-                  Chưa có món nào mới.
-                </div>
-              )}
-              {cartRows.map((r) => (
-                <div className="order-row" key={r.orderDetailId}>
-                  <button
-                    className="remove-btn"
-                    aria-label={`Xoá ${r.name}`}
-                    onClick={() => handleRemoveItem(r.itemId)}
-                  >
-                    <img src="/images/Icon Remove.png" alt="" className="remove-icon" />
-                  </button>
-                  <div className="order-info">
-                    <div className="order-top">
-                      <span className="order-name">{r.name}</span>
-                      <span className="order-price">{fmt(r.price)}</span>
-                    </div>
-                    {/*{r.note && <div className="order-item-note">Ghi chú: {r.note}</div>}*/}
-                    <div className="order-bottom">
-                      <div className="order-qty">
-                        <button
-                          className="qty-btn"
-                          aria-label={`Giảm số lượng ${r.name}`}
-                          onClick={() => handleChangeQty(r.itemId, r.qty, r.note, -1)}
-                        >
-                          −
-                        </button>
-                        <span className="qty-value">{r.qty}</span>
-                        <button
-                          className="qty-btn"
-                          aria-label={`Tăng số lượng ${r.name}`}
-                          onClick={() => handleChangeQty(r.itemId, r.qty, r.note, 1)}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
             </div>
 
             <div className="order-total">
@@ -445,16 +571,31 @@ function ClientMenu() {
             </div>
 
             <div className="order-actions">
-              <button className="btn-goimon" onClick={handleGoiMon} disabled={loading}>
+              <button
+                className="btn-goimon"
+                onClick={handleGoiMon}
+                disabled={loading}
+              >
                 Gọi món
               </button>
-              <button className="btn-thanhtoan" onClick={handleThanhToan} disabled={loading}>
+              <button
+                className="btn-thanhtoan"
+                onClick={handleThanhToan}
+                disabled={loading}
+              >
                 Thanh toán
               </button>
-              <button className="btn-goinhanvien" onClick={handleGoiNhanVien} disabled={loading}>
+              <button
+                className="btn-goinhanvien"
+                onClick={handleGoiNhanVien}
+                disabled={loading}
+              >
                 Gọi nhân viên
               </button>
-              <button className="btn-feedback" onClick={() => setFeedbackOpen(true)}>
+              <button
+                className="btn-feedback"
+                onClick={() => setFeedbackOpen(true)}
+              >
                 Phản hồi
               </button>
             </div>
@@ -467,7 +608,8 @@ function ClientMenu() {
             Chấp nhận : Visa, MasterCard, Vouchers <br />
             Phí giao dịch áp dụng cho thẻ tín dụng <br />
             Hotline/Số điện thoại: 19001900 <br />
-            Địa chỉ quán: Số 1 đường Võ Văn Ngân, phường Thủ Đức, thành phố Hồ Chí Minh
+            Địa chỉ quán: Số 1 đường Võ Văn Ngân, phường Thủ Đức, thành phố Hồ
+            Chí Minh
           </p>
         </footer>
       </main>
@@ -482,6 +624,7 @@ function ClientMenu() {
         open={feedbackOpen}
         onSubmit={submitFeedback}
         onClose={() => setFeedbackOpen(false)}
+        orderedItems={history}
       />
       <CheckoutModal
         open={checkoutOpen}
