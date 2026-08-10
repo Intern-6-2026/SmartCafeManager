@@ -1,5 +1,6 @@
 package com.codegym.backend.controller;
 
+import com.codegym.backend.dto.ActiveOrderDTO;
 import com.codegym.backend.dto.OrderDetailResponseDTO;
 import com.codegym.backend.entity.Tables;
 import com.codegym.backend.enums.ServiceStatus;
@@ -40,8 +41,9 @@ public class StaffController {
         return ResponseEntity.ok(staffOrderService.getTableInfo(tableId));
     }
 
+    // 🟢 CẬP NHẬT: Đổi từ Object sang ActiveOrderDTO cho rõ ràng dữ liệu
     @GetMapping("/tables/{tableId}/active-order")
-    public ResponseEntity<Object> getActiveOrderByTable(@PathVariable Long tableId) {
+    public ResponseEntity<ActiveOrderDTO> getActiveOrderByTable(@PathVariable Long tableId) {
         return ResponseEntity.ok(staffOrderService.getActiveOrderByTable(tableId));
     }
 
@@ -91,11 +93,22 @@ public class StaffController {
         return ResponseEntity.ok(Map.of("message", "Đã duyệt thanh toán và giải phóng bàn!"));
     }
 
+    // 🟢 BỔ SUNG: Endpoint Hủy toàn bộ đơn hàng của bàn khi cần
+    @PostMapping("/tables/{tableId}/cancel")
+    public ResponseEntity<Map<String, String>> cancelTableOrder(
+            @PathVariable Long tableId,
+            @RequestParam(required = false, defaultValue = "Nhân viên hủy đơn") String reason) {
+
+        staffOrderService.cancelTableOrder(tableId, reason);
+        notifyTableUpdate(tableId, "ORDER_CANCELLED", "Đơn hàng bàn " + tableId + " đã bị hủy.");
+        return ResponseEntity.ok(Map.of("message", "Đã hủy đơn hàng và giải phóng bàn thành công!"));
+    }
+
     @PutMapping("/tables/{tableId}/status")
     public ResponseEntity<Map<String, String>> updateTableStatus(
             @PathVariable Long tableId,
             @RequestParam ServiceStatus status) {
-        
+
         staffOrderService.updateTableServiceStatus(tableId, status);
         notifyTableUpdate(tableId, "STATUS_CHANGED", "Bàn " + tableId + " chuyển trạng thái: " + status.name());
         return ResponseEntity.ok(Map.of("message", "Cập nhật trạng thái bàn thành công!"));
@@ -115,7 +128,7 @@ public class StaffController {
     public ResponseEntity<Map<String, String>> cancelOrderItem(
             @PathVariable Long orderDetailId,
             @RequestParam(required = false, defaultValue = "Hết món") String reason) {
-        
+
         staffOrderService.cancelOrderItem(orderDetailId, reason);
         return ResponseEntity.ok(Map.of("message", "Đã hủy món và cập nhật lại tổng tiền!"));
     }
@@ -125,7 +138,7 @@ public class StaffController {
             @PathVariable Long orderDetailId,
             @RequestParam Integer quantity,
             @RequestParam(required = false) String note) {
-        
+
         staffOrderService.updateOrderItem(orderDetailId, quantity, note);
         return ResponseEntity.ok(Map.of("message", "Cập nhật số lượng/ghi chú thành công!"));
     }

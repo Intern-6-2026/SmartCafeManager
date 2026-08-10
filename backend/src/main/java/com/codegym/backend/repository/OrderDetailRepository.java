@@ -1,19 +1,23 @@
 package com.codegym.backend.repository;
 
-import java.util.List;
-
+import com.codegym.backend.entity.OrderDetail;
+import com.codegym.backend.entity.TableOrder;
+import com.codegym.backend.enums.StatusOrderDetail;
+import com.codegym.backend.enums.StatusTableOrder;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.codegym.backend.entity.OrderDetail;
-import com.codegym.backend.entity.TableOrder;
-import com.codegym.backend.enums.StatusOrderDetail;
-import com.codegym.backend.enums.StatusTableOrder;
+import java.util.Collection;
+import java.util.List;
 
 @Repository
 public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> {
+
+    // ==========================================
+    // 1. CHỨC NĂNG TRUY VẤN CHI TIẾT ĐƠN HÀNG
+    // ==========================================
 
     List<OrderDetail> findByOrder(TableOrder order);
 
@@ -29,10 +33,18 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> 
 
     List<OrderDetail> findByOrderTableOrderIdAndStatusNot(Long orderId, StatusOrderDetail status);
 
-    // 🟢 Dùng phương thức này trong FeedbackServiceImpl để kiểm tra món có trong đơn hàng (không cần kiểm tra PAID)
+    // 🟢 Lấy danh sách theo nhiều trạng thái (Ví dụ: SERVED hoặc DELIVERED)
+    List<OrderDetail> findByOrderTableOrderIdAndStatusIn(Long orderId, Collection<StatusOrderDetail> statuses);
+
+
+    // ==========================================
+    // 2. KIỂM TRA ĐIỀU KIỆN ĐÁNH GIÁ (FEEDBACK)
+    // ==========================================
+
+    // 🟢 Kiểm tra món có trong hóa đơn cụ thể hay không
     boolean existsByOrderTableOrderIdAndItemItemId(Long orderId, Long itemId);
 
-    // 💡 Kiểm tra xem Khách hàng đã từng MUA & THANH TOÁN món này thành công chưa
+    // 🟢 Kiểm tra Khách hàng ĐÃ ĐĂNG NHẬP đã mua & hoàn tất thanh toán món này chưa
     @Query("SELECT COUNT(od) > 0 FROM OrderDetail od " +
            "WHERE od.order.customer.customerId = :customerId " +
            "AND od.item.itemId = :itemId " +
@@ -43,8 +55,24 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> 
             @Param("status") StatusTableOrder status
     );
 
-    // 🟢 Thống kê doanh thu theo từng danh mục
-    @Query("SELECT c.categoryId, c.categoryName, SUM(od.quantity * od.unitPrice) " +
+    // 🟢 MỚI: Kiểm tra KHÁCH VẮNG LAI (theo Email) đã mua & hoàn tất thanh toán món này chưa
+    @Query("SELECT COUNT(od) > 0 FROM OrderDetail od " +
+           "WHERE od.order.email = :email " +
+           "AND od.item.itemId = :itemId " +
+           "AND od.order.status = :status")
+    boolean existsByEmailAndItemAndOrderStatus(
+            @Param("email") String email,
+            @Param("itemId") Long itemId,
+            @Param("status") StatusTableOrder status
+    );
+
+
+    // ==========================================
+    // 3. BÁO CÁO & THỐNG KÊ (STATISTICS)
+    // ==========================================
+
+    // 🟢 Thống kê doanh thu theo từng danh mục (Đã bọc COALESCE tránh NULL)
+    @Query("SELECT c.categoryId, c.categoryName, COALESCE(SUM(od.quantity * od.unitPrice), 0.0) " +
            "FROM OrderDetail od " +
            "JOIN od.item i " +
            "JOIN i.category c " +

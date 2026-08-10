@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,9 @@ public interface TableOrderRepository extends JpaRepository<TableOrder, Long> {
     // ==========================================
 
     Optional<TableOrder> findByTableTableIdAndStatus(Long tableId, StatusTableOrder status);
+
+    // 🟢 MỚI: Bổ sung tìm theo nhiều trạng thái (Ví dụ: Cả OPEN và PAYMENT_REQUESTED)
+    Optional<TableOrder> findByTableTableIdAndStatusIn(Long tableId, Collection<StatusTableOrder> statuses);
 
     Optional<TableOrder> findByTableOrderIdAndTableTableIdAndStatus(
             Long tableOrderId,
