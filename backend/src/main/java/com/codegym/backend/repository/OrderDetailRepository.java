@@ -55,9 +55,10 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> 
             @Param("status") StatusTableOrder status
     );
 
-    // 🟢 MỚI: Kiểm tra KHÁCH VẮNG LAI (theo Email) đã mua & hoàn tất thanh toán món này chưa
+    // 🟢 Kiểm tra KHÁCH HÀNG (theo Email) đã mua & hoàn tất thanh toán món này chưa
     @Query("SELECT COUNT(od) > 0 FROM OrderDetail od " +
-           "WHERE od.order.email = :email " +
+           "WHERE od.order.customer IS NOT NULL " +
+           "AND od.order.customer.email = :email " +
            "AND od.item.itemId = :itemId " +
            "AND od.order.status = :status")
     boolean existsByEmailAndItemAndOrderStatus(
@@ -71,13 +72,13 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> 
     // 3. BÁO CÁO & THỐNG KÊ (STATISTICS)
     // ==========================================
 
-    // 🟢 Thống kê doanh thu theo từng danh mục (Đã bọc COALESCE tránh NULL)
-    @Query("SELECT c.categoryId, c.categoryName, COALESCE(SUM(od.quantity * od.unitPrice), 0.0) " +
+    // 🟢 Thống kê doanh thu theo từng danh mục (Linh hoạt truyền tham số Trạng thái)
+    @Query("SELECT c.categoryId, c.categoryName, COALESCE(SUM(od.quantity * od.unitPrice), 0) " +
            "FROM OrderDetail od " +
            "JOIN od.item i " +
            "JOIN i.category c " +
            "JOIN od.order o " +
-           "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
+           "WHERE o.status IN :statuses " +
            "GROUP BY c.categoryId, c.categoryName")
-    List<Object[]> getSalesByCategories();
+    List<Object[]> getSalesByCategories(@Param("statuses") List<StatusTableOrder> statuses);
 }
