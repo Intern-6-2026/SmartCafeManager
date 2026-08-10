@@ -1,22 +1,26 @@
 package com.codegym.backend.service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import com.codegym.backend.dto.FeedbackRequestDTO;
 import com.codegym.backend.dto.FeedbackResponseDTO;
 import com.codegym.backend.entity.Customer;
 import com.codegym.backend.entity.Feedback;
 import com.codegym.backend.entity.Item;
-import com.codegym.backend.exception.AppException;
 import com.codegym.backend.repository.CustomerRepository;
 import com.codegym.backend.repository.FeedbackRepository;
 import com.codegym.backend.repository.ItemRepository;
+import com.codegym.backend.repository.OrderDetailRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,95 +29,122 @@ import lombok.RequiredArgsConstructor;
 @SuppressWarnings("null")
 public class FeedbackServiceImpl implements FeedbackService {
 
-        private final FeedbackRepository feedbackRepository;
-        private final CustomerRepository customerRepository;
-        private final ItemRepository itemRepository;
+    private final FeedbackRepository feedbackRepository;
+    private final CustomerRepository customerRepository;
+    private final ItemRepository itemRepository;
+    private final OrderDetailRepository orderDetailRepository;
 
-        @Override
-        @Transactional
-        public FeedbackResponseDTO createFeedback(FeedbackRequestDTO dto) {
-                // 1. Kiểm tra ID khách hàng (Bắt lỗi chưa đăng nhập)
-                if (dto.getCustomerId() == null || dto.getCustomerId() <= 0) {
-                        throw new RuntimeException("bạn chưa đăng nhập , vui lòng đăng nhập để có thể đánh giá");
+    // 🟢 1. TẠO FEEDBACK VÀ TRẢ VỀ DTO
+    @Override
+    @Transactional
+    public FeedbackResponseDTO createFeedback(FeedbackRequestDTO dto) {
+        // Kiểm tra itemId
+        Item item = itemRepository.findById(dto.getItemId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn để đánh giá!"));
+
+        // 🟢 CẬP NHẬT: Chỉ kiểm tra món ăn có trong đơn hay không (Bỏ điều kiện phải
+        // thanh toán PAID)
+        if (dto.getOrderId() != null) {
+            boolean isItemInOrder = orderDetailRepository.existsByOrderTableOrderIdAndItemItemId(
+                    dto.getOrderId(),
+                    dto.getItemId());
+
+            if (!isItemInOrder) {
+                throw new RuntimeException("Đơn hàng #" + dto.getOrderId() + " không chứa món ăn này!");
+            }
+        }
+
+        // Kiểm tra đăng nhập để lấy thông tin Customer
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Customer customer = null;
+        String email = dto.getEmail();
+        String senderName = dto.getSenderName();
+
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+            customer = customerRepository.findByAccountUsername(auth.getName()).orElse(null);
+
+            if (customer != null) {
+                if (!StringUtils.hasText(email) && customer.getAccount() != null) {
+                    email = customer.getAccount().getEmail();
                 }
-
-                // 2. Kiểm tra tài khoản khách hàng có tồn tại trong DB không
-                Customer customer = customerRepository.findById(dto.getCustomerId())
-                                .orElseThrow(() -> new RuntimeException(
-                                                "bạn chưa đăng nhập , vui lòng đăng nhập để có thể đánh giá"));
-
-                // 3. Kiểm tra món ăn
-                Item item = itemRepository.findById(dto.getItemId())
-                                .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn để đánh giá!"));
-
-                // 4. Tạo và lưu Feedback
-                Feedback feedback = Feedback.builder()
-                                .content(dto.getContent())
-                                .rating(dto.getRating())
-                                .senderName(dto.getSenderName() != null ? dto.getSenderName() : customer.getFullName())
-                                .email(dto.getEmail())
-                                .imageUrl(dto.getImageUrl())
-                                .customer(customer)
-                                .item(item)
-                                .build();
-
-                Feedback savedFeedback = feedbackRepository.save(feedback);
-
-                // 5. Trả về Response DTO
-                return FeedbackResponseDTO.builder()
-                                .feedbackId(savedFeedback.getFeedbackId())
-                                .content(savedFeedback.getContent())
-                                .rating(savedFeedback.getRating())
-                                .senderName(savedFeedback.getSenderName())
-                                .email(savedFeedback.getEmail())
-                                .imageUrl(savedFeedback.getImageUrl())
-                                .customerId(customer.getCustomerId())
-                                .itemId(item.getItemId())
-                                .build();
+                if (!StringUtils.hasText(senderName)) {
+                    senderName = customer.getFullName();
+                }
+            }
         }
 
-        @Override
-        @Transactional(readOnly = true)
-        public List<FeedbackResponseDTO> getFeedbacksByItem(Long itemId) {
-                return feedbackRepository.findByItemItemIdAndDeletedAtIsNull(itemId)
-                                .stream()
-                                .map(this::mapToResponseDTO)
-                                .collect(Collectors.toList());
+        if (!StringUtils.hasText(senderName)) {
+            senderName = "Khách hàng";
         }
 
-        @Override
-        @Transactional(readOnly = true)
-        public List<FeedbackResponseDTO> getAllFeedbacks() {
-                return feedbackRepository.findByDeletedAtIsNull()
-                                .stream()
-                                .map(this::mapToResponseDTO)
-                                .collect(Collectors.toList());
+        // Lưu Feedback
+        Feedback feedback = Feedback.builder()
+                .content(dto.getContent())
+                .rating(dto.getRating())
+                .senderName(senderName)
+                .email(email)
+                .imageUrl(dto.getImageUrl())
+                .sentAt(LocalDateTime.now())
+                .customer(customer)
+                .item(item)
+                .build();
+
+        Feedback savedFeedback = feedbackRepository.save(feedback);
+        return mapToResponseDTO(savedFeedback);
+    }
+
+    @Override
+    @Transactional
+    public void saveFeedback(FeedbackRequestDTO dto) {
+        createFeedback(dto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FeedbackResponseDTO> getFeedbacksByItem(Long itemId) {
+        return feedbackRepository.findByItemItemIdAndDeletedAtIsNull(itemId)
+                .stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FeedbackResponseDTO> getAllFeedbacks() {
+        return feedbackRepository.findByDeletedAtIsNull()
+                .stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void deleteFeedback(Long feedbackId) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đánh giá ID: " + feedbackId));
+
+        feedback.setDeletedAt(new Date());
+        feedbackRepository.save(feedback);
+    }
+
+    // --- HELPER METHOD ---
+    private FeedbackResponseDTO mapToResponseDTO(Feedback feedback) {
+        Date sentAtDate = null;
+        if (feedback.getSentAt() != null) {
+            sentAtDate = Date.from(feedback.getSentAt().atZone(ZoneId.systemDefault()).toInstant());
         }
 
-        @Override
-        @Transactional
-        public void deleteFeedback(Long feedbackId) {
-                Feedback feedback = feedbackRepository.findById(feedbackId)
-                                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                                                "Không tìm thấy đánh giá ID: " + feedbackId));
-
-                feedback.setDeletedAt(new Date());
-                feedbackRepository.save(feedback);
-        }
-
-        private FeedbackResponseDTO mapToResponseDTO(Feedback feedback) {
-                return FeedbackResponseDTO.builder()
-                                .feedbackId(feedback.getFeedbackId())
-                                .content(feedback.getContent())
-                                .rating(feedback.getRating())
-                                .senderName(feedback.getSenderName())
-                                .email(feedback.getEmail())
-                                .imageUrl(feedback.getImageUrl())
-                                .sentAt(feedback.getSentAt())
-                                .customerId(feedback.getCustomer() != null ? feedback.getCustomer().getCustomerId()
-                                                : null)
-                                .itemId(feedback.getItem() != null ? feedback.getItem().getItemId() : null)
-                                .itemName(feedback.getItem() != null ? feedback.getItem().getItemName() : null)
-                                .build();
-        }
+        return FeedbackResponseDTO.builder()
+                .feedbackId(feedback.getFeedbackId())
+                .content(feedback.getContent())
+                .rating(feedback.getRating())
+                .senderName(feedback.getSenderName())
+                .email(feedback.getEmail())
+                .imageUrl(feedback.getImageUrl())
+                .sentAt(sentAtDate)
+                .customerId(feedback.getCustomer() != null ? feedback.getCustomer().getCustomerId() : null)
+                .itemId(feedback.getItem() != null ? feedback.getItem().getItemId() : null)
+                .itemName(feedback.getItem() != null ? feedback.getItem().getItemName() : null)
+                .build();
+    }
 }

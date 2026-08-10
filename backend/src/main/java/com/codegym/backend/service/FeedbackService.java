@@ -5,6 +5,7 @@ import com.codegym.backend.dto.FeedbackResponseDTO;
 import java.util.List;
 
 public interface FeedbackService {
+    void saveFeedback(FeedbackRequestDTO dto); // 👈 Bổ sung dòng này
     FeedbackResponseDTO createFeedback(FeedbackRequestDTO dto);
     List<FeedbackResponseDTO> getFeedbacksByItem(Long itemId);
     List<FeedbackResponseDTO> getAllFeedbacks();

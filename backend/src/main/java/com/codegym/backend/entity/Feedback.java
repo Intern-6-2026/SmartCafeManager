@@ -1,6 +1,6 @@
 package com.codegym.backend.entity;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,24 +18,25 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@jakarta.persistence.Table(name = "feedback")
+@Table(name = "feedback")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Feedback extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "feedback_id")
     private Long feedbackId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "item_id")
+    @JoinColumn(name = "item_id", nullable = false) // Bắt buộc phải gắn với 1 món
     private Item item;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id")
+    @JoinColumn(name = "customer_id", nullable = true) // Allow NULL cho khách chưa đăng nhập
     private Customer customer;
 
     @Column(name = "sender_name", nullable = false)
@@ -46,12 +48,12 @@ public class Feedback extends BaseEntity {
     @Column(name = "rating", nullable = false)
     private Integer rating;
 
-    @Column(name = "content", nullable = false)
+    @Column(name = "content") 
     private String content;
 
     @Column(name = "image_url")
     private String imageUrl;
 
     @Column(name = "sent_at", nullable = false)
-    private Date sentAt;
+    private LocalDateTime sentAt; 
 }

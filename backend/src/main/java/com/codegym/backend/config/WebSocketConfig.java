@@ -13,13 +13,18 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
+        // Giữ nguyên 2 endpoint SockJS cũ của bạn
         registry.addEndpoint("/ws-news").setAllowedOriginPatterns("*").withSockJS();
         registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
+
+        // Bổ sung: Thêm endpoint WebSocket thuần (không SockJS) để dùng cho Postman hoặc App Mobile
+        registry.addEndpoint("/ws").setAllowedOriginPatterns("*");
     }
 
     @Override
     public void configureMessageBroker(@NonNull MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic");
+        // Bổ sung thêm "/queue" để hỗ trợ gửi tin nhắn 1-1 (User-specific / Private Notification)
+        registry.enableSimpleBroker("/topic", "/queue");
         registry.setApplicationDestinationPrefixes("/app");
     }
 }

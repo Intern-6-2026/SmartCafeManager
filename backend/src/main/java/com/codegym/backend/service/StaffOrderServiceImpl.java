@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +20,6 @@ import com.codegym.backend.enums.PaymentMethod;
 import com.codegym.backend.enums.ServiceStatus;
 import com.codegym.backend.enums.StatusOrderDetail;
 import com.codegym.backend.enums.StatusTableOrder;
-import com.codegym.backend.exception.AppException;
 import com.codegym.backend.repository.OrderDetailRepository;
 import com.codegym.backend.repository.TableOrderRepository;
 import com.codegym.backend.repository.TablesRepository;
@@ -55,15 +53,9 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Transactional(readOnly = true)
     public Tables getTableInfo(Long tableId) {
         return tablesRepository.findById(tableId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy thông tin bàn ID: " + tableId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin bàn ID: " + tableId));
     }
 
-    /**
-     * Lấy dữ liệu chi tiết hóa đơn đang active cho Panel bên phải (Giao diện
-     * NeoCafé)
-     * Trả về ActiveOrderDTO chuẩn hóa
-     */
     @Override
     @Transactional(readOnly = true)
     public ActiveOrderDTO getActiveOrderByTable(Long tableId) {
@@ -73,7 +65,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
                 .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
                 .orElse(null);
 
-        // Trường hợp bàn trống / không có đơn active
         if (activeOrder == null) {
             return ActiveOrderDTO.builder()
                     .tableId(table.getTableId())
@@ -83,16 +74,13 @@ public class StaffOrderServiceImpl implements StaffOrderService {
                     .build();
         }
 
-        // Trường hợp bàn đang có đơn
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
 
-        // Format giờ tạo đơn (Xử lý an toàn cho java.util.Date)
         SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
         String formattedTime = activeOrder.getCreatedAt() != null
                 ? timeFormatter.format(activeOrder.getCreatedAt())
                 : "";
 
-        // Chuyển đổi danh sách món ăn sang DTO chuẩn
         List<ActiveOrderDTO.OrderItemDto> itemDtos = details.stream()
                 .map(detail -> ActiveOrderDTO.OrderItemDto.builder()
                         .orderDetailId(detail.getOrderDetailId())
@@ -118,15 +106,14 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
         TableOrder activeOrder = tableOrderRepository
                 .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Bàn hiện tại không có đơn hàng active!"));
+                .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có đơn hàng active!"));
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
 
-        // Map từ OrderDetail (Entity) sang OrderDetailResponseDTO
         return details.stream().map(item -> {
             BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
             BigDecimal total = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
@@ -149,50 +136,34 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     // II. THAO TÁC TRÊN ĐƠN HÀNG & THANH TOÁN
     // ==========================================
 
-    /**
-     * Duyệt thanh toán tiền mặt (Đổi trạng thái đơn -> PAID & giải phóng bàn về
-     * EMPTY)
-     */
     @Override
     @Transactional
     public void approveCashPayment(Long tableId) {
-        // 1. Tìm đơn hàng đang OPEN của bàn
         TableOrder activeOrder = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
 
-        // 2. Chuyển trạng thái đơn hàng sang PAID
         activeOrder.setStatus(StatusTableOrder.PAID);
         tableOrderRepository.save(activeOrder);
 
-        // 3. Gọi thanh toán qua PaymentService
         paymentService.completeCheckout(tableId, PaymentMethod.CASH);
 
-        // 4. Chuyển trạng thái bàn về TRỐNG
         Tables table = getTableInfo(tableId);
         table.setServiceStatus(ServiceStatus.EMPTY);
         tablesRepository.save(table);
 
-        // 5. Gửi thông báo WebSocket
         notifyCustomerTable(tableId, "PAYMENT_SUCCESS", "Thanh toán thành công! Cảm ơn quý khách.");
         notifyStaffAndKitchen(tableId, "CHECKOUT_COMPLETED", "Bàn " + tableId + " đã hoàn tất thanh toán tiền mặt.");
     }
 
-    /**
-     * Hủy toàn bộ hóa đơn của bàn (Xử lý cho nút [Hủy hóa đơn])
-     */
     @Override
     @Transactional
     public void cancelTableOrder(Long tableId, String reason) {
         TableOrder activeOrder = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Bàn không có hóa đơn nào đang mở để hủy!"));
+                .orElseThrow(() -> new RuntimeException("Bàn không có hóa đơn nào đang mở để hủy!"));
 
-        // 1. Cập nhật trạng thái đơn hàng sang CANCELLED
         activeOrder.setStatus(StatusTableOrder.CANCELLED);
         tableOrderRepository.save(activeOrder);
 
-        // 2. Cập nhật trạng thái tất cả các món trong đơn sang CANCELLED
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
         for (OrderDetail detail : details) {
             detail.setStatus(StatusOrderDetail.CANCELLED);
@@ -200,12 +171,10 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         }
         orderDetailRepository.saveAll(details);
 
-        // 3. Reset bàn về trạng thái TRỐNG
         Tables table = activeOrder.getTable();
         table.setServiceStatus(ServiceStatus.EMPTY);
         tablesRepository.save(table);
 
-        // 4. Gửi thông báo WebSocket
         notifyCustomerTable(tableId, "ORDER_CANCELLED", "Hóa đơn đã bị hủy bởi nhân viên. Lý do: " + reason);
         notifyStaffAndKitchen(tableId, "ORDER_CANCELLED", "Hóa đơn bàn " + tableId + " đã bị hủy.");
     }
@@ -221,7 +190,68 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     }
 
     // ==========================================
-    // III. THAO TÁC CHI TIẾT TỪNG MÓN (ORDER DETAIL)
+    // III. THAO TÁC HÀNG LOẠT THEO BÀN (NHIỀU LƯỢT ORDER)
+    // ==========================================
+
+    @Override
+    @Transactional
+    public void serveAllItemsByTable(Long tableId) {
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
+
+        List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
+
+        // Lọc các món đang chờ chế biến hoặc chờ ra bàn (ORDERED hoặc CONFIRMED)
+        List<OrderDetail> pendingDetails = details.stream()
+                .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED || d.getStatus() == StatusOrderDetail.CONFIRMED)
+                .collect(Collectors.toList());
+
+        if (pendingDetails.isEmpty()) {
+            throw new RuntimeException("Không có món nào mới cần phục vụ!");
+        }
+
+        for (OrderDetail detail : pendingDetails) {
+            detail.setStatus(StatusOrderDetail.SERVED);
+        }
+        orderDetailRepository.saveAll(pendingDetails);
+
+        // Chuyển trạng thái bàn sang SERVING
+        Tables table = order.getTable();
+        table.setServiceStatus(ServiceStatus.SERVING);
+        tablesRepository.save(table);
+
+        notifyCustomerTable(tableId, "ALL_ITEMS_SERVED", "Tất cả món ăn lượt này đã được phục vụ!");
+        notifyStaffAndKitchen(tableId, "ALL_ITEMS_SERVED", "Bàn " + tableId + " đã hoàn tất phục vụ món lượt này.");
+    }
+
+    @Override
+    @Transactional
+    public void confirmAllNewItemsByTable(Long tableId) {
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
+
+        List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
+
+        // Lọc các món mới vừa được gọi (ORDERED)
+        List<OrderDetail> orderedDetails = details.stream()
+                .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED)
+                .collect(Collectors.toList());
+
+        if (orderedDetails.isEmpty()) {
+            throw new RuntimeException("Không có món mới nào cần nhận đơn!");
+        }
+
+        for (OrderDetail detail : orderedDetails) {
+            detail.setStatus(StatusOrderDetail.CONFIRMED);
+        }
+        orderDetailRepository.saveAll(orderedDetails);
+
+        notifyCustomerTable(tableId, "ALL_ITEMS_CONFIRMED", "Đơn hàng mới của bạn đã được bếp tiếp nhận!");
+        notifyStaffAndKitchen(tableId, "ALL_ITEMS_CONFIRMED", "Bàn " + tableId + " đã được xác nhận đơn lượt mới.");
+    }
+
+    // ==========================================
+    // IV. THAO TÁC CHI TIẾT TỪNG MÓN LẺ (ORDER DETAIL)
     // ==========================================
 
     @Override
@@ -229,7 +259,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     public void confirmOrderItems(Long tableOrderId) {
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(tableOrderId);
         if (details.isEmpty()) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Đơn hàng không có món nào!");
+            throw new RuntimeException("Đơn hàng không có món nào!");
         }
 
         Long tableId = details.get(0).getOrder().getTable().getTableId();
@@ -239,6 +269,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
                 detail.setStatus(StatusOrderDetail.CONFIRMED);
             }
         }
+        orderDetailRepository.saveAll(details);
 
         notifyCustomerTable(tableId, "ORDER_CONFIRMED", "Đơn hàng của bạn đã được bếp xác nhận và đang chế biến.");
         notifyStaffAndKitchen(tableId, "ORDER_CONFIRMED", "Bàn " + tableId + " đã được xác nhận đơn món.");
@@ -248,10 +279,10 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Transactional
     public void markItemAsServed(Long orderDetailId) {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy chi tiết đơn hàng!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
 
         detail.setStatus(StatusOrderDetail.SERVED);
+        orderDetailRepository.save(detail);
 
         Long tableId = detail.getOrder().getTable().getTableId();
         String itemName = detail.getItem().getItemName();
@@ -263,12 +294,12 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Transactional
     public void cancelOrderItem(Long orderDetailId, String reason) {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy chi tiết đơn hàng!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
 
         String cancelReason = (reason != null && !reason.trim().isEmpty()) ? reason : "Hết món / Hết nguyên liệu";
         detail.setStatus(StatusOrderDetail.CANCELLED);
         detail.setNote("Đã hủy: " + cancelReason);
+        orderDetailRepository.save(detail);
 
         TableOrder order = detail.getOrder();
         recalculateOrderTotal(order);
@@ -283,12 +314,10 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Transactional
     public void updateOrderItem(Long orderDetailId, Integer newQuantity, String newNote) {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy chi tiết đơn hàng!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
 
         if (detail.getStatus() != StatusOrderDetail.ORDERED) {
-            throw new AppException(HttpStatus.FORBIDDEN,
-                    "Không thể sửa món đã được xác nhận hoặc đã chế biến!");
+            throw new RuntimeException("Không thể sửa món đã được xác nhận hoặc đã chế biến!");
         }
 
         if (newQuantity <= 0) {
@@ -300,6 +329,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         if (newNote != null) {
             detail.setNote(newNote);
         }
+        orderDetailRepository.save(detail);
 
         TableOrder order = detail.getOrder();
         recalculateOrderTotal(order);
@@ -313,12 +343,10 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Transactional
     public void deleteOrderItem(Long orderDetailId) {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy chi tiết đơn hàng!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
 
         if (detail.getStatus() != StatusOrderDetail.ORDERED) {
-            throw new AppException(HttpStatus.FORBIDDEN,
-                    "Không thể xóa món đã được bếp xác nhận!");
+            throw new RuntimeException("Không thể xóa món đã được bếp xác nhận!");
         }
 
         TableOrder order = detail.getOrder();

@@ -1,18 +1,23 @@
 package com.codegym.backend.repository;
 
+import com.codegym.backend.entity.Feedback;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
 import java.util.List;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import com.codegym.backend.entity.Feedback;
-
+@Repository
 public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
-    // Lấy feedback của món ăn cụ thể (bỏ qua các feedback đã xoá)
+
+    // 1. Lấy feedback của món ăn cụ thể (bỏ qua các feedback đã xoá)
     List<Feedback> findByItemItemIdAndDeletedAtIsNull(Long itemId);
 
-    // Lấy tất cả feedback active (cho Admin)
+    // 2. Lấy tất cả feedback active (cho Staff/Admin)
     List<Feedback> findByDeletedAtIsNull();
-    
-    //  Kiểm tra khách hàng đã đánh giá món ăn này chưa
+
+    // 3. Kiểm tra Khách hàng đã đăng nhập đã đánh giá món ăn này chưa
     boolean existsByCustomerCustomerIdAndItemItemIdAndDeletedAtIsNull(Long customerId, Long itemId);
+
+    // 🟢 4. BỔ SUNG: Kiểm tra Khách vãng lai (theo Email) đã đánh giá món ăn này chưa
+    boolean existsByEmailAndItemItemIdAndDeletedAtIsNull(String email, Long itemId);
 }

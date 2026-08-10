@@ -1,30 +1,31 @@
 package com.codegym.backend.repository;
 
-import java.time.LocalDateTime;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-
+import com.codegym.backend.entity.TableOrder;
+import com.codegym.backend.enums.StatusTableOrder;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.codegym.backend.entity.TableOrder;
-import com.codegym.backend.enums.StatusTableOrder;
+import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
 public interface TableOrderRepository extends JpaRepository<TableOrder, Long> {
-    // 🟢 1. Lấy đơn hàng active của bàn
+
+    // ==========================================
+    // 1. CHỨC NĂNG BÀN VÀ ĐẶT MÓN (ORDERING)
+    // ==========================================
+
     Optional<TableOrder> findByTableTableIdAndStatus(Long tableId, StatusTableOrder status);
 
-    // 🟢 2. Lấy đơn hàng theo orderId, tableId và status
     Optional<TableOrder> findByTableOrderIdAndTableTableIdAndStatus(
             Long tableOrderId,
             Long tableId,
             StatusTableOrder status);
 
-    // 🟢 3. Chuyển trạng thái món tạm (PENDING) sang đã đặt (ORDERED)
     @Modifying
     @Transactional
     @Query("UPDATE OrderDetail od " +
@@ -33,7 +34,11 @@ public interface TableOrderRepository extends JpaRepository<TableOrder, Long> {
            "AND od.status = com.codegym.backend.enums.StatusOrderDetail.PENDING")
     int updatePendingItemsToOrdered(@Param("tableOrderId") Long tableOrderId);
 
-    // 🟢 4. Lấy danh sách hóa đơn theo bàn và trạng thái (Sắp xếp theo openAt)
+
+    // ==========================================
+    // 2. CHỨC NĂNG XEM HÓA ĐƠN (INVOICES)
+    // ==========================================
+
     @Query("SELECT o FROM TableOrder o WHERE o.status = :status " +
            "AND (:tableId IS NULL OR o.table.tableId = :tableId) " +
            "ORDER BY o.openAt DESC")
@@ -41,39 +46,88 @@ public interface TableOrderRepository extends JpaRepository<TableOrder, Long> {
             @Param("tableId") Long tableId,
             @Param("status") StatusTableOrder status);
 
-    // 🟢 5a. Thống kê tổng doanh thu (Hỗ trợ LocalDateTime - Chuẩn Spring Boot 3)
-    @Query("SELECT COALESCE(SUM(o.totalAmount), 0.0) FROM TableOrder o " +
+    @Query("SELECT o FROM TableOrder o " +
+           "LEFT JOIN FETCH o.table t " +
            "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
-           "AND o.paidAt BETWEEN :startDate AND :endDate")
-    Double sumRevenueBetween(
-            @Param("startDate") LocalDateTime startDate, 
+           "AND (:tableId IS NULL OR t.tableId = :tableId) " +
+           "AND COALESCE(o.paidAt, o.createdAt) BETWEEN :startDate AND :endDate " +
+           "ORDER BY o.paidAt DESC")
+    List<TableOrder> findInvoicesByTableAndDateRange(
+            @Param("tableId") Long tableId,
+            @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
-    // 🟢 5b. Overload cho phép truyền java.util.Date nếu Controller cũ đang dùng Date
+    @Query("SELECT o FROM TableOrder o " +
+           "LEFT JOIN FETCH o.table t " +
+           "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
+           "AND (:tableId IS NULL OR t.tableId = :tableId) " +
+           "AND COALESCE(o.paidAt, o.createdAt) BETWEEN :startDate AND :endDate " +
+           "ORDER BY o.paidAt DESC")
+    List<TableOrder> findInvoicesByTableAndDateRange(
+            @Param("tableId") Long tableId,
+            @Param("startDate") Date startDate,
+            @Param("endDate") Date endDate);
+
+
+    // ==========================================
+    // 3. THỐNG KÊ DOANH THU & ĐẾM ĐƠN HÀNG (STATISTICS)
+    // ==========================================
+
+    // 3a. Tính doanh thu (Truyền explicit status)
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0.0) FROM TableOrder o " +
+           "WHERE o.status = :status " +
+           "AND COALESCE(o.paidAt, o.createdAt) BETWEEN :startDate AND :endDate")
+    Double sumRevenueBetween(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("status") StatusTableOrder status);
+
+    // 3b. Tính doanh thu (Mặc định PAID - LocalDateTime)
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0.0) FROM TableOrder o " +
            "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
-           "AND o.paidAt BETWEEN :startDate AND :endDate")
+           "AND COALESCE(o.paidAt, o.createdAt) BETWEEN :startDate AND :endDate")
     Double sumRevenueBetween(
-            @Param("startDate") Date startDate, 
-            @Param("endDate") Date endDate);
-
-    // 🟢 6a. Đếm số hóa đơn trong khoảng thời gian (LocalDateTime)
-    @Query("SELECT COUNT(o) FROM TableOrder o " +
-           "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
-           "AND o.paidAt BETWEEN :startDate AND :endDate")
-    Long countOrdersBetween(
-            @Param("startDate") LocalDateTime startDate, 
+            @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
-    // 🟢 6b. Overload đếm số hóa đơn (Date)
-    @Query("SELECT COUNT(o) FROM TableOrder o " +
+    // 3c. Tính doanh thu (Mặc định PAID - java.util.Date)
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0.0) FROM TableOrder o " +
            "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
-           "AND o.paidAt BETWEEN :startDate AND :endDate")
-    Long countOrdersBetween(
-            @Param("startDate") Date startDate, 
+           "AND COALESCE(o.paidAt, o.createdAt) BETWEEN :startDate AND :endDate")
+    Double sumRevenueBetween(
+            @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
 
-    // 🟢 7. Thống kê số lượng sản phẩm bán ra theo Danh mục
+    // 3d. Đếm số hóa đơn (Truyền explicit status)
+    @Query("SELECT COUNT(o) FROM TableOrder o " +
+           "WHERE o.status = :status " +
+           "AND COALESCE(o.paidAt, o.createdAt) BETWEEN :startDate AND :endDate")
+    Long countOrdersBetween(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("status") StatusTableOrder status);
+
+    // 3e. Đếm số hóa đơn (Mặc định PAID - LocalDateTime)
+    @Query("SELECT COUNT(o) FROM TableOrder o " +
+           "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
+           "AND COALESCE(o.paidAt, o.createdAt) BETWEEN :startDate AND :endDate")
+    Long countOrdersBetween(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    // 3f. Đếm số hóa đơn (Mặc định PAID - java.util.Date)
+    @Query("SELECT COUNT(o) FROM TableOrder o " +
+           "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
+           "AND COALESCE(o.paidAt, o.createdAt) BETWEEN :startDate AND :endDate")
+    Long countOrdersBetween(
+            @Param("startDate") Date startDate,
+            @Param("endDate") Date endDate);
+
+
+    // ==========================================
+    // 4. BÁO CÁO DASHBOARD KHÁC
+    // ==========================================
+
     @Query("SELECT c.categoryName, SUM(od.quantity) " +
            "FROM OrderDetail od " +
            "JOIN od.item i " +
@@ -82,26 +136,20 @@ public interface TableOrderRepository extends JpaRepository<TableOrder, Long> {
            "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
            "GROUP BY c.categoryId, c.categoryName")
     List<Object[]> getSalesGroupedByCategory();
-    // Bổ sung vào TableOrderRepository.java sẵn có
-        @Query("SELECT o FROM TableOrder o " +
-        "LEFT JOIN FETCH o.table t " +
-        "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
-        "AND (:tableId IS NULL OR t.tableId = :tableId) " +
-        "AND o.paidAt BETWEEN :startDate AND :endDate " +
-        "ORDER BY o.paidAt DESC")
-        List<TableOrder> findInvoicesByTableAndDateRange(
-        @Param("tableId") Long tableId,
-        @Param("startDate") Date startDate,
-        @Param("endDate") Date endDate);
-        // Bổ sung vào TableOrderRepository.java
-        @Query("SELECT o FROM TableOrder o " +
-        "LEFT JOIN FETCH o.table t " +
-        "WHERE o.status = com.codegym.backend.enums.StatusTableOrder.PAID " +
-        "AND (:tableId IS NULL OR t.tableId = :tableId) " +
-        "AND o.paidAt BETWEEN :startDate AND :endDate " +
-        "ORDER BY o.paidAt DESC")
-        List<TableOrder> findInvoicesByTableAndDateRange(
-        @Param("tableId") Long tableId,
-        @Param("startDate") LocalDateTime startDate,
-        @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0.0) FROM TableOrder o " +
+           "WHERE CAST(COALESCE(o.paidAt, o.createdAt) AS date) = CURRENT_DATE " +
+           "AND o.status = :status")
+    Double getTodayRevenue(@Param("status") StatusTableOrder status);
+
+    @Query("SELECT COUNT(o) FROM TableOrder o " +
+           "WHERE CAST(COALESCE(o.paidAt, o.createdAt) AS date) = CURRENT_DATE " +
+           "AND o.status = :status")
+    Long getTodayOrderCount(@Param("status") StatusTableOrder status);
+
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0.0) FROM TableOrder o " +
+           "WHERE FUNCTION('MONTH', COALESCE(o.paidAt, o.createdAt)) = FUNCTION('MONTH', CURRENT_DATE) " +
+           "AND FUNCTION('YEAR', COALESCE(o.paidAt, o.createdAt)) = FUNCTION('YEAR', CURRENT_DATE) " +
+           "AND o.status = :status")
+    Double getMonthlyRevenue(@Param("status") StatusTableOrder status);
 }

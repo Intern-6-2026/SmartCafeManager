@@ -3,6 +3,7 @@ package com.codegym.backend.service;
 import com.codegym.backend.dto.DashboardStatsDTO;
 import com.codegym.backend.dto.InvoiceResponseDTO;
 import com.codegym.backend.entity.TableOrder;
+import com.codegym.backend.enums.StatusTableOrder;
 import com.codegym.backend.repository.TableOrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,7 +26,7 @@ public class StatisticServiceImpl implements StatisticService {
 
     private final TableOrderRepository tableOrderRepository;
 
-    // 🟢 1. HÀM CHÍNH: LẤY HÓA ĐƠN THEO BÀN, TYPE (TODAY/MONTH) VÀ NGÀY
+    // 🟢 1. LẤY HÓA ĐƠN THEO BÀN, TYPE (TODAY/MONTH) VÀ NGÀY
     @Override
     @Transactional(readOnly = true)
     public List<InvoiceResponseDTO> getInvoices(Long tableId, String type, Date date) {
@@ -47,11 +48,10 @@ public class StatisticServiceImpl implements StatisticService {
         }
 
         List<TableOrder> orders = tableOrderRepository.findInvoicesByTableAndDateRange(tableId, startDate, endDate);
-
         return orders.stream().map(this::mapToInvoiceDTO).collect(Collectors.toList());
     }
 
-    //2. CÁC HÀM OVERLOAD DÙNG CHO CÁC NƠI KHÁC TRONG DỰ ÁN
+    // 🟢 2. CÁC HÀM OVERLOAD
     @Override
     @Transactional(readOnly = true)
     public List<InvoiceResponseDTO> getInvoices(Long tableId, Date date) {
@@ -64,7 +64,7 @@ public class StatisticServiceImpl implements StatisticService {
         return getInvoices(tableId, "TODAY", null);
     }
 
-    //3. LẤY DỮ LIỆU DASHBOARD THỐNG KÊ
+    // 🟢 3. LẤY DỮ LIỆU DASHBOARD THỐNG KÊ
     @Override
     @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
@@ -76,10 +76,13 @@ public class StatisticServiceImpl implements StatisticService {
         LocalDateTime startOfMonth = today.with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay();
         LocalDateTime endOfMonth = today.with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
 
-        // A. 3 Thẻ Tổng quan
-        Double todayRevenue = tableOrderRepository.sumRevenueBetween(startOfToday, endOfToday);
-        Long todayOrderCount = tableOrderRepository.countOrdersBetween(startOfToday, endOfToday);
-        Double monthRevenue = tableOrderRepository.sumRevenueBetween(startOfMonth, endOfMonth);
+        // A. 3 Thẻ Tổng quan (Lọc chính xác đơn đã thanh toán PAID)
+        Double todayRevenue = tableOrderRepository.sumRevenueBetween(startOfToday, endOfToday, StatusTableOrder.PAID);
+        
+        // 👈 ĐÃ SỬA: Bổ sung StatusTableOrder.PAID vào hàm đếm hóa đơn
+        Long todayOrderCount = tableOrderRepository.countOrdersBetween(startOfToday, endOfToday, StatusTableOrder.PAID);
+        
+        Double monthRevenue = tableOrderRepository.sumRevenueBetween(startOfMonth, endOfMonth, StatusTableOrder.PAID);
 
         // B. Biểu đồ đường theo tuần (Thứ 2 -> Chủ Nhật)
         LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -91,7 +94,7 @@ public class StatisticServiceImpl implements StatisticService {
             LocalDateTime start = currentDay.atStartOfDay();
             LocalDateTime end = currentDay.atTime(LocalTime.MAX);
 
-            Double dayRev = tableOrderRepository.sumRevenueBetween(start, end);
+            Double dayRev = tableOrderRepository.sumRevenueBetween(start, end, StatusTableOrder.PAID);
             weeklyRevenueList.add(new DashboardStatsDTO.WeeklyRevenueDTO(dayNames[i], dayRev != null ? dayRev : 0.0));
         }
 

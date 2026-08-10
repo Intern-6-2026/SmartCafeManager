@@ -8,7 +8,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +21,6 @@ import com.codegym.backend.entity.Tables;
 import com.codegym.backend.enums.ServiceStatus;
 import com.codegym.backend.enums.StatusOrderDetail;
 import com.codegym.backend.enums.StatusTableOrder;
-import com.codegym.backend.exception.AppException;
 import com.codegym.backend.repository.FeedbackRepository;
 import com.codegym.backend.repository.ItemRepository;
 import com.codegym.backend.repository.OrderDetailRepository;
@@ -56,7 +54,7 @@ public class OrderServiceImpl implements OrderService {
                 Tables table = getTableEntity(tableId);
                 table.setServiceStatus(status);
 
-                // Cập nhật trạng thái occupies đồng bộ
+                // Cập nhật trạng thái occupied đồng bộ với trạng thái EMPTY
                 table.setIsOccupied(status != ServiceStatus.EMPTY);
 
                 tablesRepository.save(table);
@@ -68,8 +66,7 @@ public class OrderServiceImpl implements OrderService {
                 Tables table = getTableEntity(tableId);
 
                 Item item = itemRepository.findById(itemId)
-                                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                                                "Món ăn không tồn tại với ID: " + itemId));
+                                .orElseThrow(() -> new RuntimeException("Món ăn không tồn tại với ID: " + itemId));
 
                 TableOrder order = tableOrderRepository
                                 .findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
@@ -176,7 +173,7 @@ public class OrderServiceImpl implements OrderService {
                                                 StatusOrderDetail.PENDING);
 
                 if (existingDetails.isEmpty()) {
-                        throw new AppException(HttpStatus.BAD_REQUEST, "Món ăn không tồn tại trong giỏ tạm!");
+                        throw new RuntimeException("Món ăn không tồn tại trong giỏ tạm!");
                 }
 
                 OrderDetail detail = existingDetails.get(0);
@@ -227,13 +224,56 @@ public class OrderServiceImpl implements OrderService {
                 boolean hasPending = details.stream().anyMatch(d -> d.getStatus() == StatusOrderDetail.PENDING);
 
                 if (!hasPending) {
-                        throw new AppException(HttpStatus.BAD_REQUEST, "Không có món mới nào trong giỏ hàng tạm!");
+                        throw new RuntimeException("Không có món mới nào trong giỏ hàng tạm!");
                 }
 
                 processPendingToOrderedAndRecalculateTotal(order, details);
 
                 table.setServiceStatus(ServiceStatus.WAITING_FOOD);
                 tablesRepository.save(table);
+        }
+
+        // 🟢 BỔ SUNG: Khách tự hủy món đã bấm đặt (chỉ hủy được khi trạng thái là
+        // ORDERED)
+        @Override
+        @Transactional
+        public void cancelOrderItemByCustomer(Long orderDetailId, String reason) {
+                OrderDetail detail = orderDetailRepository.findById(orderDetailId)
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Không tìm thấy chi tiết món ăn ID: " + orderDetailId));
+
+                if (detail.getStatus() != StatusOrderDetail.ORDERED) {
+                        throw new RuntimeException("Không thể hủy món do Bếp đã nhận chế biến hoặc đã phục vụ!");
+                }
+
+                detail.setStatus(StatusOrderDetail.CANCELLED);
+                if (reason != null && !reason.trim().isEmpty()) {
+                        String currentNote = detail.getNote() != null ? detail.getNote() + " | " : "";
+                        detail.setNote(currentNote + "Khách hủy: " + reason);
+                }
+                orderDetailRepository.save(detail);
+
+                // Giảm lượt order count của Item
+                Item item = detail.getItem();
+                if (item != null) {
+                        int currentCount = item.getTotalOrderCount() != null ? item.getTotalOrderCount() : 0;
+                        int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
+                        item.setTotalOrderCount(Math.max(0, currentCount - qty));
+                        itemRepository.save(item);
+                }
+
+                // Trừ bớt tổng tiền của hóa đơn bàn
+                TableOrder order = detail.getOrder();
+                if (order != null) {
+                        BigDecimal price = getSafeUnitPrice(detail);
+                        int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
+                        BigDecimal itemTotal = price.multiply(BigDecimal.valueOf(qty));
+
+                        BigDecimal currentTotal = order.getTotalAmount() != null ? order.getTotalAmount()
+                                        : BigDecimal.ZERO;
+                        order.setTotalAmount(currentTotal.subtract(itemTotal).max(BigDecimal.ZERO));
+                        tableOrderRepository.save(order);
+                }
         }
 
         // ==========================================
@@ -279,9 +319,7 @@ public class OrderServiceImpl implements OrderService {
                                 })
                                 .collect(Collectors.toList());
 
-                Date paidAt = order.getCloseAt() != null
-                                ? Date.from(order.getCloseAt().atZone(ZoneId.systemDefault()).toInstant())
-                                : null;
+                LocalDateTime paidDateTime = order.getPaidAt() != null ? order.getPaidAt() : order.getCloseAt();
 
                 return InvoiceDetailResponseDTO.builder()
                                 .orderId(order.getTableOrderId())
@@ -293,7 +331,7 @@ public class OrderServiceImpl implements OrderService {
                                 .status(order.getStatus())
                                 .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name()
                                                 : null)
-                                .paidAt(paidAt)
+                                .paidAt(toDate(paidDateTime))
                                 .items(itemDTOs)
                                 .build();
         }
@@ -356,5 +394,11 @@ public class OrderServiceImpl implements OrderService {
                                                 ? detail.getOrder().getTable().getTableName()
                                                 : null)
                                 .build();
+        }
+
+        private Date toDate(LocalDateTime localDateTime) {
+                if (localDateTime == null)
+                        return null;
+                return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
         }
 }
