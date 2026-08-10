@@ -5,7 +5,6 @@ import com.codegym.backend.dto.FeedbackResponseDTO;
 import com.codegym.backend.entity.Customer;
 import com.codegym.backend.entity.Feedback;
 import com.codegym.backend.entity.Item;
-import com.codegym.backend.enums.StatusTableOrder;
 import com.codegym.backend.repository.CustomerRepository;
 import com.codegym.backend.repository.FeedbackRepository;
 import com.codegym.backend.repository.ItemRepository;
@@ -41,16 +40,15 @@ public class FeedbackServiceImpl implements FeedbackService {
         Item item = itemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn để đánh giá!"));
 
-        // Kiểm tra đơn hàng đã thanh toán và có món ăn này hay không (nếu có truyền orderId)
+        // 🟢 CẬP NHẬT: Chỉ kiểm tra món ăn có trong đơn hay không (Bỏ điều kiện phải thanh toán PAID)
         if (dto.getOrderId() != null) {
-            boolean isOrderValid = orderDetailRepository.existsByOrderTableOrderIdAndItemItemIdAndOrderStatus(
+            boolean isItemInOrder = orderDetailRepository.existsByOrderTableOrderIdAndItemItemId(
                     dto.getOrderId(),
-                    dto.getItemId(),
-                    StatusTableOrder.PAID
+                    dto.getItemId()
             );
 
-            if (!isOrderValid) {
-                throw new RuntimeException("Đơn hàng #" + dto.getOrderId() + " chưa thanh toán hoặc không chứa món ăn này!");
+            if (!isItemInOrder) {
+                throw new RuntimeException("Đơn hàng #" + dto.getOrderId() + " không chứa món ăn này!");
             }
         }
 
@@ -63,7 +61,6 @@ public class FeedbackServiceImpl implements FeedbackService {
         if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
             customer = customerRepository.findByAccountUsername(auth.getName()).orElse(null);
             
-            // Nếu đã đăng nhập mà form chưa có email hoặc tên, tự động lấy từ thông tin Customer
             if (customer != null) {
                 if (!StringUtils.hasText(email) && customer.getAccount() != null) {
                     email = customer.getAccount().getEmail();
@@ -94,7 +91,6 @@ public class FeedbackServiceImpl implements FeedbackService {
         return mapToResponseDTO(savedFeedback);
     }
 
-    // 🟢 2. ALIAS METHOD CHO CONTROLLER / INTERFACE ĐẶT TÊN LÀ saveFeedback
     @Override
     @Transactional
     public void saveFeedback(FeedbackRequestDTO dto) {

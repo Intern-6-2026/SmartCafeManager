@@ -6,7 +6,7 @@ import com.codegym.backend.service.FeedbackService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication; // 👈 1. Đã bổ sung import bị thiếu
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,22 +26,24 @@ public class FeedbackController {
      * Khách hàng gửi đánh giá mới (Hỗ trợ cả khách đã đăng nhập & khách vãng lai)
      * URL: POST /api/v1/customer/feedbacks
      */
-    @PostMapping("/customer/feedbacks") // 👈 2. Sửa đường dẫn đồng bộ với /api/v1
+    @PostMapping("/customer/feedbacks")
     public ResponseEntity<?> createFeedback(
             @Valid @RequestBody FeedbackRequestDTO dto,
             Authentication authentication
     ) {
         String finalEmail;
 
-        // Trường hợp 1: Đã đăng nhập -> Ưu tiên lấy email trực tiếp từ Token/Session
+        // Trường hợp 1: Đã đăng nhập -> Ưu tiên email từ Token/Session nếu Form không gửi
         if (authentication != null && authentication.isAuthenticated() 
                 && !"anonymousUser".equals(authentication.getPrincipal())) {
-            finalEmail = authentication.getName(); 
+            finalEmail = (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) 
+                    ? dto.getEmail().trim() 
+                    : authentication.getName();
         } 
         // Trường hợp 2: Khách vãng lai -> Bắt buộc kiểm tra email nhập ở Form
         else {
             if (dto.getEmail() == null || dto.getEmail().trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Khách vãng lai bắt buộc phải nhập email!");
+                return ResponseEntity.badRequest().body(Map.of("message", "Khách vãng lai bắt buộc phải nhập email!"));
             }
             finalEmail = dto.getEmail().trim();
         }
@@ -49,10 +51,10 @@ public class FeedbackController {
         // Gán email đã xác định vào DTO
         dto.setEmail(finalEmail);
 
-        // 👈 3. Gọi hàm saveFeedback(dto) nguyên bản của FeedbackService
-        feedbackService.saveFeedback(dto);
+        // Gọi trực tiếp createFeedback để nhận lại FeedbackResponseDTO
+        FeedbackResponseDTO createdFeedback = feedbackService.createFeedback(dto);
 
-        return ResponseEntity.ok(Map.of("message", "Gửi phản hồi thành công!"));
+        return ResponseEntity.ok(createdFeedback);
     }
 
     /**

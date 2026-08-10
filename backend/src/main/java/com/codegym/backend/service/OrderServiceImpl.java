@@ -214,6 +214,46 @@ public class OrderServiceImpl implements OrderService {
         tablesRepository.save(table);
     }
 
+    // 🟢 BỔ SUNG: Khách tự hủy món đã bấm đặt (chỉ hủy được khi trạng thái là ORDERED)
+    @Override
+    @Transactional
+    public void cancelOrderItemByCustomer(Long orderDetailId, String reason) {
+        OrderDetail detail = orderDetailRepository.findById(orderDetailId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết món ăn ID: " + orderDetailId));
+
+        if (detail.getStatus() != StatusOrderDetail.ORDERED) {
+            throw new RuntimeException("Không thể hủy món do Bếp đã nhận chế biến hoặc đã phục vụ!");
+        }
+
+        detail.setStatus(StatusOrderDetail.CANCELLED);
+        if (reason != null && !reason.trim().isEmpty()) {
+            String currentNote = detail.getNote() != null ? detail.getNote() + " | " : "";
+            detail.setNote(currentNote + "Khách hủy: " + reason);
+        }
+        orderDetailRepository.save(detail);
+
+        // Giảm lượt order count của Item
+        Item item = detail.getItem();
+        if (item != null) {
+            int currentCount = item.getTotalOrderCount() != null ? item.getTotalOrderCount() : 0;
+            int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
+            item.setTotalOrderCount(Math.max(0, currentCount - qty));
+            itemRepository.save(item);
+        }
+
+        // Trừ bớt tổng tiền của hóa đơn bàn
+        TableOrder order = detail.getOrder();
+        if (order != null) {
+            BigDecimal price = getSafeUnitPrice(detail);
+            int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
+            BigDecimal itemTotal = price.multiply(BigDecimal.valueOf(qty));
+
+            BigDecimal currentTotal = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
+            order.setTotalAmount(currentTotal.subtract(itemTotal).max(BigDecimal.ZERO));
+            tableOrderRepository.save(order);
+        }
+    }
+
     // ==========================================
     // II. HÓA ĐƠN & CHI TIẾT
     // ==========================================
@@ -254,7 +294,6 @@ public class OrderServiceImpl implements OrderService {
                 })
                 .collect(Collectors.toList());
 
-        // 🟢 CẢI TIẾN: Ưu tiên lấy paidAt, nếu null thì fallback sang closeAt
         LocalDateTime paidDateTime = order.getPaidAt() != null ? order.getPaidAt() : order.getCloseAt();
 
         return InvoiceDetailResponseDTO.builder()
