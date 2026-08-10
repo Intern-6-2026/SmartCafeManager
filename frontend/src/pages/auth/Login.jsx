@@ -33,8 +33,6 @@ export default function Login() {
 
             if (requirePasswordChange) {
                 navigate("/change-password");
-            } else if (String(roleName || "").toUpperCase() === "STAFF") {
-                navigate("/admin/news");
             } else {
                 navigate("/home");
             }

@@ -77,7 +77,7 @@ export default function AppRoutes() {
                 <Route
                     path="/admin/news"
                     element={
-                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                        <RequireRole roles={["ADMIN"]}>
                             <AdminNewsList />
                         </RequireRole>
                     }
@@ -85,7 +85,7 @@ export default function AppRoutes() {
                 <Route
                     path="/admin/news/new"
                     element={
-                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                        <RequireRole roles={["ADMIN"]}>
                             <AdminNewsForm />
                         </RequireRole>
                     }
@@ -93,7 +93,7 @@ export default function AppRoutes() {
                 <Route
                     path="/admin/news/:id/edit"
                     element={
-                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                        <RequireRole roles={["ADMIN"]}>
                             <AdminNewsForm />
                         </RequireRole>
                     }
@@ -101,7 +101,7 @@ export default function AppRoutes() {
                 <Route
                     path="/admin/news/:id"
                     element={
-                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                        <RequireRole roles={["ADMIN"]}>
                             <AdminNewsDetail />
                         </RequireRole>
                     }

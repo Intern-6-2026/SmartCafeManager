@@ -82,7 +82,7 @@ export const getAdminNewsList = async (page = 0, size = 10) => {
 };
 
 export const getAdminNewsById = async (id) => {
-  return await axios.get(`${API_BASE_URL}/news/admin/${id}`);
+  return await axios.get(`${API_BASE_URL}/news/${id}`);
 };
 
 export const createNews = async ({ title, summary, content, image }) => {

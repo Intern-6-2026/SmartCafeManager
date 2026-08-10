@@ -65,7 +65,7 @@ export default function NewsDetail() {
                 <Link to={`/admin/news/${id}`} className="news-btn news-btn-ghost">
                   Xem bản quản lý
                 </Link>
-                {canEditOrDeleteNews(news?.authorUsername) && (
+                {canEditOrDeleteNews() && (
                   <Link to={`/admin/news/${id}/edit`} className="news-btn news-btn-primary">
                     Sửa bài
                   </Link>
@@ -95,7 +95,10 @@ export default function NewsDetail() {
                 {news.summary ? (
                   <p className="news-detail-summary">{news.summary}</p>
                 ) : null}
-                <div className="news-detail-content">{news.content}</div>
+                <div
+                  className="news-detail-content"
+                  dangerouslySetInnerHTML={{ __html: news.content || "" }}
+                />
               </div>
             </article>
           )}

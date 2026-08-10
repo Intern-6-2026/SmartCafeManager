@@ -25,9 +25,9 @@ export function getCurrentUsername() {
   return localStorage.getItem("userName") || "";
 }
 
+/** Hiện chỉ ADMIN quản lý / đăng tin (theo yêu cầu lead) */
 export function canManageNews() {
-  const role = getRoleName();
-  return role === "ADMIN" || role === "STAFF";
+  return getRoleName() === "ADMIN";
 }
 
 export function isAdminRole() {
@@ -38,11 +38,16 @@ export function isStaffRole() {
   return getRoleName() === "STAFF";
 }
 
-/** Admin sửa/xóa mọi bài; Staff chỉ bài do chính mình viết */
-export function canEditOrDeleteNews(authorUsername) {
-  if (isAdminRole()) return true;
-  if (!isStaffRole()) return false;
-  const me = getCurrentUsername();
-  if (!me || !authorUsername) return false;
-  return me.toLowerCase() === String(authorUsername).toLowerCase();
+/** Admin sửa/xóa mọi bài */
+export function canEditOrDeleteNews() {
+  return isAdminRole();
+}
+
+export function stripHtml(html) {
+  if (!html) return "";
+  return String(html)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }

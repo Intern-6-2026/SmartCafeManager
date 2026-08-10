@@ -9,8 +9,9 @@ import {
   getAdminNewsById,
   getApiErrorMessage,
 } from "../../services/apiService";
-import { canEditOrDeleteNews, isAdminRole } from "../../utils/newsHelpers";
+import { isAdminRole, stripHtml } from "../../utils/newsHelpers";
 import { newsFormSchema } from "../../validation/newsSchemas";
+import NewsEditor from "../../components/NewsEditor";
 import "../../styles/news.css";
 
 const emptyValues = {
@@ -39,10 +40,8 @@ export default function AdminNewsForm() {
       .then((res) => {
         if (cancelled) return;
         const n = res.data || {};
-        if (!canEditOrDeleteNews(n.authorUsername) && !isAdminRole()) {
-          setLoadError(
-            "Bạn không có quyền sửa bài viết này (chỉ tác giả hoặc admin)."
-          );
+        if (!isAdminRole()) {
+          setLoadError("Chỉ admin được sửa bài viết tin tức.");
           return;
         }
         setInitialValues({
@@ -106,7 +105,7 @@ export default function AdminNewsForm() {
                   const payload = {
                     title: values.title.trim(),
                     summary: (values.summary || "").trim(),
-                    content: values.content.trim(),
+                    content: values.content,
                     image: values.image || null,
                   };
                   if (isEdit) {
@@ -184,25 +183,23 @@ export default function AdminNewsForm() {
                       )}
                     </label>
 
-                    <label className="news-form-field">
+                    <div className="news-form-field">
                       <span className="news-form-label">
                         Nội dung <em>*</em>
                       </span>
-                      <Field
-                        as="textarea"
-                        name="content"
-                        rows={10}
-                        className={`news-input news-input-content ${showErr("content") ? "is-invalid" : ""}`}
-                        placeholder="Nhập nội dung chi tiết bài viết..."
-                        maxLength={10000}
+                      <NewsEditor
+                        value={values.content}
+                        onChange={(html) => setFieldValue("content", html)}
+                        className={showErr("content") ? "is-invalid" : ""}
                       />
                       <span className="news-form-hint">
-                        Ít nhất 20 ký tự · {(values.content || "").trim().length}/10000
+                        Có thể in đậm, nghiêng, danh sách… ·{" "}
+                        {stripHtml(values.content).length}/10000 ký tự
                       </span>
                       {showErr("content") && (
                         <span className="news-field-error">{errors.content}</span>
                       )}
-                    </label>
+                    </div>
 
                     <div className="news-form-field">
                       <span className="news-form-label">

@@ -11,10 +11,6 @@ import {
 import {
   formatNewsDate,
   NEWS_STATUS_LABEL,
-  isAdminRole,
-  isStaffRole,
-  canEditOrDeleteNews,
-  getCurrentUsername,
 } from "../../utils/newsHelpers";
 import "../../styles/news.css";
 
@@ -29,13 +25,9 @@ export default function AdminNewsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterMine, setFilterMine] = useState(false);
   const [sortKey, setSortKey] = useState("time");
   const [sortDir, setSortDir] = useState("desc");
   const [busyId, setBusyId] = useState(null);
-  const admin = isAdminRole();
-  const staff = isStaffRole();
-  const myUsername = getCurrentUsername();
 
   const load = () => {
     setLoading(true);
@@ -64,13 +56,6 @@ export default function AdminNewsList() {
     if (filterStatus) {
       rows = rows.filter((r) => r.status === filterStatus);
     }
-    if (filterMine && myUsername) {
-      rows = rows.filter(
-        (r) =>
-          String(r.authorUsername || "").toLowerCase() ===
-          myUsername.toLowerCase()
-      );
-    }
     rows.sort((a, b) => {
       const va = sortKey === "title" ? (a.title || "") : new Date(a.createdAt || 0).getTime();
       const vb = sortKey === "title" ? (b.title || "") : new Date(b.createdAt || 0).getTime();
@@ -80,7 +65,7 @@ export default function AdminNewsList() {
       return sortDir === "asc" ? va - vb : vb - va;
     });
     return rows;
-  }, [items, filterStatus, filterMine, myUsername, sortKey, sortDir]);
+  }, [items, filterStatus, sortKey, sortDir]);
 
   const toggleSort = (key) => {
     if (sortKey === key) {
@@ -123,13 +108,9 @@ export default function AdminNewsList() {
         <div className="wrap wrap-wide">
           <div className="page-head">
             <div>
-              <h1 className="page-title">
-                {staff ? "Tin tức — Nhân viên" : "Quản lý tin tức"}
-              </h1>
+              <h1 className="page-title">Quản lý tin tức</h1>
               <p className="page-sub">
-                {staff
-                  ? "Bạn có thể tạo tin mới. Chỉ được sửa/xóa bài do chính bạn đăng."
-                  : "Thêm, sửa, xóa và duyệt bài viết NEOCAFÉ."}
+                Thêm, sửa, xóa và duyệt bài viết NEOCAFÉ (chỉ Admin).
               </p>
             </div>
             <div className="page-head-actions">
@@ -148,13 +129,6 @@ export default function AdminNewsList() {
             </div>
           </div>
 
-          {staff && (
-            <div className="news-staff-note">
-              Đang đăng nhập: <strong>{myUsername || "—"}</strong> (STAFF). Nút
-              Sửa/Xóa chỉ hiện với bài bạn là tác giả.
-            </div>
-          )}
-
           <div className="filter-bar">
             <div className="filter-field">
               <label htmlFor="filterStatus">Lọc theo trạng thái</label>
@@ -169,23 +143,10 @@ export default function AdminNewsList() {
                 <option value="REJECTED">Từ chối</option>
               </select>
             </div>
-            {staff && (
-              <label className="filter-check">
-                <input
-                  type="checkbox"
-                  checked={filterMine}
-                  onChange={(e) => setFilterMine(e.target.checked)}
-                />
-                Chỉ bài của tôi
-              </label>
-            )}
             <button
               type="button"
               className="filter-clear"
-              onClick={() => {
-                setFilterStatus("");
-                setFilterMine(false);
-              }}
+              onClick={() => setFilterStatus("")}
             >
               Xóa lọc
             </button>
@@ -233,18 +194,13 @@ export default function AdminNewsList() {
                       </td>
                     </tr>
                   ) : (
-                    visible.map((row, index) => {
-                      const canEdit = canEditOrDeleteNews(row.authorUsername);
-                      return (
+                    visible.map((row, index) => (
                         <tr key={row.newsId}>
                           <td className="col-id">{page * PAGE_SIZE + index + 1}</td>
                           <td className="col-time">{formatNewsDate(row.createdAt)}</td>
                           <td className="col-name">{row.title}</td>
                           <td className="col-author">
                             {row.authorUsername || "—"}
-                            {canEdit && staff ? (
-                              <span className="mine-tag"> của bạn</span>
-                            ) : null}
                           </td>
                           <td className="col-content">
                             {row.summary || "—"}
@@ -278,26 +234,22 @@ export default function AdminNewsList() {
                               >
                                 Xem
                               </button>
-                              {canEdit && (
-                                <button
-                                  type="button"
-                                  className="news-btn news-btn-sm"
-                                  onClick={() => navigate(`/admin/news/${row.newsId}/edit`)}
-                                >
-                                  Sửa
-                                </button>
-                              )}
-                              {canEdit && (
-                                <button
-                                  type="button"
-                                  className="news-btn news-btn-sm news-btn-danger"
-                                  disabled={busyId === row.newsId}
-                                  onClick={() => handleDelete(row.newsId)}
-                                >
-                                  Xóa
-                                </button>
-                              )}
-                              {admin && row.status !== "PUBLISHED" && (
+                              <button
+                                type="button"
+                                className="news-btn news-btn-sm"
+                                onClick={() => navigate(`/admin/news/${row.newsId}/edit`)}
+                              >
+                                Sửa
+                              </button>
+                              <button
+                                type="button"
+                                className="news-btn news-btn-sm news-btn-danger"
+                                disabled={busyId === row.newsId}
+                                onClick={() => handleDelete(row.newsId)}
+                              >
+                                Xóa
+                              </button>
+                              {row.status !== "PUBLISHED" && (
                                 <button
                                   type="button"
                                   className="news-btn news-btn-sm news-btn-primary"
@@ -307,7 +259,7 @@ export default function AdminNewsList() {
                                   Duyệt
                                 </button>
                               )}
-                              {admin && row.status === "PUBLISHED" && (
+                              {row.status === "PUBLISHED" && (
                                 <button
                                   type="button"
                                   className="news-btn news-btn-sm"
@@ -320,8 +272,7 @@ export default function AdminNewsList() {
                             </div>
                           </td>
                         </tr>
-                      );
-                    })
+                    ))
                   )}
                 </tbody>
               </table>

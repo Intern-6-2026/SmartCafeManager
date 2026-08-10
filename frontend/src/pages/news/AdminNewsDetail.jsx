@@ -99,14 +99,9 @@ export default function AdminNewsDetail() {
                       {NEWS_STATUS_LABEL[news.status] || news.status}
                     </span>
                   </p>
-                  {!canEditOrDeleteNews(news.authorUsername) && !admin && (
-                    <p className="page-sub">
-                      Bạn chỉ được xem bài này — không thể sửa hoặc xóa vì không phải tác giả.
-                    </p>
-                  )}
                 </div>
                 <div className="page-head-actions">
-                  {canEditOrDeleteNews(news.authorUsername) && (
+                  {canEditOrDeleteNews() && (
                     <Link
                       to={`/admin/news/${id}/edit`}
                       className="news-btn news-btn-ghost"
@@ -114,7 +109,7 @@ export default function AdminNewsDetail() {
                       Sửa
                     </Link>
                   )}
-                  {canEditOrDeleteNews(news.authorUsername) && (
+                  {canEditOrDeleteNews() && (
                     <button
                       type="button"
                       className="news-btn news-btn-danger"
@@ -168,7 +163,10 @@ export default function AdminNewsDetail() {
                   {news.summary ? (
                     <p className="news-detail-summary">{news.summary}</p>
                   ) : null}
-                  <div className="news-detail-content">{news.content}</div>
+                  <div
+                    className="news-detail-content"
+                    dangerouslySetInnerHTML={{ __html: news.content || "" }}
+                  />
                 </div>
               </article>
             </>

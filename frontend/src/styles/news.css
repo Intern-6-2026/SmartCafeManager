@@ -295,8 +295,29 @@
 .news-detail-content {
   font-size: 15px;
   line-height: 1.75;
-  white-space: pre-wrap;
   color: var(--ink);
+}
+
+.news-detail-content p {
+  margin: 0 0 0.85em;
+}
+
+.news-detail-content ul,
+.news-detail-content ol {
+  margin: 0 0 0.85em;
+  padding-left: 1.4em;
+}
+
+.news-detail-content a {
+  color: var(--tan-deep);
+}
+
+.news-detail-content blockquote {
+  margin: 0 0 0.85em;
+  padding: 8px 14px;
+  border-left: 3px solid var(--tan);
+  color: var(--ink-soft);
+  background: #fff8ee;
 }
 
 .news-lightbox {
@@ -726,6 +747,43 @@ table.fb-table {
   min-height: 220px;
   resize: vertical;
   line-height: 1.7;
+}
+
+.news-editor {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.news-editor.is-invalid {
+  border-color: #c45c45;
+  box-shadow: 0 0 0 3px rgba(196, 92, 69, 0.12);
+}
+
+.news-editor .ql-toolbar.ql-snow {
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: #fbf4e7;
+  font-family: "Be Vietnam Pro", sans-serif;
+}
+
+.news-editor .ql-container.ql-snow {
+  border: none;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 15px;
+  min-height: 220px;
+}
+
+.news-editor .ql-editor {
+  min-height: 220px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.news-editor .ql-editor.ql-blank::before {
+  color: #a89886;
+  font-style: normal;
 }
 
 .news-input-file {
