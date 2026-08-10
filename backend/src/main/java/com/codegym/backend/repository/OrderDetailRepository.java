@@ -44,7 +44,7 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> 
     // 🟢 Kiểm tra món có trong hóa đơn cụ thể hay không
     boolean existsByOrderTableOrderIdAndItemItemId(Long orderId, Long itemId);
 
-    // 🟢 Kiểm tra Khách hàng ĐÃ ĐĂNG NHẬP đã mua & hoàn tất thanh toán món này chưa
+    // 🟢 Kiểm tra Khách hàng ĐÃ ĐĂNG NHẬP đã mua & hoàn tất thanh toán món này chưa (theo Customer ID)
     @Query("SELECT COUNT(od) > 0 FROM OrderDetail od " +
            "WHERE od.order.customer.customerId = :customerId " +
            "AND od.item.itemId = :itemId " +
@@ -55,10 +55,11 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> 
             @Param("status") StatusTableOrder status
     );
 
-    // 🟢 Kiểm tra KHÁCH HÀNG (theo Email) đã mua & hoàn tất thanh toán món này chưa
+    // 🟢 Kiểm tra Khách hàng ĐÃ ĐĂNG NHẬP đã mua & hoàn tất thanh toán món này chưa (theo Email trong Account)
     @Query("SELECT COUNT(od) > 0 FROM OrderDetail od " +
            "WHERE od.order.customer IS NOT NULL " +
-           "AND od.order.customer.email = :email " +
+           "AND od.order.customer.account IS NOT NULL " +
+           "AND od.order.customer.account.email = :email " +
            "AND od.item.itemId = :itemId " +
            "AND od.order.status = :status")
     boolean existsByEmailAndItemAndOrderStatus(
