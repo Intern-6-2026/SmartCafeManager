@@ -181,18 +181,19 @@ export const payWithCash = async (tableId) => {
   });
 };
 
-// API 11: thanh toán tiền mặt 
-export const sentFeedback = async (content, rating, orderId, senderName, email, imageUrl, itemId) => {
-  return await axios.post(`${CUSTOMER_URL}/feedbacks`, {
-    content,
-    rating,
-    orderId,
-    senderName,
-    email,
-    imageUrl,
-    itemId
-  }, 
-  { headers: { "Content-Type": "application/json", }, });
+// API: gửi feedback của khách hàng
+export const sentFeedback = async (content, rating, orderId, senderName, email, imageFile, itemId) => {
+  const formData = new FormData();
+  formData.append("content", content);
+  formData.append("rating", rating);
+  formData.append("orderId", orderId);
+  formData.append("senderName", senderName);
+  formData.append("email", email);
+  formData.append("itemId", itemId);
+  if (imageFile) {
+    formData.append("imageFile", imageFile);
+  }
+  return await axios.post(`${CUSTOMER_URL}/feedbacks`, formData);
 };
 // API cho nhân viên
 
@@ -229,6 +230,11 @@ export const getItemFeedbacks = async (itemId) => {
 // API 18: xác nhận đơn hàng của khách (chuyển trạng thái từ PENDING -> CONFIRMED)
 export const staffConfirmOrder = async (tableOrderId) => {
   return await axios.put(`${API_BASE_URL}/staff/orders/${tableOrderId}/confirm`);
+};
+
+// API 19: xác nhận phục vụ món ăn (chuyển trạng thái từ CONFIRMED -> SERVED)
+export const staffServeTable = async (tableId) => {
+  return await axios.put(`${API_BASE_URL}/staff/tables/${tableId}/serve-all`);
 };
 
 /* Helper: rút thông báo lỗi từ axios error để hiển thị lên UI */

@@ -10,6 +10,7 @@ import {
   getApiErrorMessage,
   getActiveOrder,
   staffConfirmOrder,
+  staffServeTable
 } from "../../services/apiService";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + "đ";
@@ -75,6 +76,7 @@ function SaleManager() {
   const [cash, setCash] = useState(""); // tiền khách đưa
   const [lastChange, setLastChange] = useState(0); // tiền thối vừa trả
   const [showNhanDon, setShowNhanDon] = useState(false); // hiển thị nút nhận đơn
+  const [showServed, setShowServed] = useState(false); // hiển thị nút xác nhận lên món
   const [message, setMessage] = useState(""); // thông báo kết quả API
   const [loading, setLoading] = useState(false);
 
@@ -133,10 +135,17 @@ function SaleManager() {
       /* Bỏ món đã huỷ và đã xoá mềm khỏi hóa đơn */
       const visible = raw.filter((d) => !d.deleted && d.status !== "CANCELLED");
       setDetails(visible.map(normalizeDetail));
+      //Hiện nút nhận đơn nếu có món mới gọi (ORDERED) chưa xác nhận
       if (visible.filter((d) => d.status === "ORDERED").length > 0) {
         setShowNhanDon(true);
       } else {
         setShowNhanDon(false);
+      }
+      //Hiện nut xác nhận phục vụ món nếu có món đã xác nhận nhưng chưa phục vụ
+      if (visible.filter((d) => d.status === "CONFIRMED").length > 0) {
+        setShowServed(true);
+      } else {
+        setShowServed(false);
       }
 
       const order = raw[0]?.order;
@@ -230,6 +239,19 @@ function SaleManager() {
     }
   };
 
+  const handleServeAll = async () => {
+    setLoading(true);
+    try {
+      const res = await staffServeTable(selectedTable.id);
+      notify("Đã xác nhận phục vụ tất cả món.");
+      await loadDetails(selectedTable.id);
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Xác nhận phục vụ thất bại."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const closeDone = async () => {
     setDoneOpen(false);
     /* Nạp lại từ server để lấy trạng thái bàn thật sau khi đóng hóa đơn */
@@ -247,6 +269,7 @@ function SaleManager() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   });
+
   /* ===== WebRTC PeerJS để nhận thông báo từ client-menu ===== */
   const peerRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
@@ -438,7 +461,13 @@ function SaleManager() {
                       </button>
                     </>
                   )}
-
+                  {showServed && (
+                    <>
+                      <button className="btn-served" onClick={handleServeAll}>
+                        Đã lên món
+                      </button>
+                    </>
+                  )}
                   {showPay && (
                     <button
                       className="btn-thanhtoan"

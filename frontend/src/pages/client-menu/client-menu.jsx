@@ -224,14 +224,14 @@ function ClientMenu() {
     try {
       const res = await confirmOrder(tableId);
       notify(res.data);
-      await callService(tableId, "WAITING_FOOD"); //set status bàn thành "Đang chờ món"
-      if (connectionRef.current?.open) {
-        connectionRef.current.send({
-          type: "WAITING_FOOD",
-          tableId: tableId,
-          message: `Bàn ${tableId} vừa gọi món`,
-        });
-      }
+      // await callService(tableId, "WAITING_FOOD"); //set status bàn thành "Đang chờ món"
+      // if (connectionRef.current?.open) {
+      //   connectionRef.current.send({
+      //     type: "WAITING_FOOD",
+      //     tableId: tableId,
+      //     message: `Bàn ${tableId} vừa gọi món`,
+      //   });
+      // }
       await loadCart(); // giỏ tạm sẽ trống sau khi chốt
     } catch (err) {
       notify(getApiErrorMessage(err, "Gọi món thất bại."));
@@ -248,7 +248,7 @@ function ClientMenu() {
       setInvoice(res.data);
       setCheckoutOpen(true);
     } catch (err) {
-      notify(getApiErrorMessage(err, "Không lấy được hóa đơn."));
+      notify( "Không lấy được hóa đơn.");
     } finally {
       setLoading(false);
     }
@@ -307,7 +307,6 @@ function ClientMenu() {
           message: `Bàn ${tableId} vừa gọi nhân viên`,
         });
       }
-
     } catch (err) {
       notify(getApiErrorMessage(err, "Gọi nhân viên thất bại."));
     } finally {

@@ -117,11 +117,17 @@ function FeedbackModal({ open, onSubmit, onClose, orderedItems = [] }) {
             <option value="">
               {hasOrdered ? "-- Chọn món --" : "Chưa có món nào được gọi"}
             </option>
-            {orderedItems.map((it) => (
-              <option key={it.orderDetailId} value={it.orderDetailId}>
-                {it.itemName}
-              </option>
-            ))}
+            {orderedItems
+              .filter(
+                (it, index, self) =>
+                  index === self.findIndex((item) => item.itemId === it.itemId)
+              )
+              .map((it) => (
+                <option key={it.orderDetailId} value={it.orderDetailId}>
+                  {it.itemName}
+                </option>
+              ))
+            }
           </select>
           {errors.orderDetailId && <span className="field-error">{errors.orderDetailId}</span>}
           {!hasOrdered && (
