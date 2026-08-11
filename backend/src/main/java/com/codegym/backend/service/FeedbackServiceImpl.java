@@ -1,5 +1,6 @@
 package com.codegym.backend.service;
 
+import java.io.IOException; // 🟢 THÊM IMPORT NÀY
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
@@ -33,6 +34,7 @@ public class FeedbackServiceImpl implements FeedbackService {
     private final CustomerRepository customerRepository;
     private final ItemRepository itemRepository;
     private final OrderDetailRepository orderDetailRepository;
+    private final CloudinaryService cloudinaryService;
 
     // 🟢 1. TẠO FEEDBACK VÀ TRẢ VỀ DTO
     @Override
@@ -42,8 +44,7 @@ public class FeedbackServiceImpl implements FeedbackService {
         Item item = itemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn để đánh giá!"));
 
-        // 🟢 CẬP NHẬT: Chỉ kiểm tra món ăn có trong đơn hay không (Bỏ điều kiện phải
-        // thanh toán PAID)
+        // Chỉ kiểm tra món ăn có trong đơn hay không
         if (dto.getOrderId() != null) {
             boolean isItemInOrder = orderDetailRepository.existsByOrderTableOrderIdAndItemItemId(
                     dto.getOrderId(),
@@ -51,6 +52,16 @@ public class FeedbackServiceImpl implements FeedbackService {
 
             if (!isItemInOrder) {
                 throw new RuntimeException("Đơn hàng #" + dto.getOrderId() + " không chứa món ăn này!");
+            }
+        }
+
+        // 🟢 2. XỬ LÝ UPLOAD ẢNH LÊN CLOUDINARY (ĐÃ BỌC TRY-CATCH)
+        String finalImageUrl = dto.getImageUrl();
+        if (dto.getImageFile() != null && !dto.getImageFile().isEmpty()) {
+            try {
+                finalImageUrl = cloudinaryService.uploadImage(dto.getImageFile());
+            } catch (IOException e) {
+                throw new RuntimeException("Lỗi tải ảnh lên Cloudinary: " + e.getMessage());
             }
         }
 
@@ -77,13 +88,13 @@ public class FeedbackServiceImpl implements FeedbackService {
             senderName = "Khách hàng";
         }
 
-        // Lưu Feedback
+        // Lưu Feedback với finalImageUrl đã xử lý
         Feedback feedback = Feedback.builder()
                 .content(dto.getContent())
                 .rating(dto.getRating())
                 .senderName(senderName)
                 .email(email)
-                .imageUrl(dto.getImageUrl())
+                .imageUrl(finalImageUrl)
                 .sentAt(LocalDateTime.now())
                 .customer(customer)
                 .item(item)

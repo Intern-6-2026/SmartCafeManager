@@ -41,6 +41,8 @@ public class PaymentServiceImpl implements PaymentService {
                                 .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
                                 .orElseThrow(() -> new RuntimeException("Bàn " + tableId + " không có hóa đơn mở!"));
 
+                // Khách yêu cầu: Đổi sang WAITING_PAYMENT, giữ nguyên paidAt/closeAt = null
+                order.setStatus(StatusTableOrder.WAITING_PAYMENT);
                 order.setPaymentMethod(paymentMethod);
                 tableOrderRepository.save(order);
         }
@@ -48,13 +50,15 @@ public class PaymentServiceImpl implements PaymentService {
         @Override
         @Transactional
         public void completeCheckout(Long tableId, PaymentMethod paymentMethod) {
+                // Nhân viên duyệt: Chấp nhận đơn OPEN hoặc WAITING_PAYMENT
                 TableOrder order = tableOrderRepository
-                                .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                                .findByTableTableIdAndStatusIn(tableId,
+                                                List.of(StatusTableOrder.OPEN, StatusTableOrder.WAITING_PAYMENT))
                                 .orElseThrow(() -> new RuntimeException(
-                                                "Bàn " + tableId + " không có hóa đơn mở để hoàn tất thanh toán!"));
+                                                "Bàn " + tableId + " không có hóa đơn chờ hoàn tất thanh toán!"));
 
                 order.setStatus(StatusTableOrder.PAID);
-                order.setPaymentMethod(paymentMethod);
+                order.setPaymentMethod(paymentMethod != null ? paymentMethod : PaymentMethod.CASH);
                 order.setPaidAt(LocalDateTime.now());
                 order.setCloseAt(LocalDateTime.now());
 
@@ -65,8 +69,10 @@ public class PaymentServiceImpl implements PaymentService {
         @Transactional(readOnly = true)
         public TableOrderSummaryDTO getInvoiceSummaryDTO(Long tableId) {
                 TableOrder order = tableOrderRepository
-                                .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-                                .orElseThrow(() -> new RuntimeException("Bàn " + tableId + " không có hóa đơn mở!"));
+                                .findByTableTableIdAndStatusIn(tableId,
+                                                List.of(StatusTableOrder.OPEN, StatusTableOrder.WAITING_PAYMENT))
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Bàn " + tableId + " không có hóa đơn mở hoặc chờ thanh toán!"));
 
                 BigDecimal total = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
                 List<OrderDetail> details = orderDetailRepository.findByOrder(order);
@@ -79,7 +85,7 @@ public class PaymentServiceImpl implements PaymentService {
                                 .totalAmount(total)
                                 .orderStatus(order.getStatus() != null ? order.getStatus().name() : null)
                                 .openAt(order.getOpenAt())
-                                .orderDetails(mapToOrderDetailDTOList(details)) // Bổ sung nạp danh sách món
+                                .orderDetails(mapToOrderDetailDTOList(details))
                                 .build();
         }
 
@@ -94,9 +100,11 @@ public class PaymentServiceImpl implements PaymentService {
                                                         "Không tìm thấy hóa đơn mã: " + tableOrderId));
                 } else {
                         order = tableOrderRepository
-                                        .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-                                        .orElseThrow(() -> new RuntimeException(
-                                                        "Bàn " + tableId + " không có hóa đơn mở!"));
+                                        .findByTableTableIdAndStatusIn(tableId,
+                                                        List.of(StatusTableOrder.OPEN,
+                                                                        StatusTableOrder.WAITING_PAYMENT))
+                                        .orElseThrow(() -> new RuntimeException("Bàn " + tableId
+                                                        + " không có hóa đơn mở hoặc chờ thanh toán!"));
                 }
 
                 List<OrderDetail> details = orderDetailRepository.findByOrder(order);
@@ -116,7 +124,6 @@ public class PaymentServiceImpl implements PaymentService {
                                 .build();
         }
 
-        // 🟢 Hàm phụ trợ map từ Entity OrderDetail sang OrderDetailDTO
         private List<OrderDetailDTO> mapToOrderDetailDTOList(List<OrderDetail> details) {
                 if (details == null || details.isEmpty()) {
                         return Collections.emptyList();

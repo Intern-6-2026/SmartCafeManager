@@ -39,6 +39,12 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     private final PaymentService paymentService;
     private final SimpMessagingTemplate messagingTemplate;
 
+    // Danh sách các trạng thái đơn hàng được coi là đang hoạt động trên bàn
+    private static final List<StatusTableOrder> ACTIVE_ORDER_STATUSES = List.of(
+            StatusTableOrder.OPEN, 
+            StatusTableOrder.WAITING_PAYMENT
+    );
+
     // ==========================================
     // I. SƠ ĐỒ BÀN & CHI TIẾT PANELS
     // ==========================================
@@ -62,7 +68,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         Tables table = getTableInfo(tableId);
 
         TableOrder activeOrder = tableOrderRepository
-                .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                .findByTableTableIdAndStatusIn(tableId, ACTIVE_ORDER_STATUSES)
                 .orElse(null);
 
         if (activeOrder == null) {
@@ -109,7 +115,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Transactional(readOnly = true)
     public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
         TableOrder activeOrder = tableOrderRepository
-                .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                .findByTableTableIdAndStatusIn(tableId, ACTIVE_ORDER_STATUSES)
                 .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có đơn hàng active!"));
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
@@ -139,16 +145,13 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Override
     @Transactional
     public void approveCashPayment(Long tableId) {
-        TableOrder activeOrder = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
-
-        activeOrder.setStatus(StatusTableOrder.PAID);
-        tableOrderRepository.save(activeOrder);
-
+        // Ủy quyền chốt đơn hàng và set paidAt cho PaymentService
         paymentService.completeCheckout(tableId, PaymentMethod.CASH);
 
+        // Đưa bàn về trạng thái EMPTY và giải phóng bàn
         Tables table = getTableInfo(tableId);
         table.setServiceStatus(ServiceStatus.EMPTY);
+        table.setIsOccupied(false);
         tablesRepository.save(table);
 
         notifyCustomerTable(tableId, "PAYMENT_SUCCESS", "Thanh toán thành công! Cảm ơn quý khách.");
@@ -158,7 +161,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Override
     @Transactional
     public void cancelTableOrder(Long tableId, String reason) {
-        TableOrder activeOrder = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+        TableOrder activeOrder = tableOrderRepository.findByTableTableIdAndStatusIn(tableId, ACTIVE_ORDER_STATUSES)
                 .orElseThrow(() -> new RuntimeException("Bàn không có hóa đơn nào đang mở để hủy!"));
 
         activeOrder.setStatus(StatusTableOrder.CANCELLED);
@@ -173,6 +176,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         Tables table = activeOrder.getTable();
         table.setServiceStatus(ServiceStatus.EMPTY);
+        table.setIsOccupied(false);
         tablesRepository.save(table);
 
         notifyCustomerTable(tableId, "ORDER_CANCELLED", "Hóa đơn đã bị hủy bởi nhân viên. Lý do: " + reason);
@@ -196,12 +200,11 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Override
     @Transactional
     public void serveAllItemsByTable(Long tableId) {
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatusIn(tableId, ACTIVE_ORDER_STATUSES)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
 
-        // Lọc các món đang chờ chế biến hoặc chờ ra bàn (ORDERED hoặc CONFIRMED)
         List<OrderDetail> pendingDetails = details.stream()
                 .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED || d.getStatus() == StatusOrderDetail.CONFIRMED)
                 .collect(Collectors.toList());
@@ -215,7 +218,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         }
         orderDetailRepository.saveAll(pendingDetails);
 
-        // Chuyển trạng thái bàn sang SERVING
         Tables table = order.getTable();
         table.setServiceStatus(ServiceStatus.SERVING);
         tablesRepository.save(table);
@@ -227,12 +229,11 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Override
     @Transactional
     public void confirmAllNewItemsByTable(Long tableId) {
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatusIn(tableId, ACTIVE_ORDER_STATUSES)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
 
-        // Lọc các món mới vừa được gọi (ORDERED)
         List<OrderDetail> orderedDetails = details.stream()
                 .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED)
                 .collect(Collectors.toList());
