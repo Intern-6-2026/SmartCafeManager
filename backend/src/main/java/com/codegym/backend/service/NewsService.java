@@ -9,6 +9,7 @@ import org.jsoup.safety.Safelist;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import com.codegym.backend.dto.NewsRequest;
 import com.codegym.backend.entity.Account;
 import com.codegym.backend.entity.News;
 import com.codegym.backend.enums.NewsStatus;
+import com.codegym.backend.exception.AppException;
 import com.codegym.backend.repository.AccountRepository;
 import com.codegym.backend.repository.NewsRepository;
 
@@ -33,10 +35,6 @@ public class NewsService {
         private final CloudinaryService cloudinaryService;
         private final SimpMessagingTemplate messagingTemplate;
         private final AccountRepository accountRepository;
-
-        // ==========================================
-        // 1. NHÓM TÁC VỤ PUBLIC (KHÁCH HÀNG / VÃNG LAI)
-        // ==========================================
 
         public Page<NewsListResponse> getAllNews(int page, int size) {
                 Pageable pageable = PageRequest.of(page, size);
@@ -53,15 +51,26 @@ public class NewsService {
         }
 
         public News getNewsById(Long id) {
-                return newsRepository.findById(Objects.requireNonNull(id))
-                                .filter(news -> news.getDeletedAt() == null && news.getStatus() == NewsStatus.PUBLISHED)
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Không tìm thấy tin tức, tin tức chưa được duyệt hoặc đã bị xóa!"));
-        }
+                News news = newsRepository.findWithAuthorByNewsIdAndDeletedAtIsNull(Objects.requireNonNull(id))
+                                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                                                "Không tìm thấy tin tức hoặc tin tức đã bị xóa!"));
 
-        // ==========================================
-        // 2. NHÓM TÁC VỤ QUẢN LÝ (STAFF & ADMIN)
-        // ==========================================
+                if (news.getStatus() == NewsStatus.PUBLISHED) {
+                        return news;
+                }
+
+                var auth = SecurityContextHolder.getContext().getAuthentication();
+                boolean isStaffOrAdmin = auth != null && auth.getAuthorities().stream()
+                                .anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN")
+                                                || role.getAuthority().equals("ROLE_STAFF"));
+
+                if (isStaffOrAdmin) {
+                        return news;
+                }
+
+                throw new AppException(HttpStatus.NOT_FOUND,
+                                "Không tìm thấy tin tức, tin tức chưa được duyệt hoặc đã bị xóa!");
+        }
 
         @Transactional(rollbackFor = Exception.class)
         public News createNews(NewsRequest request) throws Exception {
@@ -81,7 +90,8 @@ public class NewsService {
 
                 String username = SecurityContextHolder.getContext().getAuthentication().getName();
                 Account curentAccount = accountRepository.findByUsernameAndDeletedAtIsNull(username)
-                                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản người đăng"));
+                                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                                                "Không tìm thấy tài khoản người đăng"));
                 boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                                 .stream().anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
 
@@ -116,12 +126,20 @@ public class NewsService {
                                 .stream().anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
 
                 News news = newsRepository.findById(Objects.requireNonNull(id))
-                                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin tức!"));
+                                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                                                "Không tìm thấy tin tức!"));
 
                 String authorName = news.getAuthor().getUsername();
 
                 if (!currentUsername.equals(authorName) && !isAdmin) {
-                        throw new RuntimeException("Lỗi phân quyền: Bạn không có quyền sửa bài viết này");
+                        throw new AppException(HttpStatus.FORBIDDEN,
+                                        "Lỗi phân quyền: Bạn không có quyền sửa bài viết này");
+                }
+
+                if (!isAdmin && news.getStatus() == NewsStatus.PUBLISHED) {
+                        news.setStatus(NewsStatus.PENDING);
+                        messagingTemplate.convertAndSend("/topic/news",
+                                        "NEWS_REMOVED_FROM_HOME|" + news.getNewsId());
                 }
 
                 summary = sanitizeHtml(summary);
@@ -153,12 +171,14 @@ public class NewsService {
                                 .stream().anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
 
                 News news = newsRepository.findById(Objects.requireNonNull(id))
-                                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin tức!"));
+                                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                                                "Không tìm thấy tin tức!"));
 
                 String authorName = news.getAuthor().getUsername();
 
                 if (!currentUsername.equals(authorName) && !isAdmin) {
-                        throw new RuntimeException("Lỗi phân quyền: Bạn không có quyền xóa bài viết này");
+                        throw new AppException(HttpStatus.FORBIDDEN,
+                                        "Lỗi phân quyền: Bạn không có quyền xóa bài viết này");
                 }
 
                 news.setDeletedAt(new Date());
@@ -168,25 +188,27 @@ public class NewsService {
                 messagingTemplate.convertAndSend("/topic/news", "NEWS_DELETED|" + id);
         }
 
-        // ==========================================
-        // 3. NHÓM TÁC VỤ ĐỘC QUYỀN (CHỈ DÀNH CHO ADMIN)
-        // ==========================================
-
         public Page<News> getAllNewsForAdmin(int page, int size) {
                 Pageable pageable = PageRequest.of(page, size);
                 return newsRepository.findByDeletedAtIsNullOrderByCreatedAtDesc(pageable);
         }
 
-        public News getNewsByIdForAdmin(Long id) {
-                return newsRepository.findWithAuthorByNewsIdAndDeletedAtIsNull(Objects.requireNonNull(id))
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Không tìm thấy tin tức hoặc tin tức đã bị xóa!"));
+public Page<News> getMyNews(int page, int size) {
+                Pageable pageable = PageRequest.of(page, size);
+                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                Account currentAccount = accountRepository.findByUsernameAndDeletedAtIsNull(username)
+                                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                                                "Không tìm thấy tài khoản hiện tại"));
+
+                return newsRepository.findByAuthorAccountIdOrderByCreatedAtDesc(currentAccount.getAccountId(),
+                                pageable);
         }
 
         @Transactional(rollbackFor = Exception.class)
         public News changeNewsStatus(Long id, NewsStatus newStatus) {
                 News news = newsRepository.findById(Objects.requireNonNull(id))
-                                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin tức!"));
+                                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
+                                                "Không tìm thấy tin tức!"));
 
                 news.setStatus(newStatus);
 
@@ -214,33 +236,39 @@ public class NewsService {
         }
 
         private String sanitizeHtml(String html) {
-                if (html == null) {
+                if (html == null)
                         return null;
-                }
-                return Jsoup.clean(html, Safelist.relaxed());
+                Safelist customSafelist = Safelist.relaxed()
+                                .addAttributes(":all", "style")
+                                .addAttributes(":all", "class");
+
+                return Jsoup.clean(html, customSafelist);
         }
 
         private void validateImage(MultipartFile image) {
                 String contentType = image.getContentType();
                 if (contentType == null || !contentType.startsWith("image/")) {
-                        throw new RuntimeException("File ảnh không hợp lệ, vui lòng tải lên file hình ảnh");
+                        throw new AppException(HttpStatus.BAD_REQUEST,
+                                        "File ảnh không hợp lệ, vui lòng tải lên file hình ảnh");
                 }
 
                 String originalFilename = image.getOriginalFilename();
                 if (originalFilename == null || !originalFilename.contains(".")) {
-                        throw new RuntimeException("Tên file ảnh không hợp lệ");
+                        throw new AppException(HttpStatus.BAD_REQUEST, "Tên file ảnh không hợp lệ");
                 }
 
                 String ext = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
                 Set<String> allowedExt = Set.of("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "tiff", "tif",
                                 "heic");
                 if (!allowedExt.contains(ext)) {
-                        throw new RuntimeException("Định dạng file không được hỗ trợ");
+                        throw new AppException(HttpStatus.BAD_REQUEST,
+                                        "Định dạng file không được hỗ trợ");
                 }
 
                 long maxSizeBytes = 5L * 1024 * 1024;
                 if (image.getSize() > maxSizeBytes) {
-                        throw new RuntimeException("Dung lượng ảnh không được vượt quá 5MB");
+                        throw new AppException(HttpStatus.BAD_REQUEST,
+                                        "Dung lượng ảnh không được vượt quá 5MB");
                 }
         }
 }

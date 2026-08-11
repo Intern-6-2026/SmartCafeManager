@@ -4,8 +4,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,7 @@ import com.codegym.backend.entity.Account;
 import com.codegym.backend.entity.Employee;
 import com.codegym.backend.entity.Role;
 import com.codegym.backend.enums.AccountStatus;
+import com.codegym.backend.exception.AppException;
 import com.codegym.backend.repository.AccountRepository;
 import com.codegym.backend.repository.EmployeeRepository;
 import com.codegym.backend.repository.RoleRepository;
@@ -44,14 +47,15 @@ public class EmployeeService {
     @Transactional(rollbackFor = Exception.class)
     public EmployeeResponse createEmployee(EmployeeRequest request, MultipartFile image) throws Exception {
         if (accountRepository.findByUsernameAndDeletedAtIsNull(request.getUsername()).isPresent()) {
-            throw new RuntimeException("Tên đăng nhập đã tồn tại!");
+            throw new AppException(HttpStatus.CONFLICT, "Tên đăng nhập đã tồn tại!");
         }
         if (accountRepository.findByEmailAndDeletedAtIsNull(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email đã tồn tại!");
+            throw new AppException(HttpStatus.CONFLICT, "Email đã tồn tại!");
         }
 
         Role staffRole = roleRepository.findByRoleName("STAFF")
-                .orElseThrow(() -> new RuntimeException("Lỗi hệ thống: Không tìm thấy quyền STAFF"));
+                .orElseThrow(() -> new AppException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Lỗi hệ thống: Không tìm thấy quyền STAFF"));
 
         Account account = Account.builder()
                 .username(request.getUsername())
@@ -65,6 +69,7 @@ public class EmployeeService {
 
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
+            validateImage(image);
             imageUrl = cloudinaryService.uploadImage(image);
         }
         Date dob = null;
@@ -90,13 +95,13 @@ public class EmployeeService {
             throws Exception {
 
         Employee employee = employeeRepository.findById(Objects.requireNonNull(employeeId))
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy nhân viên!"));
 
         Account account = employee.getAccount();
 
         if (request.getEmail() != null && !request.getEmail().equals(account.getEmail())) {
             if (accountRepository.findByEmailAndDeletedAtIsNull(request.getEmail()).isPresent()) {
-                throw new RuntimeException("Email đã được sử dụng bởi người khác!");
+                throw new AppException(HttpStatus.CONFLICT, "Email đã được sử dụng bởi người khác!");
             }
             account.setEmail(request.getEmail());
         }
@@ -117,12 +122,13 @@ public class EmployeeService {
 
         if (request.getPhoneNumber() != null && !request.getPhoneNumber().equals(employee.getPhoneNumber())) {
             if (employeeRepository.existsByPhoneNumberAndAccountNot(request.getPhoneNumber(), account)) {
-                throw new RuntimeException("Số điện thoại đã tồn tại!");
+                throw new AppException(HttpStatus.CONFLICT, "Số điện thoại đã tồn tại!");
             }
             employee.setPhoneNumber(request.getPhoneNumber());
         }
 
         if (image != null && !image.isEmpty()) {
+            validateImage(image);
             if (employee.getImageUrl() != null) {
                 cloudinaryService.deleteImage(employee.getImageUrl());
             }
@@ -136,7 +142,7 @@ public class EmployeeService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteEmployee(Long employeeId) {
         Employee employee = employeeRepository.findById(Objects.requireNonNull(employeeId))
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy nhân viên!"));
 
         Account account = employee.getAccount();
 
@@ -165,5 +171,32 @@ public class EmployeeService {
                 .imageUrl(emp.getImageUrl())
                 .status(emp.getAccount().getStatus().name())
                 .build();
+    }
+
+    private void validateImage(MultipartFile image) {
+        String contentType = image.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new AppException(HttpStatus.BAD_REQUEST,
+                    "File ảnh không hợp lệ, vui lòng tải lên file hình ảnh");
+        }
+
+        String originalFilename = image.getOriginalFilename();
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Tên file ảnh không hợp lệ");
+        }
+
+        String ext = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
+        Set<String> allowedExt = Set.of("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "tiff", "tif",
+                "heic");
+        if (!allowedExt.contains(ext)) {
+            throw new AppException(HttpStatus.BAD_REQUEST,
+                    "Định dạng file không được hỗ trợ");
+        }
+
+        long maxSizeBytes = 5L * 1024 * 1024;
+        if (image.getSize() > maxSizeBytes) {
+            throw new AppException(HttpStatus.BAD_REQUEST,
+                    "Dung lượng ảnh không được vượt quá 5MB");
+        }
     }
 }

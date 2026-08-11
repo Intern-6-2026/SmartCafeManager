@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import com.codegym.backend.entity.Account;
 import com.codegym.backend.entity.Customer;
 import com.codegym.backend.entity.Role;
 import com.codegym.backend.enums.AccountStatus;
+import com.codegym.backend.exception.AppException;
 import com.codegym.backend.repository.AccountRepository;
 import com.codegym.backend.repository.CustomerRepository;
 import com.codegym.backend.repository.RoleRepository;
@@ -44,14 +46,15 @@ public class CustomerService {
     @Transactional(rollbackFor = Exception.class)
     public CustomerResponse createCustomer(CustomerRequest request, MultipartFile image) throws Exception {
         if (accountRepository.findByUsernameAndDeletedAtIsNull(request.getUsername()).isPresent()) {
-            throw new RuntimeException("Tên đăng nhập đã tồn tại!");
+            throw new AppException(HttpStatus.CONFLICT, "Tên đăng nhập đã tồn tại!");
         }
         if (accountRepository.findByEmailAndDeletedAtIsNull(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email đã tồn tại!");
+            throw new AppException(HttpStatus.CONFLICT, "Email đã tồn tại!");
         }
 
         Role userRole = roleRepository.findByRoleName("USER")
-                .orElseThrow(() -> new RuntimeException("Lỗi hệ thống: Không tìm thấy quyền USER"));
+                .orElseThrow(() -> new AppException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Lỗi hệ thống: Không tìm thấy quyền USER"));
 
         Account account = Account.builder()
                 .username(request.getUsername())
@@ -90,13 +93,13 @@ public class CustomerService {
             throws Exception {
 
         Customer customer = customerRepository.findById(Objects.requireNonNull(customerId))
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy khách hàng!"));
 
         Account account = customer.getAccount();
 
         if (request.getEmail() != null && !request.getEmail().equals(account.getEmail())) {
             if (accountRepository.findByEmailAndDeletedAtIsNull(request.getEmail()).isPresent()) {
-                throw new RuntimeException("Email đã được sử dụng bởi người khác!");
+                throw new AppException(HttpStatus.CONFLICT, "Email đã được sử dụng bởi người khác!");
             }
             account.setEmail(request.getEmail());
         }
@@ -118,7 +121,7 @@ public class CustomerService {
 
         if (request.getPhoneNumber() != null && !request.getPhoneNumber().equals(customer.getPhoneNumber())) {
             if (customerRepository.existsByPhoneNumberAndAccountNot(request.getPhoneNumber(), account)) {
-                throw new RuntimeException("Số điện thoại đã tồn tại!");
+                throw new AppException(HttpStatus.CONFLICT, "Số điện thoại đã tồn tại!");
             }
             customer.setPhoneNumber(request.getPhoneNumber());
         }
@@ -137,7 +140,7 @@ public class CustomerService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteCustomer(Long customerId) {
         Customer customer = customerRepository.findById(Objects.requireNonNull(customerId))
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng!"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy khách hàng!"));
 
         Account account = customer.getAccount();
         Date now = new Date();

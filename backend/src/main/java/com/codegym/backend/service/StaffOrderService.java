@@ -34,4 +34,6 @@ public interface StaffOrderService {
     void updateOrderItem(Long orderDetailId, Integer newQuantity, String newNote);
 
     void deleteOrderItem(Long orderDetailId);
+    void serveAllItemsByTable(Long tableId);
+    void confirmAllNewItemsByTable(Long tableId);
 }

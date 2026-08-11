@@ -1,27 +1,29 @@
 package com.codegym.backend.service;
 
-import com.codegym.backend.dto.FeedbackRequestDTO;
-import com.codegym.backend.dto.FeedbackResponseDTO;
-import com.codegym.backend.entity.Customer;
-import com.codegym.backend.entity.Feedback;
-import com.codegym.backend.entity.Item;
-import com.codegym.backend.enums.StatusTableOrder;
-import com.codegym.backend.repository.CustomerRepository;
-import com.codegym.backend.repository.FeedbackRepository;
-import com.codegym.backend.repository.ItemRepository;
-import com.codegym.backend.repository.OrderDetailRepository;
-import lombok.RequiredArgsConstructor;
+import java.io.IOException; // 🟢 THÊM IMPORT NÀY
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.codegym.backend.dto.FeedbackRequestDTO;
+import com.codegym.backend.dto.FeedbackResponseDTO;
+import com.codegym.backend.entity.Customer;
+import com.codegym.backend.entity.Feedback;
+import com.codegym.backend.entity.Item;
+import com.codegym.backend.repository.CustomerRepository;
+import com.codegym.backend.repository.FeedbackRepository;
+import com.codegym.backend.repository.ItemRepository;
+import com.codegym.backend.repository.OrderDetailRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +34,7 @@ public class FeedbackServiceImpl implements FeedbackService {
     private final CustomerRepository customerRepository;
     private final ItemRepository itemRepository;
     private final OrderDetailRepository orderDetailRepository;
+    private final CloudinaryService cloudinaryService;
 
     // 🟢 1. TẠO FEEDBACK VÀ TRẢ VỀ DTO
     @Override
@@ -41,16 +44,24 @@ public class FeedbackServiceImpl implements FeedbackService {
         Item item = itemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn để đánh giá!"));
 
-        // Kiểm tra đơn hàng đã thanh toán và có món ăn này hay không (nếu có truyền orderId)
+        // Chỉ kiểm tra món ăn có trong đơn hay không
         if (dto.getOrderId() != null) {
-            boolean isOrderValid = orderDetailRepository.existsByOrderTableOrderIdAndItemItemIdAndOrderStatus(
+            boolean isItemInOrder = orderDetailRepository.existsByOrderTableOrderIdAndItemItemId(
                     dto.getOrderId(),
-                    dto.getItemId(),
-                    StatusTableOrder.PAID
-            );
+                    dto.getItemId());
 
-            if (!isOrderValid) {
-                throw new RuntimeException("Đơn hàng #" + dto.getOrderId() + " chưa thanh toán hoặc không chứa món ăn này!");
+            if (!isItemInOrder) {
+                throw new RuntimeException("Đơn hàng #" + dto.getOrderId() + " không chứa món ăn này!");
+            }
+        }
+
+        // 🟢 2. XỬ LÝ UPLOAD ẢNH LÊN CLOUDINARY (ĐÃ BỌC TRY-CATCH)
+        String finalImageUrl = dto.getImageUrl();
+        if (dto.getImageFile() != null && !dto.getImageFile().isEmpty()) {
+            try {
+                finalImageUrl = cloudinaryService.uploadImage(dto.getImageFile());
+            } catch (IOException e) {
+                throw new RuntimeException("Lỗi tải ảnh lên Cloudinary: " + e.getMessage());
             }
         }
 
@@ -62,8 +73,7 @@ public class FeedbackServiceImpl implements FeedbackService {
 
         if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
             customer = customerRepository.findByAccountUsername(auth.getName()).orElse(null);
-            
-            // Nếu đã đăng nhập mà form chưa có email hoặc tên, tự động lấy từ thông tin Customer
+
             if (customer != null) {
                 if (!StringUtils.hasText(email) && customer.getAccount() != null) {
                     email = customer.getAccount().getEmail();
@@ -78,13 +88,13 @@ public class FeedbackServiceImpl implements FeedbackService {
             senderName = "Khách hàng";
         }
 
-        // Lưu Feedback
+        // Lưu Feedback với finalImageUrl đã xử lý
         Feedback feedback = Feedback.builder()
                 .content(dto.getContent())
                 .rating(dto.getRating())
                 .senderName(senderName)
                 .email(email)
-                .imageUrl(dto.getImageUrl())
+                .imageUrl(finalImageUrl)
                 .sentAt(LocalDateTime.now())
                 .customer(customer)
                 .item(item)
@@ -94,7 +104,6 @@ public class FeedbackServiceImpl implements FeedbackService {
         return mapToResponseDTO(savedFeedback);
     }
 
-    // 🟢 2. ALIAS METHOD CHO CONTROLLER / INTERFACE ĐẶT TÊN LÀ saveFeedback
     @Override
     @Transactional
     public void saveFeedback(FeedbackRequestDTO dto) {

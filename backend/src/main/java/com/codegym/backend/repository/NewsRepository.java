@@ -17,6 +17,8 @@ public interface NewsRepository extends JpaRepository<News, Long> {
 
     Page<News> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(NewsStatus status, Pageable pageable);
 
-    @EntityGraph(attributePaths = "author")
+@EntityGraph(attributePaths = "author")
     Optional<News> findWithAuthorByNewsIdAndDeletedAtIsNull(Long newsId);
+
+    Page<News> findByAuthorAccountIdOrderByCreatedAtDesc(Long accountId, Pageable pageable);
 }

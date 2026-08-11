@@ -1,5 +1,5 @@
 package com.codegym.backend.service;
-import com.codegym.backend.enums.ServiceStatus; // Cần giống hệt package ở cả 2 file
+import com.codegym.backend.enums.ServiceStatus; 
 import com.codegym.backend.dto.CartResponseDTO;
 import com.codegym.backend.dto.InvoiceDetailResponseDTO;
 
@@ -15,4 +15,5 @@ public interface OrderService {
     void clearTemporaryCart(Long tableId);
     void confirmOrder(Long tableId);
     InvoiceDetailResponseDTO getInvoiceDetailForCustomer(Long orderId, Long customerId);
+    void cancelOrderItemByCustomer(Long orderDetailId, String reason);
 }
