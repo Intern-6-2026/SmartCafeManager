@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import Peer from "peerjs";
+import { Client } from '@stomp/stompjs';
+import { ToastService } from "../../services/toastService";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import "../../styles/client-menu.css";
 import AddDrinkModal from "../../components/add-drink";
 import FeedbackModal from "../../components/feedback";
@@ -105,34 +108,38 @@ function ClientMenu() {
   const [paypalOpen, setPaypalOpen] = useState(false); // modal QR PayPal
   const [paypalData, setPaypalData] = useState(null); // { qrCodeUrl }
   const [paypalLoading, setPaypalLoading] = useState(false);
-  const [message, setMessage] = useState(""); // thông báo kết quả API
-  const [loading, setLoading] = useState(false);
-  /* PeerJS: kết nối với staff */
-  const peerRef = useRef(null);
-  const connectionRef = useRef(null);
 
-  const notify = (msg) => {
-    setMessage(String(msg));
-    setTimeout(() => setMessage(""), 4000);
+  const [loading, setLoading] = useState(false);
+  /* Thông báo dạng toast.
+     notify(msg)            -> toast thường (info)
+     notify(msg, "success") -> toast xanh
+     notify(msg, "error")   -> toast đỏ */
+  const notify = (msg, type = "info") => {
+    const text = String(msg);
+    if (type === "success") ToastService.success(text);
+    else if (type === "error") ToastService.error(text);
+    else ToastService.info(text);
   };
+  //Lấy menu từ server, nếu lỗi thì dùng menu dự phòng FALLBACK_MENU
+  const loadMenu = useCallback(async () => {
+    try {
+      const res = await getAllItems();
+      const items = Array.isArray(res.data)
+        ? res.data.map(normalizeItem)
+        : [];
+      setMenuItems(items);
+      if (items.length > 0) setCategory(items[0].category);
+    } catch (err) {
+      // Không lấy được menu từ server -> dùng menu dự phòng
+      setMenuItems(FALLBACK_MENU);
+      setCategory(FALLBACK_MENU[0].category);
+      notify(getApiErrorMessage(err, "Không tải được menu từ máy chủ."), "error");
+    }
+  }, []);
 
   /* ===== API 1: Lấy toàn bộ menu ===== */
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await getAllItems();
-        const items = Array.isArray(res.data)
-          ? res.data.map(normalizeItem)
-          : [];
-        setMenuItems(items);
-        if (items.length > 0) setCategory(items[0].category);
-      } catch (err) {
-        // Không lấy được menu từ server -> dùng menu dự phòng
-        setMenuItems(FALLBACK_MENU);
-        setCategory(FALLBACK_MENU[0].category);
-        notify(getApiErrorMessage(err, "Không tải được menu từ máy chủ."));
-      }
-    })();
+      loadMenu();
   }, []);
 
   /* Danh mục sinh tự động từ menu server */
@@ -165,7 +172,7 @@ function ClientMenu() {
       setBillTotal(0);
       setTableOrderId(null);
       if (err?.response?.status !== 500) {
-        notify(getApiErrorMessage(err, "Không kết nối được máy chủ."));
+        notify(getApiErrorMessage(err, "Không kết nối được máy chủ."), "error");
       }
     }
   }, [tableId]);
@@ -208,10 +215,10 @@ function ClientMenu() {
     setLoading(true);
     try {
       const res = await addItemToCart(tableId, item.id, qty, note);
-      notify(res.data);
+      notify("Thêm món thành công.", "success");
       await loadCart();
     } catch (err) {
-      notify(getApiErrorMessage(err, "Thêm món thất bại."));
+      notify(getApiErrorMessage(err, "Thêm món thất bại."), "error");
     } finally {
       setLoading(false);
       setSelectedItem(null);
@@ -223,18 +230,10 @@ function ClientMenu() {
     setLoading(true);
     try {
       const res = await confirmOrder(tableId);
-      notify(res.data);
-      // await callService(tableId, "WAITING_FOOD"); //set status bàn thành "Đang chờ món"
-      // if (connectionRef.current?.open) {
-      //   connectionRef.current.send({
-      //     type: "WAITING_FOOD",
-      //     tableId: tableId,
-      //     message: `Bàn ${tableId} vừa gọi món`,
-      //   });
-      // }
+      notify("Gọi món thành công.", "success");
       await loadCart(); // giỏ tạm sẽ trống sau khi chốt
     } catch (err) {
-      notify(getApiErrorMessage(err, "Gọi món thất bại."));
+      notify(getApiErrorMessage(err, "Gọi món thất bại."), "error");
     } finally {
       setLoading(false);
     }
@@ -248,7 +247,7 @@ function ClientMenu() {
       setInvoice(res.data);
       setCheckoutOpen(true);
     } catch (err) {
-      notify( "Không lấy được hóa đơn.");
+      notify("Không lấy được hóa đơn.", "error");
     } finally {
       setLoading(false);
     }
@@ -261,18 +260,11 @@ function ClientMenu() {
       setLoading(true);
       try {
         const res = await payWithCash(tableId);
-        notify(res.data);
+        notify("Đã gửi yêu cầu thanh toán tiền mặt.");
         await callService(tableId, "REQUESTING_BILL"); // tự động gọi nhân viên sau khi bấm Thanh toán
-        if (connectionRef.current?.open) {
-          connectionRef.current.send({
-            type: "REQUESTING_BILL",
-            tableId: tableId,
-            message: `Bàn ${tableId} yêu cầu thanh toán tiền mặt`,
-          });
-        }
         await loadCart();
       } catch (err) {
-        notify(getApiErrorMessage(err, "Thanh toán tiền mặt thất bại."));
+        notify(getApiErrorMessage(err, "Thanh toán tiền mặt thất bại."), "error");
       } finally {
         setCheckoutOpen(false);
         window.scrollTo(0, 0);
@@ -287,7 +279,7 @@ function ClientMenu() {
         const res = await getPaymentQRCode(tableId);
         setPaypalData(res.data);
       } catch (err) {
-        notify(getApiErrorMessage(err, "Không tạo được mã QR thanh toán."));
+        notify(getApiErrorMessage(err, "Không tạo được mã QR thanh toán."), "error");
       } finally {
         setPaypalLoading(false);
       }
@@ -299,16 +291,9 @@ function ClientMenu() {
     setLoading(true);
     try {
       const res = await callService(tableId, "CALL_STAFF");
-      notify(res.data);
-      if (connectionRef.current?.open) {
-        connectionRef.current.send({
-          type: "CALL_STAFF",
-          tableId: tableId,
-          message: `Bàn ${tableId} vừa gọi nhân viên`,
-        });
-      }
+      notify("Đã gửi yêu cầu gọi nhân viên.", "success");    
     } catch (err) {
-      notify(getApiErrorMessage(err, "Gọi nhân viên thất bại."));
+      notify(getApiErrorMessage(err, "Gọi nhân viên thất bại."), "error");
     } finally {
       setLoading(false);
     }
@@ -323,10 +308,10 @@ function ClientMenu() {
     setLoading(true);
     try {
       const res = await updateItemQuantity(tableId, itemId, note, newQty);
-      notify(res.data);
+      notify("Cập nhật số lượng thành công.", "success");
       await loadCart();
     } catch (err) {
-      notify(getApiErrorMessage(err, "Cập nhật số lượng thất bại."));
+      notify(getApiErrorMessage(err, "Cập nhật số lượng thất bại."), "error");
     } finally {
       setLoading(false);
     }
@@ -337,10 +322,10 @@ function ClientMenu() {
     setLoading(true);
     try {
       const res = await removeItem(tableId, itemId);
-      notify(res.data);
+      notify("Xóa món thành công.", "success");
       await loadCart();
     } catch (err) {
-      notify(getApiErrorMessage(err, "Xoá món thất bại."));
+      notify(getApiErrorMessage(err, "Xoá món thất bại."), "error");
     } finally {
       setLoading(false);
     }
@@ -359,46 +344,59 @@ function ClientMenu() {
         data.itemId
       );
       setLoading(true);
-      notify(res.data);
+      notify("Cảm ơn phản hồi của bạn!", "success");
     } catch (err) {
-      notify(getApiErrorMessage(err, "Gửi phản hồi thất bại."));
+      notify(getApiErrorMessage(err, "Gửi phản hồi thất bại."), "error");
     } finally {
       setLoading(false);
       setFeedbackOpen(false);
     }
   };
 
+  const onMessageReceived = async () => {
+    try {
+      await loadMenu(); // Cập nhật menu khi nhận được thông báo từ server
+      await loadCart(); // Cập nhật giỏ hàng khi nhận được thông báo từ server
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Không tải được dữ liệu mới."), "error");
+    }
+  };
+
+  //Thực hiện kết nối WebSocket để nhận thông báo từ server khi có sự kiện mới liên quan đến bàn
+  useEffect(() => {
+    if (!tableId) return;
+
+    const client = new Client({
+      brokerURL: 'ws://localhost:8080/ws', // Đổi thành IP backend thực tế
+      reconnectDelay: 5000,
+      onConnect: () => {
+        console.log(`[WebSocket] Đã kết nối. Đang theo dõi bàn ${tableId}`);
+        
+        // Đăng ký nhận tin nhắn của riêng bàn này
+        client.subscribe(`/topic/table/${tableId}`, (message) => {
+          if (message.body) {
+            const data = JSON.parse(message.body);
+            onMessageReceived(); // Gọi hàm callback để update UI
+          }
+        });
+      },
+      onStompError: (frame) => {
+        console.error('[WebSocket] Lỗi STOMP: ', frame.headers['message']);
+      },
+    });
+
+    client.activate();
+
+    return () => {
+      client.deactivate();
+      console.log(`[WebSocket] Đã ngắt kết nối theo dõi bàn ${tableId}`);
+    };
+  }, [tableId]);
+
   /* Chọn danh mục món (nút nằm ngang) */
   const pickCategory = (c) => {
     setCategory(c);
   };
-
-  /* ===== PeerJS: kết nối với staff ===== */
-  useEffect(() => {
-    const peer = new Peer();
-
-    peerRef.current = peer;
-
-    peer.on("open", (id) => {
-      console.log("Client Peer ID:", id);
-
-      const conn = peer.connect("staff");
-
-      connectionRef.current = conn;
-
-      conn.on("open", () => {
-        console.log("Connected to staff");
-      });
-
-      conn.on("error", (err) => {
-        console.error("Peer connection error:", err);
-      });
-    });
-
-    return () => {
-      peer.destroy();
-    };
-  }, []);
 
   return (
     <div className="client-menu">
@@ -415,12 +413,8 @@ function ClientMenu() {
         </div>
       </header>
 
-      {/* Thông báo kết quả API */}
-      {message && (
-        <div className="api-message" role="status">
-          {message}
-        </div>
-      )}
+      {/* Thông báo dạng toast */}
+      <ToastContainer position="top-center" />
 
       <main>
         <div className="main-content">

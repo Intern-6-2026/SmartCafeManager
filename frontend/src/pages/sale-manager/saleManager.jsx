@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import Peer from "peerjs";
 import "../../styles/sale-manager.css";
+import { Client } from '@stomp/stompjs';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { ToastService } from "../../services/toastService";
 import { Link } from "react-router-dom";
 import Logo from "../../components/Logo";
 import {
@@ -67,7 +70,7 @@ const normalizeDetail = (d) => ({
 
 function SaleManager() {
   const [tables, setTables] = useState([]); // danh sách bàn từ server
-  const [selectedId, setSelectedId] = useState(null); // bàn đang chọn
+  const [selectedId, setSelectedId] = useState(1); // bàn đang chọn
   const [details, setDetails] = useState([]); // chi tiết đơn của bàn đang chọn
   const [openAt, setOpenAt] = useState(""); // giờ mở bàn (order.openAt)
   const [customerName, setCustomerName] = useState(""); // tên khách nếu có
@@ -77,12 +80,81 @@ function SaleManager() {
   const [lastChange, setLastChange] = useState(0); // tiền thối vừa trả
   const [showNhanDon, setShowNhanDon] = useState(false); // hiển thị nút nhận đơn
   const [showServed, setShowServed] = useState(false); // hiển thị nút xác nhận lên món
-  const [message, setMessage] = useState(""); // thông báo kết quả API
+  const [notifications, setNotifications] = useState([]); // danh sách thông báo
+  const [bellOpen, setBellOpen] = useState(false); // mở/đóng bảng thông báo
   const [loading, setLoading] = useState(false);
 
-  const notify = (msg) => {
-    setMessage(String(msg));
-    setTimeout(() => setMessage(""), 4000);
+  /* Thêm 1 thông báo vào danh sách (hiện chuông + lắc) */
+  const pushNotification = useCallback((text, type = "info") => {
+    setNotifications((prev) => [
+      {
+        id: Date.now() + Math.random(),
+        text: String(text),
+        type,
+        time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+      },
+      ...prev,
+    ].slice(0, 30)); // giữ tối đa 30 thông báo gần nhất
+  }, []);
+
+  const removeNotification = useCallback((id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const notify = ( msg, type = "info", msgType = null, tableId = null) => {
+    /* Thông báo dạng toast.
+         notify(msg)            -> toast thường (info)
+         notify(msg, "success") -> toast xanh
+         notify(msg, "error")   -> toast đỏ */
+    const text = String(msg);
+    if (type === "success") ToastService.success(text);
+    else if (type === "error") ToastService.error(text);
+    else {
+      pushNotification(text, type); // đồng thời lưu vào danh sách thông báo
+
+      switch (msgType) {
+        case "NEW_ORDER":
+          if (tableId === selectedId) {
+            loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
+          }
+          loadTables();
+          break;
+        case "CALL_STAFF":
+          loadTables();
+          break;
+        case "CASH_PAYMENT_REQUEST":
+          if (tableId === selectedId) {
+            loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
+          }
+          loadTables();
+          break;
+        case "ALL_ITEMS_SERVED":
+          if (tableId === selectedId) {
+            loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
+          }
+          loadTables();
+          break;
+        case "CHECKOUT_COMPLETE":
+          if (tableId === selectedId) {
+            loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
+          }
+          loadTables();
+          break;
+        case "ORDER_CONFIRMED":
+          if (tableId === selectedId) {
+            loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+    setBellOpen(false);
   };
 
   /* ===== API 12: Lấy thông tin tất cả các bàn ===== */
@@ -101,7 +173,7 @@ function SaleManager() {
         return (busy || list[0])?.id ?? null;
       });
     } catch (err) {
-      notify(getApiErrorMessage(err, "Không tải được danh sách bàn."));
+      notify(getApiErrorMessage(err, "Không tải được danh sách bàn."), "error");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -110,16 +182,6 @@ function SaleManager() {
   useEffect(() => {
     loadTables();
   }, [loadTables]);
-
-  /* Tự làm mới lưới bàn để bắt kịp khách gọi nhân viên / yêu cầu thanh toán.
-     Không refresh khi đang mở modal để tránh dữ liệu đổi giữa chừng. */
-  useEffect(() => {
-    if (!REFRESH_MS) return;
-    const timer = setInterval(() => {
-      if (!payOpen && !doneOpen) loadTables(true);
-    }, REFRESH_MS);
-    return () => clearInterval(timer);
-  }, [loadTables, payOpen, doneOpen]);
 
   /* ===== API 14: Lấy chi tiết hóa đơn của bàn ===== */
   const loadDetails = useCallback(async (tableId) => {
@@ -165,7 +227,7 @@ function SaleManager() {
       setCustomerName("");
       const code = err?.response?.status;
       if (code !== 404 && code !== 500) {
-        notify(getApiErrorMessage(err, "Không tải được hóa đơn của bàn."));
+        notify(getApiErrorMessage(err, "Không tải được hóa đơn của bàn."), "error");
       }
     }
   }, []);
@@ -188,25 +250,21 @@ function SaleManager() {
 
   const change = (Number(cash) || 0) - total;
   const canFinish = Number(cash) > 0 && change >= 0 && !loading;
-
-  /* Nhận đơn — CHƯA CÓ API.
-     confirmOrder() trong apiService.js nằm dưới /customer, là hành động của khách
-     khi chốt giỏ hàng, không phải nhân viên nhận đơn.
-     Cần backend bổ sung, ví dụ: POST /staff/tables/{tableId}/serve-order */
+  /* ===== API nhận đơn =====*/
   const handleNhanDon = async () => {
     setLoading(true);
     try {
       const res = await getActiveOrder(selectedTable.id);
       const order = res.data; // axios bọc dữ liệu trong .data
       if (!order?.tableOrderId) {
-        notify("Không tìm thấy đơn đang mở của bàn này.");
+        notify("Không tìm thấy đơn đang mở của bàn này.", "error");
         return;
       }
       const confirmRes = await staffConfirmOrder(order.tableOrderId);
-      notify("Đã xác nhận món.");
+      notify("Đã xác nhận món.", "success");
       await loadDetails(selectedTable.id); // tải lại để cập nhật trạng thái món
     } catch (err) {
-      notify(getApiErrorMessage(err, "Xác nhận món thất bại."));
+      notify(getApiErrorMessage(err, "Xác nhận món thất bại."), "error");
     } finally {
       setLoading(false);
     }
@@ -228,12 +286,12 @@ function SaleManager() {
       //   return;
       // }
       const res = await approvePayment(selectedTable.id);
-      notify(res.data || "Đã xác nhận thanh toán.");
+      notify("Đã xác nhận thanh toán.", "success");
       setLastChange(change);
       setPayOpen(false);
       setDoneOpen(true);
     } catch (err) {
-      notify(getApiErrorMessage(err, "Xác nhận thanh toán thất bại."));
+      notify(getApiErrorMessage(err, "Xác nhận thanh toán thất bại."), "error");
     } finally {
       setLoading(false);
     }
@@ -243,10 +301,10 @@ function SaleManager() {
     setLoading(true);
     try {
       const res = await staffServeTable(selectedTable.id);
-      notify("Đã xác nhận phục vụ tất cả món.");
+      notify("Đã xác nhận phục vụ tất cả món.", "success");
       await loadDetails(selectedTable.id);
     } catch (err) {
-      notify(getApiErrorMessage(err, "Xác nhận phục vụ thất bại."));
+      notify(getApiErrorMessage(err, "Xác nhận phục vụ thất bại."), "error");
     } finally {
       setLoading(false);
     }
@@ -270,49 +328,45 @@ function SaleManager() {
     return () => document.removeEventListener("keydown", onKey);
   });
 
-  /* ===== WebRTC PeerJS để nhận thông báo từ client-menu ===== */
-  const peerRef = useRef(null);
-  const [notifications, setNotifications] = useState([]);
-
-  useEffect(() => {
-    const peer = new Peer("staff");
-
-    peerRef.current = peer;
-
-    peer.on("open", (id) => {
-      console.log("Staff Peer ID:", id);
-    });
-
-    peer.on("connection", (conn) => {
-      console.log("Client connected:", conn.peer);
-
-      conn.on("data", (data) => {
-        console.log("Received:", data);
-
-        const notification = {
-          id: Date.now(),
-          tableId: data.tableId,
-          message: data.message,
-        };
-
-        setNotifications((prev) => [
-          ...prev,
-          notification,
-        ]);
-
-        // Browser notification nếu muốn
-        alert(data.message);
-      });
-    });
-
-    return () => {
-      peer.destroy();
-    };
-  }, []);
-
   const showAccept = selectedTable?.status === "neworder";
   const showPay = selectedTable?.status === "bill";
   
+  //Thực hiện kết nối WebSocket để nhận thông báo từ server khi có sự kiện mới liên quan đến bàn
+  useEffect(() => {
+    const client = new Client({
+      brokerURL: 'ws://localhost:8080/ws', // Đổi thành IP backend thực tế
+      reconnectDelay: 5000,
+      onConnect: () => {
+        console.log(`[WebSocket] Đã kết nối.`);
+        
+        // Đăng ký nhận tin nhắn của riêng bàn này
+        client.subscribe(`/topic/staff-requests`, (message) => {
+          if (message.body) {
+            const data = JSON.parse(message.body);
+            notify(data?.message, "info", data?.type, data?.tableId);
+          }
+        });
+        // Đăng ký nhận tin nhắn của riêng bàn này
+        client.subscribe(`/topic/table-events`, (message) => {
+          if (message.body) {
+            const data = JSON.parse(message.body);
+            notify(data?.message, "info", data?.type, data?.tableId);
+          }
+        });
+      },
+      onStompError: (frame) => {
+        console.error('[WebSocket] Lỗi STOMP: ', frame.headers['message']);
+      },
+    });
+
+    client.activate();
+
+    return () => {
+      client.deactivate();
+      console.log(`[WebSocket] Đã ngắt kết nối theo dõi bàn.`);
+    };
+  }, []);
+
   return (
     <div className="sale-manager">
       <header>
@@ -325,17 +379,11 @@ function SaleManager() {
             <h1 className="brand-name-not-bold">CAFÉ</h1>
           </div>
           <div className="header-title">MÀN HÌNH BÁN HÀNG</div>
-          {notifications.map((notification) => (
-            <div key={notification.id}>
-              🔔 {notification.message}
-            </div>
-          ))}
         </div>
       </header>
 
-      {/* Thông báo kết quả API */}
-      {message && <div className="api-message" role="status">{message}</div>}
-
+      <ToastContainer position="top-center" />
+      
       <main>
         <div className="main-content">
           {/* ----------------------------- Lưới bàn ----------------------------- */}
@@ -343,9 +391,6 @@ function SaleManager() {
             <div className="section-head">
               <div className="section-title-row">
                 <h3 className="section-title">Danh sách bàn</h3>
-                <button className="btn-reload" onClick={loadTables} disabled={loading}>
-                  Tải lại
-                </button>
               </div>
               
               <div className="legend">
@@ -590,6 +635,65 @@ function SaleManager() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* -------------------- Chuông thông báo nổi -------------------- */}
+      {notifications.length > 0 && (
+        <div className="notif-bell-wrap">
+          {bellOpen && (
+            <div className="notif-panel" role="dialog" aria-label="Danh sách thông báo">
+              <div className="notif-panel-head">
+                <span>Thông báo ({notifications.length})</span>
+                <button className="notif-clear" onClick={clearNotifications}>
+                  Xoá hết
+                </button>
+              </div>
+              <div className="notif-list">
+                {notifications.map((n) => (
+                  <div className={`notif-item ${n.type}`} key={n.id}>
+                    <span className="notif-dot" />
+                    <div className="notif-body">
+                      <div className="notif-text">{n.text}</div>
+                      <div className="notif-time">{n.time}</div>
+                    </div>
+                    <button className="notif-close" onClick={() => removeNotification(n.id)}>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                          <path
+                            d="M18 6 6 18M6 6l12 12"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            className="notif-bell"
+            onClick={() => setBellOpen((v) => !v)}
+            aria-label={`${notifications.length} thông báo`}
+          >
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
+              <path
+                d="M12 3a6 6 0 0 0-6 6v3.5l-1.5 3h15L18 12.5V9a6 6 0 0 0-6-6Z"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M9.5 18a2.5 2.5 0 0 0 5 0"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span className="notif-badge">{notifications.length}</span>
+          </button>
         </div>
       )}
     </div>

@@ -162,7 +162,7 @@ export const updateItemQuantity = async (tableId, itemId, note, newQuantity) => 
 
 // API 9: Xóa món khỏi giỏ hàng
 export const removeItem = async (tableId, itemId) => {
-  return await axios.delete(`${CUSTOMER_URL}/cart/remove`, {
+  return await axios.delete(`${CUSTOMER_URL}/cart/items/${itemId}`, {
     params: { tableId, itemId },
   });
 };
