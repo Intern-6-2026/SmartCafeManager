@@ -572,6 +572,12 @@ function ClientMenu() {
                 Gọi món
               </button>
               <button
+                className="btn-feedback"
+                onClick={() => setFeedbackOpen(true)}
+              >
+                Phản hồi
+              </button>
+              <button
                 className="btn-thanhtoan"
                 onClick={handleThanhToan}
                 disabled={loading}
@@ -584,12 +590,6 @@ function ClientMenu() {
                 disabled={loading}
               >
                 Gọi nhân viên
-              </button>
-              <button
-                className="btn-feedback"
-                onClick={() => setFeedbackOpen(true)}
-              >
-                Phản hồi
               </button>
             </div>
           </section>
