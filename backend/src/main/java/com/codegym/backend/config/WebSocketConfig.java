@@ -13,7 +13,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
-        // Giữ nguyên 2 endpoint SockJS cũ của bạn
         registry.addEndpoint("/ws-news").setAllowedOriginPatterns("*").withSockJS();
         registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
 

@@ -14,10 +14,13 @@ import com.codegym.backend.dto.TableOrderSummaryDTO;
 import com.codegym.backend.dto.TableOrderSummaryDTO.OrderDetailDTO;
 import com.codegym.backend.entity.OrderDetail;
 import com.codegym.backend.entity.TableOrder;
+import com.codegym.backend.entity.Tables;
 import com.codegym.backend.enums.PaymentMethod;
+import com.codegym.backend.enums.ServiceStatus;
 import com.codegym.backend.enums.StatusTableOrder;
 import com.codegym.backend.repository.OrderDetailRepository;
 import com.codegym.backend.repository.TableOrderRepository;
+import com.codegym.backend.repository.TablesRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +30,9 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final TableOrderRepository tableOrderRepository;
     private final OrderDetailRepository orderDetailRepository;
+    
+    // Bổ sung Repository để xử lý cập nhật trạng thái Bàn
+    private final TablesRepository tablesRepository; 
 
     @Override
     @Transactional
@@ -55,12 +61,20 @@ public class PaymentServiceImpl implements PaymentService {
                 .findByTableTableIdAndStatusIn(tableId, List.of(StatusTableOrder.OPEN, StatusTableOrder.WAITING_PAYMENT))
                 .orElseThrow(() -> new RuntimeException("Bàn " + tableId + " không có hóa đơn chờ hoàn tất thanh toán!"));
 
+        // 1. Cập nhật trạng thái hóa đơn thành Đã thanh toán
         order.setStatus(StatusTableOrder.PAID);
         order.setPaymentMethod(paymentMethod != null ? paymentMethod : PaymentMethod.CASH);
         order.setPaidAt(LocalDateTime.now());
         order.setCloseAt(LocalDateTime.now());
-
         tableOrderRepository.save(order);
+
+        // 2. GIẢI PHÓNG BÀN: Cập nhật trạng thái bàn về trống để đón khách mới
+        Tables table = order.getTable();
+        if (table != null) {
+            table.setServiceStatus(ServiceStatus.EMPTY);
+            table.setIsOccupied(false);
+            tablesRepository.save(table);
+        }
     }
 
     @Override

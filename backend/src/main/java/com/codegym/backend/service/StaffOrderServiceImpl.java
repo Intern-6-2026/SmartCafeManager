@@ -143,15 +143,11 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Override
     @Transactional
     public void approveCashPayment(Long tableId) {
-        // Ủy quyền chốt đơn hàng và set paidAt cho PaymentService
+        // 🟢 Cập nhật: Chỉ ủy quyền cho PaymentService xử lý (chốt đơn + giải phóng bàn)
         paymentService.completeCheckout(tableId, PaymentMethod.CASH);
 
-        // Đưa bàn về trạng thái EMPTY và giải phóng bàn
-        Tables table = getTableInfo(tableId);
-        table.setServiceStatus(ServiceStatus.EMPTY);
-        table.setIsOccupied(false);
-        tablesRepository.save(table);
-
+        // 🟢 Cập nhật: Bỏ đi phần code set bàn về EMPTY ở đây để tránh lặp code.
+        // Chỉ còn nhiệm vụ thông báo qua WebSocket
         notifyCustomerTable(tableId, "PAYMENT_SUCCESS", "Thanh toán thành công! Cảm ơn quý khách.");
         notifyStaffAndKitchen(tableId, "CHECKOUT_COMPLETED", "Bàn " + tableId + " đã hoàn tất thanh toán tiền mặt.");
     }
@@ -390,7 +386,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         payload.put("tableId", tableId);
         payload.put("type", type);
         payload.put("message", message);
-
         messagingTemplate.convertAndSend("/topic/staff-requests", payload);
     }
 }

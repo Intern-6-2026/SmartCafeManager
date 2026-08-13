@@ -5,6 +5,7 @@ import com.codegym.backend.dto.CartResponseDTO;
 import com.codegym.backend.dto.TableOrderSummaryDTO;
 import com.codegym.backend.entity.Tables;
 import com.codegym.backend.enums.ServiceStatus;
+import com.codegym.backend.service.CartService;
 import com.codegym.backend.service.OrderService;
 import com.codegym.backend.service.PaymentService;
 import com.codegym.backend.service.StaffOrderService;
@@ -25,6 +26,7 @@ import java.util.Map;
 @Slf4j
 public class CustomerController {
 
+    private final CartService cartService;
     private final OrderService orderService;
     private final PaymentService paymentService;
     private final StaffOrderService staffOrderService;
@@ -34,7 +36,6 @@ public class CustomerController {
     // I. THÔNG TIN BÀN & GỌI PHỤC VỤ
     // ==========================================
 
-    // 🟢 CẬP NHẬT: Dùng PathVariable cho chuẩn RESTful API
     @GetMapping("/table-info/{tableId}")
     public ResponseEntity<Tables> getTableInfo(@PathVariable Long tableId) {
         return ResponseEntity.ok(staffOrderService.getTableInfo(tableId));
@@ -56,7 +57,6 @@ public class CustomerController {
                 ? "Bàn " + tableId + " đang gọi nhân viên!" 
                 : "Bàn " + tableId + " yêu cầu thanh toán!";
         
-        // Gửi thông báo cho nhân viên và đồng bộ cho các máy cùng bàn
         notifyStaffAndKitchen(tableId, type, message);
         notifyCustomerTable(tableId, type, message);
 
@@ -69,14 +69,13 @@ public class CustomerController {
 
     @GetMapping("/cart/{tableId}")
     public ResponseEntity<CartResponseDTO> getCartOverview(@PathVariable Long tableId) {
-        return ResponseEntity.ok(orderService.getCartOverview(tableId));
+        return ResponseEntity.ok(cartService.getCartOverview(tableId));
     }
 
     @PostMapping("/cart/add")
     public ResponseEntity<Map<String, String>> addItemToCart(@Valid @RequestBody CartItemRequestDTO dto) {
-        orderService.addItemToCart(dto.getTableId(), dto.getItemId(), dto.getQuantity(), dto.getNote());
+        cartService.addItemToCart(dto.getTableId(), dto.getItemId(), dto.getQuantity(), dto.getNote());
         
-        // Đồng bộ giỏ hàng cho những người khác cùng bàn
         notifyCustomerTable(dto.getTableId(), "CART_UPDATED", "Giỏ hàng vừa được cập nhật!");
         return ResponseEntity.ok(Map.of("message", "Đã thêm món vào giỏ hàng tạm!"));
     }
@@ -89,12 +88,12 @@ public class CustomerController {
             @RequestParam(required = false) String note) {
 
         if (quantity != null && quantity <= 0) {
-            orderService.removeItemFromCart(tableId, itemId);
+            cartService.removeItemFromCart(tableId, itemId);
             notifyCustomerTable(tableId, "CART_UPDATED", "Đã xóa món khỏi giỏ hàng!");
             return ResponseEntity.ok(Map.of("message", "Đã xóa món khỏi giỏ hàng!"));
         }
 
-        orderService.updateCartItemDetail(tableId, itemId, quantity, note);
+        cartService.updateCartItemDetail(tableId, itemId, quantity, note);
         notifyCustomerTable(tableId, "CART_UPDATED", "Giỏ hàng đã thay đổi!");
         return ResponseEntity.ok(Map.of("message", "Cập nhật giỏ hàng thành công!"));
     }
@@ -103,14 +102,14 @@ public class CustomerController {
     public ResponseEntity<Map<String, String>> removeItemFromCart(
             @RequestParam Long tableId,
             @PathVariable Long itemId) {
-        orderService.removeItemFromCart(tableId, itemId);
+        cartService.removeItemFromCart(tableId, itemId);
         notifyCustomerTable(tableId, "CART_UPDATED", "Đã xóa món khỏi giỏ hàng!");
         return ResponseEntity.ok(Map.of("message", "Đã xóa món ăn khỏi giỏ hàng!"));
     }
 
     @DeleteMapping("/cart/clear")
     public ResponseEntity<Map<String, String>> clearCart(@RequestParam Long tableId) {
-        orderService.clearTemporaryCart(tableId);
+        cartService.clearTemporaryCart(tableId);
         notifyCustomerTable(tableId, "CART_UPDATED", "Giỏ hàng đã bị xóa sạch!");
         return ResponseEntity.ok(Map.of("message", "Đã xóa toàn bộ món trong giỏ hàng tạm!"));
     }
@@ -121,9 +120,8 @@ public class CustomerController {
 
     @PostMapping("/confirm-order")
     public ResponseEntity<Map<String, String>> confirmOrder(@RequestParam Long tableId) {
-        orderService.confirmOrder(tableId);
+        cartService.confirmOrder(tableId);
         
-        // Thông báo Bếp/Nhân viên nhận đơn + Báo giao diện Khách chuyển trạng thái
         notifyStaffAndKitchen(tableId, "NEW_ORDER", "Bàn " + tableId + " vừa gửi đơn món mới!");
         notifyCustomerTable(tableId, "ORDER_SUBMITTED", "Đơn hàng của bạn đã gửi xuống bếp thành công!");
 
@@ -153,20 +151,20 @@ public class CustomerController {
     // HELPER WEBSOCKET
     // ==========================================
 
-    // Gửi thông báo đến Màn hình Nhân viên / Bếp
     private void notifyStaffAndKitchen(Long tableId, String type, String message) {
         try {
             Map<String, Object> payload = new HashMap<>();
             payload.put("tableId", tableId);
             payload.put("type", type);
             payload.put("message", message);
-            messagingTemplate.convertAndSend("/topic/staff-requests", payload);
+            
+            // 🟢 Đã đổi từ "/topic/staff-requests" sang "/topic/staff-events"
+            messagingTemplate.convertAndSend("/topic/staff-events", payload);
         } catch (Exception e) {
-            log.error("Lỗi gửi WebSocket tới /topic/staff-requests: {}", e.getMessage());
+            log.error("Lỗi gửi WebSocket tới /topic/staff-events: {}", e.getMessage());
         }
     }
 
-    // 🟢 BỔ SUNG: Gửi thông báo đồng bộ realtime đến tất cả máy khách hàng tại bàn
     private void notifyCustomerTable(Long tableId, String type, String message) {
         try {
             Map<String, Object> payload = new HashMap<>();
