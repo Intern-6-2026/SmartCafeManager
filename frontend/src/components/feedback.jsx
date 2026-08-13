@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import * as Yup from "yup";
 import "../styles/feedback.css";
+import Rating from '@mui/material/Rating';
 
 const EMPTY = { hoten: "", email: "", orderDetailId: "", rating: "", noidung: "", image: null };
 
@@ -136,15 +137,13 @@ function FeedbackModal({ open, onSubmit, onClose, orderedItems = [] }) {
         </div>
 
         <div className="modal-field">
-          <label className="modal-label" htmlFor="feedback-rating">Rating</label>
-          <input
-            type="number"
-            id="feedback-rating"
-            className={`modal-input ${errors.rating ? "input-error" : ""}`}
-            value={form.rating}
-            onChange={set("rating")}
-            min="1"
-            max="5"
+          <label className="modal-label">Rating</label>
+        
+          <Rating
+            name="feedback-rating-stars"
+            value={Number(form.rating) || 0}
+            onChange={(e, newValue) => setForm((f) => ({ ...f, rating: newValue }))}
+            precision={1}
           />
           {errors.rating && <span className="field-error">{errors.rating}</span>}
         </div>

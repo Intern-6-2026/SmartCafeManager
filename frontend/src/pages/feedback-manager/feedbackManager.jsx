@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import "../../styles/feedback-manager.css";
 import { Link } from "react-router-dom";
+import { Client } from '@stomp/stompjs';
 import Logo from "../../components/Logo";
 import { getAllFeedbacks, getApiErrorMessage } from "../../services/apiService";
 
@@ -125,6 +126,35 @@ function FeedbackManager() {
     return () => document.removeEventListener("keydown", onKey);
   }, [preview]);
 
+  //Thực hiện kết nối WebSocket để nhận thông báo từ server khi có sự kiện mới liên quan đến bàn
+  useEffect(() => {
+    const client = new Client({
+      brokerURL: 'ws://localhost:8080/ws', // Đổi thành IP backend thực tế
+      reconnectDelay: 5000,
+      onConnect: () => {
+        console.log(`[WebSocket] Đã kết nối.`);
+        
+        // Đăng ký nhận tin nhắn của riêng bàn này
+        client.subscribe(`/topic/staff-requests`, (message) => {
+          if (message.body) {
+            const data = JSON.parse(message.body);
+            onMessageReceived(data?.message, "info", data?.type, data?.tableId); // Gọi hàm callback để update UI
+          }
+        });
+      },
+      onStompError: (frame) => {
+        console.error('[WebSocket] Lỗi STOMP: ', frame.headers['message']);
+      },
+    });
+
+    client.activate();
+
+    return () => {
+      client.deactivate();
+      console.log(`[WebSocket] Đã ngắt kết nối`);
+    };
+  }, []);
+  
   const renderStars = (n) => (
     <div className="rating">
       {[1, 2, 3, 4, 5].map((i) => (
@@ -205,9 +235,6 @@ function FeedbackManager() {
 
           <button className="btn-clear" onClick={clearFilter}>
             Xóa lọc
-          </button>
-          <button className="btn-reload" onClick={loadFeedbacks} disabled={loading}>
-            Tải lại
           </button>
         </div>
 

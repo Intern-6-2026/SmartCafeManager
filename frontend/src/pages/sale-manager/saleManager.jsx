@@ -110,19 +110,21 @@ function SaleManager() {
     if (type === "success") ToastService.success(text);
     else if (type === "error") ToastService.error(text);
     else {
-      pushNotification(text, type); // đồng thời lưu vào danh sách thông báo
 
       switch (msgType) {
         case "NEW_ORDER":
+          pushNotification(text, type);
           if (tableId === selectedId) {
             loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
           }
           loadTables();
           break;
         case "CALL_STAFF":
+          pushNotification(text, type);
           loadTables();
           break;
         case "CASH_PAYMENT_REQUEST":
+          pushNotification(text, type);
           if (tableId === selectedId) {
             loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
           }
@@ -135,6 +137,7 @@ function SaleManager() {
           loadTables();
           break;
         case "CHECKOUT_COMPLETE":
+          pushNotification(text, type);
           if (tableId === selectedId) {
             loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
           }
@@ -250,6 +253,7 @@ function SaleManager() {
 
   const change = (Number(cash) || 0) - total;
   const canFinish = Number(cash) > 0 && change >= 0 && !loading;
+  
   /* ===== API nhận đơn =====*/
   const handleNhanDon = async () => {
     setLoading(true);
@@ -339,20 +343,14 @@ function SaleManager() {
       onConnect: () => {
         console.log(`[WebSocket] Đã kết nối.`);
         
-        // Đăng ký nhận tin nhắn của riêng bàn này
+        // Đăng ký nhận tin nhắn của staff-requests và table-events
         client.subscribe(`/topic/staff-requests`, (message) => {
           if (message.body) {
             const data = JSON.parse(message.body);
             notify(data?.message, "info", data?.type, data?.tableId);
           }
         });
-        // Đăng ký nhận tin nhắn của riêng bàn này
-        client.subscribe(`/topic/table-events`, (message) => {
-          if (message.body) {
-            const data = JSON.parse(message.body);
-            notify(data?.message, "info", data?.type, data?.tableId);
-          }
-        });
+
       },
       onStompError: (frame) => {
         console.error('[WebSocket] Lỗi STOMP: ', frame.headers['message']);

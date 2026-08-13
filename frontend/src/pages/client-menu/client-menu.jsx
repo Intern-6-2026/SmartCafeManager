@@ -353,7 +353,10 @@ function ClientMenu() {
     }
   };
 
-  const onMessageReceived = async () => {
+  const onMessageReceived = async (msg, type = "info", msgType = null, tableId = null) => {
+    if (msgType === "ALL_ITEMS_CONFIRMED" || msgType === "ODER_CONFIRMED") {
+      notify("Bếp đã nhận món.", "info");
+    }
     try {
       await loadMenu(); // Cập nhật menu khi nhận được thông báo từ server
       await loadCart(); // Cập nhật giỏ hàng khi nhận được thông báo từ server
@@ -376,7 +379,7 @@ function ClientMenu() {
         client.subscribe(`/topic/table/${tableId}`, (message) => {
           if (message.body) {
             const data = JSON.parse(message.body);
-            onMessageReceived(); // Gọi hàm callback để update UI
+            onMessageReceived(data?.message, "info", data?.type, data?.tableId); // Gọi hàm callback để update UI
           }
         });
       },
@@ -577,6 +580,7 @@ function ClientMenu() {
               >
                 Phản hồi
               </button>
+              
               <button
                 className="btn-thanhtoan"
                 onClick={handleThanhToan}
