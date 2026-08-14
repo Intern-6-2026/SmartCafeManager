@@ -31,6 +31,7 @@ public class CustomerController {
     private final PaymentService paymentService;
     private final StaffOrderService staffOrderService;
     private final SimpMessagingTemplate messagingTemplate;
+
     // I. THÔNG TIN BÀN & GỌI PHỤC VỤ
     @GetMapping("/table-info/{tableId}")
     public ResponseEntity<Tables> getTableInfo(@PathVariable Long tableId) {
@@ -48,17 +49,18 @@ public class CustomerController {
 
         orderService.updateTableServiceStatus(tableId, status);
 
-        String type = (status == ServiceStatus.CALL_STAFF) ? "CALL_STAFF" : "REQUESTING_BILL";
-        String message = (status == ServiceStatus.CALL_STAFF) 
-                ? "Bàn " + tableId + " đang gọi nhân viên!" 
-                : "Bàn " + tableId + " yêu cầu thanh toán!";
-        
-        // Báo cho Nhân viên/Admin/Bếp VÀ Khách hàng tại bàn
-        notifyStaffAndKitchen(tableId, type, message);
-        notifyCustomerTable(tableId, type, message);
+        // 🟢 CHỈ BẮN SOCKET KHI KHÁCH GỌI PHỤC VỤ (CALL_STAFF)
+        // Nếu là REQUESTING_BILL thì để API /payment/cash xử lý, tránh bắn trùng 2 lần.
+        if (status == ServiceStatus.CALL_STAFF) {
+            String message = "Bàn " + tableId + " đang gọi nhân viên!";
+            notifyStaffAndKitchen(tableId, "CALL_STAFF", message);
+            notifyCustomerTable(tableId, "CALL_STAFF", message);
+            return ResponseEntity.ok(Map.of("message", message));
+        }
 
-        return ResponseEntity.ok(Map.of("message", message));
+        return ResponseEntity.ok(Map.of("message", "Đã tiếp nhận yêu cầu!"));
     }
+
     // II. GIỎ HÀNG TẠM
     @GetMapping("/cart/{tableId}")
     public ResponseEntity<CartResponseDTO> getCartOverview(@PathVariable Long tableId) {
@@ -107,13 +109,10 @@ public class CustomerController {
         return ResponseEntity.ok(Map.of("message", "Đã xóa toàn bộ món trong giỏ hàng tạm!"));
     }
 
-    // III. BẤM GỌI MÓN (ĐỐI CHIẾU CHUẨN CẢ SERVICE)
+    // III. BẤM GỌI MÓN
     @PostMapping("/confirm-order")
     public ResponseEntity<Map<String, String>> confirmOrder(@RequestParam Long tableId) {
-        // 🟢 Trong CartServiceImpl.confirmOrder() đã tích hợp bắn Socket NEW_ORDER_SUBMITTED 
-        // cho cả /topic/table-events và /topic/table/{tableId} nên không bắn lại ở đây để tránh trùng lặp.
         cartService.confirmOrder(tableId);
-
         return ResponseEntity.ok(Map.of("message", "Đã gửi đơn hàng thành công xuống bếp!"));
     }
 
@@ -121,9 +120,10 @@ public class CustomerController {
 
     @PostMapping("/payment/cash")
     public ResponseEntity<Map<String, String>> processCashPayment(@RequestParam Long tableId) {
+        // 🟢 1. Trong paymentService đã tự động cập nhật DB + bắn Socket PAYMENT_REQUESTED cho Staff
         paymentService.processCashPayment(tableId);
         
-        notifyStaffAndKitchen(tableId, "CASH_PAYMENT_REQUEST", "Bàn " + tableId + " yêu cầu THANH TOÁN TIỀN MẶT!");
+        // 🟢 2. Chỉ gửi thông báo phản hồi cho riêng bàn của Khách hàng đó
         notifyCustomerTable(tableId, "WAITING_PAYMENT", "Đã gửi yêu cầu, vui lòng chờ nhân viên tới thu tiền mặt!");
 
         return ResponseEntity.ok(Map.of("message", "Đã gửi yêu cầu thanh toán tiền mặt. Vui lòng chờ nhân viên!"));
@@ -133,7 +133,8 @@ public class CustomerController {
     public ResponseEntity<TableOrderSummaryDTO> getInvoiceSummary(@PathVariable Long tableId) {
         return ResponseEntity.ok(paymentService.getInvoiceSummaryDTO(tableId));
     }
-    // HELPER WEBSOCKET (ĐỒNG BỘ 1 KÊNH TABLE-EVENTS)
+
+    // HELPER WEBSOCKET
     private void notifyStaffAndKitchen(Long tableId, String type, String message) {
         try {
             Map<String, Object> payload = new HashMap<>();
@@ -142,7 +143,6 @@ public class CustomerController {
             payload.put("message", message);
             payload.put("timestamp", System.currentTimeMillis());
             
-            // Đã chuyển chuẩn kênh chung: /topic/table-events
             messagingTemplate.convertAndSend("/topic/table-events", payload);
         } catch (Exception e) {
             log.error("Lỗi gửi WebSocket tới /topic/table-events: {}", e.getMessage());

@@ -8,11 +8,9 @@ import com.codegym.backend.service.StaffOrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +23,7 @@ import java.util.Map;
 public class StaffController {
 
     private final StaffOrderService staffOrderService;
-    private final SimpMessagingTemplate messagingTemplate;
+
     // I. LẤY SƠ ĐỒ BÀN & THÔNG TIN ĐƠN HÀNG
     @GetMapping("/tables")
     public ResponseEntity<List<Tables>> getAllTables() {
@@ -46,14 +44,16 @@ public class StaffController {
     public ResponseEntity<List<OrderDetailResponseDTO>> getOrderDetailsByTable(@PathVariable Long tableId) {
         return ResponseEntity.ok(staffOrderService.getOrderDetailsByTable(tableId));
     }
-    // II. XỬ LÝ HÀNG LOẠT THEO LƯỢT ORDER CỦA BÀn
+
+    // II. XỬ LÝ HÀNG LOẠT THEO LƯỢT ORDER CỦA BÀN
+    
     /**
      * Bếp nhận nấu tất cả món mới vừa đặt của bàn (ORDERED -> CONFIRMED)
      */
     @PutMapping("/tables/{tableId}/confirm-all")
     public ResponseEntity<Map<String, String>> confirmAllNewItemsByTable(@PathVariable Long tableId) {
+        // Service đã tự động xử lý DB + bắn WebSocket
         staffOrderService.confirmAllNewItemsByTable(tableId);
-        notifyTableUpdate(tableId, "ITEMS_CONFIRMED", "Bếp đã nhận chế biến tất cả món mới của bàn " + tableId);
         return ResponseEntity.ok(Map.of("message", "Đã duyệt nhận đơn lượt mới!"));
     }
 
@@ -62,26 +62,25 @@ public class StaffController {
      */
     @PutMapping("/tables/{tableId}/serve-all")
     public ResponseEntity<Map<String, String>> serveAllItemsByTable(@PathVariable Long tableId) {
+        // Service đã tự động xử lý DB + bắn WebSocket
         staffOrderService.serveAllItemsByTable(tableId);
-        notifyTableUpdate(tableId, "ALL_ITEMS_SERVED", "Bàn " + tableId + " đã phục vụ xong tất cả món lượt này!");
         return ResponseEntity.ok(Map.of("message", "Đã hoàn thành và phục vụ tất cả món lượt này!"));
     }
+
     // III. XỬ LÝ ĐƠN HÀNG VÀ THANH TOÁN BÀN
+    
     @PutMapping("/orders/{tableOrderId}/confirm")
     public ResponseEntity<Map<String, String>> confirmOrderItems(
             @PathVariable Long tableOrderId,
             @RequestParam(required = false) Long tableId) {
 
         staffOrderService.confirmOrderItems(tableOrderId);
-        notifyTableUpdate(tableId, "ORDER_CONFIRMED", "Đơn hàng #" + tableOrderId + " đã được xác nhận!");
         return ResponseEntity.ok(Map.of("message", "Đã xác nhận đơn hàng!"));
     }
 
     @PostMapping("/tables/{tableId}/approve-payment")
     public ResponseEntity<Map<String, String>> approvePayment(@PathVariable Long tableId) {
-        // 🟢 Dùng staffOrderService thay vì paymentService
         staffOrderService.approveCashPayment(tableId);
-
         return ResponseEntity.ok(Map.of(
             "status", "SUCCESS",
             "message", "Đã duyệt thanh toán và giải phóng bàn thành công!"
@@ -94,7 +93,6 @@ public class StaffController {
             @RequestParam(required = false, defaultValue = "Nhân viên hủy đơn") String reason) {
 
         staffOrderService.cancelTableOrder(tableId, reason);
-        notifyTableUpdate(tableId, "ORDER_CANCELLED", "Đơn hàng bàn " + tableId + " đã bị hủy.");
         return ResponseEntity.ok(Map.of("message", "Đã hủy đơn hàng và giải phóng bàn thành công!"));
     }
 
@@ -104,17 +102,17 @@ public class StaffController {
             @RequestParam ServiceStatus status) {
 
         staffOrderService.updateTableServiceStatus(tableId, status);
-        notifyTableUpdate(tableId, "STATUS_CHANGED", "Bàn " + tableId + " chuyển trạng thái: " + status.name());
         return ResponseEntity.ok(Map.of("message", "Cập nhật trạng thái bàn thành công!"));
     }
-    // IV. THAO TÁC MÓN LẺ (TỐI ƯU GỌN GÀNG)
+
+    // IV. THAO TÁC MÓN LẺ
+    
     @PutMapping("/order-details/{orderDetailId}/serve")
     public ResponseEntity<Map<String, String>> markItemAsServed(
             @PathVariable Long orderDetailId,
             @RequestParam(required = false) Long tableId) {
 
         staffOrderService.markItemAsServed(orderDetailId);
-        notifyTableUpdate(tableId, "ITEM_SERVED", "Món #" + orderDetailId + " đã được phục vụ!");
         return ResponseEntity.ok(Map.of("message", "Đã chuyển món sang SERVED!"));
     }
 
@@ -125,7 +123,6 @@ public class StaffController {
             @RequestParam(required = false) Long tableId) {
 
         staffOrderService.cancelOrderItem(orderDetailId, reason);
-        notifyTableUpdate(tableId, "ITEM_CANCELLED", "Món #" + orderDetailId + " bị hủy: " + reason);
         return ResponseEntity.ok(Map.of("message", "Đã hủy món và cập nhật lại tổng tiền!"));
     }
 
@@ -137,7 +134,6 @@ public class StaffController {
             @RequestParam(required = false) Long tableId) {
 
         staffOrderService.updateOrderItem(orderDetailId, quantity, note);
-        notifyTableUpdate(tableId, "ITEM_UPDATED", "Món #" + orderDetailId + " đã được cập nhật!");
         return ResponseEntity.ok(Map.of("message", "Cập nhật số lượng/ghi chú thành công!"));
     }
 
@@ -147,39 +143,6 @@ public class StaffController {
             @RequestParam(required = false) Long tableId) {
 
         staffOrderService.deleteOrderItem(orderDetailId);
-        notifyTableUpdate(tableId, "ITEM_DELETED", "Món #" + orderDetailId + " đã bị xóa khỏi đơn!");
         return ResponseEntity.ok(Map.of("message", "Đã xóa món khỏi đơn!"));
-    }
-
-    // ==========================================
-    // HELPER WEBSOCKET MULTI-CHANNEL (TỐI ƯU THÔNG MINH)
-    // ==========================================
-
-    /**
-     * Tự động gửi tin nhắn WebSocket:
-     * 1. Luôn luôn gửi tới /topic/table-events (cho POS / Sơ đồ bàn / Bếp)
-     * 2. Nếu có tableId, gửi thêm tới /topic/table/{tableId} (cho Khách hàng tại bàn đó)
-     */
-    private void notifyTableUpdate(Long tableId, String type, String message) {
-        try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("type", type);
-            payload.put("message", message);
-            payload.put("timestamp", System.currentTimeMillis());
-
-            if (tableId != null) {
-                payload.put("tableId", tableId);
-            }
-
-            // 1. Phát tới Màn hình Nhân viên / POS / Sơ đồ bàn / Bếp
-            messagingTemplate.convertAndSend("/topic/table-events", payload);
-
-            // 2. Phát tới Màn hình Khách hàng tại bàn (nếu xác định được bàn)
-            if (tableId != null) {
-                messagingTemplate.convertAndSend("/topic/table/" + tableId, payload);
-            }
-        } catch (Exception e) {
-            log.error("Lỗi gửi tin nhắn WebSocket: {}", e.getMessage());
-        }
     }
 }
