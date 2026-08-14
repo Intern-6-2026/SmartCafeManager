@@ -26,11 +26,7 @@ public class StaffController {
 
     private final StaffOrderService staffOrderService;
     private final SimpMessagingTemplate messagingTemplate;
-
-    // ==========================================
     // I. LẤY SƠ ĐỒ BÀN & THÔNG TIN ĐƠN HÀNG
-    // ==========================================
-
     @GetMapping("/tables")
     public ResponseEntity<List<Tables>> getAllTables() {
         return ResponseEntity.ok(staffOrderService.getAllTables());
@@ -50,11 +46,7 @@ public class StaffController {
     public ResponseEntity<List<OrderDetailResponseDTO>> getOrderDetailsByTable(@PathVariable Long tableId) {
         return ResponseEntity.ok(staffOrderService.getOrderDetailsByTable(tableId));
     }
-
-    // ==========================================
-    // II. XỬ LÝ HÀNG LOẠT THEO LƯỢT ORDER CỦA BÀN
-    // ==========================================
-
+    // II. XỬ LÝ HÀNG LOẠT THEO LƯỢT ORDER CỦA BÀn
     /**
      * Bếp nhận nấu tất cả món mới vừa đặt của bàn (ORDERED -> CONFIRMED)
      */
@@ -74,11 +66,7 @@ public class StaffController {
         notifyTableUpdate(tableId, "ALL_ITEMS_SERVED", "Bàn " + tableId + " đã phục vụ xong tất cả món lượt này!");
         return ResponseEntity.ok(Map.of("message", "Đã hoàn thành và phục vụ tất cả món lượt này!"));
     }
-
-    // ==========================================
     // III. XỬ LÝ ĐƠN HÀNG VÀ THANH TOÁN BÀN
-    // ==========================================
-
     @PutMapping("/orders/{tableOrderId}/confirm")
     public ResponseEntity<Map<String, String>> confirmOrderItems(
             @PathVariable Long tableOrderId,
@@ -91,9 +79,13 @@ public class StaffController {
 
     @PostMapping("/tables/{tableId}/approve-payment")
     public ResponseEntity<Map<String, String>> approvePayment(@PathVariable Long tableId) {
+        // 🟢 Dùng staffOrderService thay vì paymentService
         staffOrderService.approveCashPayment(tableId);
-        notifyTableUpdate(tableId, "PAYMENT_APPROVED", "Bàn " + tableId + " đã thanh toán và hoàn tất!");
-        return ResponseEntity.ok(Map.of("message", "Đã duyệt thanh toán và giải phóng bàn!"));
+
+        return ResponseEntity.ok(Map.of(
+            "status", "SUCCESS",
+            "message", "Đã duyệt thanh toán và giải phóng bàn thành công!"
+        ));
     }
 
     @PostMapping("/tables/{tableId}/cancel")
@@ -115,11 +107,7 @@ public class StaffController {
         notifyTableUpdate(tableId, "STATUS_CHANGED", "Bàn " + tableId + " chuyển trạng thái: " + status.name());
         return ResponseEntity.ok(Map.of("message", "Cập nhật trạng thái bàn thành công!"));
     }
-
-    // ==========================================
     // IV. THAO TÁC MÓN LẺ (TỐI ƯU GỌN GÀNG)
-    // ==========================================
-
     @PutMapping("/order-details/{orderDetailId}/serve")
     public ResponseEntity<Map<String, String>> markItemAsServed(
             @PathVariable Long orderDetailId,

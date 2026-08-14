@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,22 +80,26 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
 
-        SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
-        String formattedTime = activeOrder.getCreatedAt() != null 
-                ? timeFormatter.format(activeOrder.getCreatedAt()) 
+        // 🟢 Sửa lỗi định dạng thời gian cho LocalDateTime
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+        String formattedTime = activeOrder.getOpenAt() != null 
+                ? activeOrder.getOpenAt().format(timeFormatter) 
                 : "";
 
-        List<ActiveOrderDTO.OrderItemDto> itemDtos = details.stream().map(detail -> 
-            ActiveOrderDTO.OrderItemDto.builder()
+        List<ActiveOrderDTO.OrderItemDto> itemDtos = details.stream().map(detail -> {
+            int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
+            BigDecimal price = detail.getUnitPrice() != null ? detail.getUnitPrice() : BigDecimal.ZERO;
+            
+            return ActiveOrderDTO.OrderItemDto.builder()
                     .orderDetailId(detail.getOrderDetailId())
-                    .itemName(detail.getItem().getItemName())
-                    .quantity(detail.getQuantity())
-                    .unitPrice(detail.getUnitPrice())
-                    .subTotal(detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity())))
+                    .itemName(detail.getItem() != null ? detail.getItem().getItemName() : "Món không xác định")
+                    .quantity(qty)
+                    .unitPrice(price)
+                    .subTotal(price.multiply(BigDecimal.valueOf(qty)))
                     .status(detail.getStatus() != null ? detail.getStatus().name() : null)
                     .note(detail.getNote())
-                    .build()
-        ).collect(Collectors.toList());
+                    .build();
+        }).collect(Collectors.toList());
 
         return ActiveOrderDTO.builder()
                 .tableId(table.getTableId())
@@ -104,7 +108,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
                 .hasActiveOrder(true)
                 .tableOrderId(activeOrder.getTableOrderId())
                 .orderTime(formattedTime)
-                .totalAmount(activeOrder.getTotalAmount())
+                .totalAmount(activeOrder.getTotalAmount() != null ? activeOrder.getTotalAmount() : BigDecimal.ZERO)
                 .items(itemDtos)
                 .build();
     }
@@ -119,15 +123,16 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
 
         return details.stream().map(item -> {
+            int qty = item.getQuantity() != null ? item.getQuantity() : 0;
             BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
-            BigDecimal total = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal total = unitPrice.multiply(BigDecimal.valueOf(qty));
 
             return OrderDetailResponseDTO.builder()
                     .orderDetailId(item.getOrderDetailId())
                     .itemId(item.getItem() != null ? item.getItem().getItemId() : null)
                     .itemName(item.getItem() != null ? item.getItem().getItemName() : "Món không xác định")
                     .itemImage(item.getItem() != null ? item.getItem().getImageUrl() : null)
-                    .quantity(item.getQuantity())
+                    .quantity(qty)
                     .unitPrice(unitPrice)
                     .totalPrice(total)
                     .note(item.getNote())
@@ -136,18 +141,13 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         }).collect(Collectors.toList());
     }
 
-    // ==========================================
-    // II. THAO TÁC TRÊN ĐƠN HÀNG & THANH TOÁN
-    // ==========================================
-
     @Override
     @Transactional
     public void approveCashPayment(Long tableId) {
-        // 🟢 Cập nhật: Chỉ ủy quyền cho PaymentService xử lý (chốt đơn + giải phóng bàn)
+        //  1. Ủy quyền cho PaymentService chốt hóa đơn & giải phóng bàn
         paymentService.completeCheckout(tableId, PaymentMethod.CASH);
 
-        // 🟢 Cập nhật: Bỏ đi phần code set bàn về EMPTY ở đây để tránh lặp code.
-        // Chỉ còn nhiệm vụ thông báo qua WebSocket
+        //  2. Bắn thông báo realtime
         notifyCustomerTable(tableId, "PAYMENT_SUCCESS", "Thanh toán thành công! Cảm ơn quý khách.");
         notifyStaffAndKitchen(tableId, "CHECKOUT_COMPLETED", "Bàn " + tableId + " đã hoàn tất thanh toán tiền mặt.");
     }
@@ -186,10 +186,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         notifyStaffAndKitchen(tableId, "TABLE_STATUS_CHANGED", "Bàn " + tableId + " đổi trạng thái sang " + status);
     }
-
-    // ==========================================
-    // III. THAO TÁC HÀNG LOẠT THEO BÀN (NHIỀU LƯỢT ORDER)
-    // ==========================================
 
     @Override
     @Transactional
@@ -246,7 +242,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     }
 
     // ==========================================
-    // IV. THAO TÁC CHI TIẾT TỪNG MÓN LẺ (ORDER DETAIL)
+    // IV. THAO TÁC CHI TIẾT TỪNG MÓN LẺ
     // ==========================================
 
     @Override
@@ -280,7 +276,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         orderDetailRepository.save(detail);
 
         Long tableId = detail.getOrder().getTable().getTableId();
-        String itemName = detail.getItem().getItemName();
+        String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
 
         notifyCustomerTable(tableId, "ITEM_SERVED", "Món '" + itemName + "' đã được phục vụ lên bàn.");
     }
@@ -300,7 +296,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         recalculateOrderTotal(order);
 
         Long tableId = order.getTable().getTableId();
-        String itemName = detail.getItem().getItemName();
+        String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
 
         notifyCustomerTable(tableId, "ITEM_CANCELLED", "Món '" + itemName + "' bị hủy do: " + cancelReason);
     }
@@ -315,7 +311,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
             throw new RuntimeException("Không thể sửa món đã được xác nhận hoặc đã chế biến!");
         }
 
-        if (newQuantity <= 0) {
+        if (newQuantity == null || newQuantity <= 0) {
             deleteOrderItem(orderDetailId);
             return;
         }
@@ -330,8 +326,9 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         recalculateOrderTotal(order);
 
         Long tableId = order.getTable().getTableId();
+        String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
         notifyCustomerTable(tableId, "ITEM_UPDATED", 
-                "Món '" + detail.getItem().getItemName() + "' đã được thay đổi số lượng thành " + newQuantity);
+                "Món '" + itemName + "' đã được thay đổi số lượng thành " + newQuantity);
     }
 
     @Override
@@ -345,7 +342,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         }
 
         TableOrder order = detail.getOrder();
-        String itemName = detail.getItem().getItemName();
+        String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
         Long tableId = order.getTable().getTableId();
 
         orderDetailRepository.delete(detail);
@@ -365,7 +362,11 @@ public class StaffOrderServiceImpl implements StaffOrderService {
                 .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED 
                           || d.getStatus() == StatusOrderDetail.CONFIRMED 
                           || d.getStatus() == StatusOrderDetail.SERVED)
-                .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
+                .map(d -> {
+                    BigDecimal price = d.getUnitPrice() != null ? d.getUnitPrice() : BigDecimal.ZERO;
+                    int qty = d.getQuantity() != null ? d.getQuantity() : 0;
+                    return price.multiply(BigDecimal.valueOf(qty));
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         order.setTotalAmount(newTotal);
@@ -373,19 +374,31 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     }
 
     private void notifyCustomerTable(Long tableId, String type, String message) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("tableId", tableId);
-        payload.put("type", type);
-        payload.put("message", message);
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("tableId", tableId);
+            payload.put("type", type);
+            payload.put("message", message);
+            payload.put("timestamp", System.currentTimeMillis());
 
-        messagingTemplate.convertAndSend("/topic/table/" + tableId, payload);
+            messagingTemplate.convertAndSend("/topic/table/" + tableId, payload);
+        } catch (Exception e) {
+            log.error("Lỗi gửi WebSocket tới /topic/table/{}: {}", tableId, e.getMessage());
+        }
     }
 
     private void notifyStaffAndKitchen(Long tableId, String type, String message) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("tableId", tableId);
-        payload.put("type", type);
-        payload.put("message", message);
-        messagingTemplate.convertAndSend("/topic/staff-requests", payload);
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("tableId", tableId);
+            payload.put("type", type);
+            payload.put("message", message);
+            payload.put("timestamp", System.currentTimeMillis());
+
+            // 🟢 Đã đổi từ /topic/staff-requests sang chuẩn chung /topic/table-events
+            messagingTemplate.convertAndSend("/topic/table-events", payload);
+        } catch (Exception e) {
+            log.error("Lỗi gửi WebSocket tới /topic/table-events: {}", e.getMessage());
+        }
     }
 }

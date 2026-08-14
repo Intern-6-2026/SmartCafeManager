@@ -4,8 +4,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,22 +19,25 @@ import com.codegym.backend.entity.TableOrder;
 import com.codegym.backend.entity.Tables;
 import com.codegym.backend.enums.PaymentMethod;
 import com.codegym.backend.enums.ServiceStatus;
+import com.codegym.backend.enums.StatusOrderDetail;
 import com.codegym.backend.enums.StatusTableOrder;
 import com.codegym.backend.repository.OrderDetailRepository;
 import com.codegym.backend.repository.TableOrderRepository;
 import com.codegym.backend.repository.TablesRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null") 
 public class PaymentServiceImpl implements PaymentService {
 
     private final TableOrderRepository tableOrderRepository;
     private final OrderDetailRepository orderDetailRepository;
-    
-    // Bổ sung Repository để xử lý cập nhật trạng thái Bàn
     private final TablesRepository tablesRepository; 
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
@@ -44,19 +49,19 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public void requestCheckout(Long tableId, PaymentMethod paymentMethod) {
         TableOrder order = tableOrderRepository
-                .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                .findByTableTableIdAndStatusIn(tableId, List.of(StatusTableOrder.OPEN, StatusTableOrder.WAITING_PAYMENT))
                 .orElseThrow(() -> new RuntimeException("Bàn " + tableId + " không có hóa đơn mở!"));
 
-        // Khách yêu cầu: Đổi sang WAITING_PAYMENT, giữ nguyên paidAt/closeAt = null
         order.setStatus(StatusTableOrder.WAITING_PAYMENT);
         order.setPaymentMethod(paymentMethod);
         tableOrderRepository.save(order);
+
+        notifyTableEvents(tableId, "PAYMENT_REQUESTED", "Bàn " + tableId + " yêu cầu thanh toán (" + paymentMethod + ")");
     }
 
     @Override
     @Transactional
     public void completeCheckout(Long tableId, PaymentMethod paymentMethod) {
-        // Nhân viên duyệt: Chấp nhận đơn OPEN hoặc WAITING_PAYMENT
         TableOrder order = tableOrderRepository
                 .findByTableTableIdAndStatusIn(tableId, List.of(StatusTableOrder.OPEN, StatusTableOrder.WAITING_PAYMENT))
                 .orElseThrow(() -> new RuntimeException("Bàn " + tableId + " không có hóa đơn chờ hoàn tất thanh toán!"));
@@ -68,7 +73,18 @@ public class PaymentServiceImpl implements PaymentService {
         order.setCloseAt(LocalDateTime.now());
         tableOrderRepository.save(order);
 
-        // 2. GIẢI PHÓNG BÀN: Cập nhật trạng thái bàn về trống để đón khách mới
+        // 2. Chốt trạng thái các món chi tiết sang SERVED
+        List<OrderDetail> details = orderDetailRepository.findByOrder(order);
+        if (details != null && !details.isEmpty()) {
+            for (OrderDetail detail : details) {
+                if (detail.getStatus() == StatusOrderDetail.ORDERED || detail.getStatus() == StatusOrderDetail.CONFIRMED) {
+                    detail.setStatus(StatusOrderDetail.SERVED);
+                }
+            }
+            orderDetailRepository.saveAll(details); // Đã bọc kiểm tra không rỗng
+        }
+
+        // 3. GIẢI PHÓNG BÀN: Cập nhật trạng thái bàn về trống để đón khách mới
         Tables table = order.getTable();
         if (table != null) {
             table.setServiceStatus(ServiceStatus.EMPTY);
@@ -148,5 +164,19 @@ public class PaymentServiceImpl implements PaymentService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    private void notifyTableEvents(Long tableId, String type, String message) {
+        try {
+            Map<String, Object> payload = Map.of(
+                "tableId", tableId,
+                "type", type,
+                "message", message,
+                "timestamp", System.currentTimeMillis()
+            );
+            messagingTemplate.convertAndSend("/topic/table-events", payload);
+        } catch (Exception e) {
+            log.error("Lỗi bắn WebSocket tại PaymentService cho bàn {}: {}", tableId, e.getMessage());
+        }
     }
 }

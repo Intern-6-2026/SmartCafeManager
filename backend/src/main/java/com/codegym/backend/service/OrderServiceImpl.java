@@ -7,7 +7,7 @@ import com.codegym.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import lombok.extern.slf4j.Slf4j;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @SuppressWarnings("null")
 public class OrderServiceImpl implements OrderService {
@@ -42,41 +43,49 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional
-    public void cancelOrderItemByCustomer(Long orderDetailId, String reason) {
-        OrderDetail detail = orderDetailRepository.findById(orderDetailId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết món ăn ID: " + orderDetailId));
+@Transactional
+public void cancelOrderItemByCustomer(Long orderDetailId, String reason) {
+    OrderDetail detail = orderDetailRepository.findById(orderDetailId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết món ăn ID: " + orderDetailId));
 
-        if (detail.getStatus() != StatusOrderDetail.ORDERED) {
-            throw new RuntimeException("Không thể hủy món do Bếp đã nhận chế biến hoặc đã phục vụ!");
-        }
-
-        detail.setStatus(StatusOrderDetail.CANCELLED);
-        if (reason != null && !reason.trim().isEmpty()) {
-            String currentNote = detail.getNote() != null ? detail.getNote() + " | " : "";
-            detail.setNote(currentNote + "Khách hủy: " + reason);
-        }
-        orderDetailRepository.save(detail);
-
-        Item item = detail.getItem();
-        if (item != null) {
-            int currentCount = item.getTotalOrderCount() != null ? item.getTotalOrderCount() : 0;
-            int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
-            item.setTotalOrderCount(Math.max(0, currentCount - qty));
-            itemRepository.save(item);
-        }
-
-        TableOrder order = detail.getOrder();
-        if (order != null) {
-            BigDecimal price = getSafeUnitPrice(detail);
-            int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
-            BigDecimal itemTotal = price.multiply(BigDecimal.valueOf(qty));
-
-            BigDecimal currentTotal = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
-            order.setTotalAmount(currentTotal.subtract(itemTotal).max(BigDecimal.ZERO));
-            tableOrderRepository.save(order);
-        }
+    if (detail.getStatus() != StatusOrderDetail.ORDERED) {
+        throw new RuntimeException("Không thể hủy món do Bếp đã nhận chế biến hoặc đã phục vụ!");
     }
+
+    // LẤY SỐ LƯỢNG AN TOÀN: Nếu trong DB bị âm hoặc null, ép về số dương chuẩn
+    int rawQty = detail.getQuantity() != null ? detail.getQuantity() : 0;
+    if (rawQty <= 0) {
+        log.warn("Cảnh báo: OrderDetail ID {} có số lượng không hợp lệ ({}), tự động điều chỉnh về 1", orderDetailId, rawQty);
+        rawQty = 1;
+    }
+    final int qty = rawQty; // Dùng số lượng dương chuẩn để tính toán
+
+    detail.setStatus(StatusOrderDetail.CANCELLED);
+    if (reason != null && !reason.trim().isEmpty()) {
+        String currentNote = detail.getNote() != null ? detail.getNote() + " | " : "";
+        detail.setNote(currentNote + "Khách hủy: " + reason);
+    }
+    orderDetailRepository.save(detail);
+
+    // Cập nhật lại số lượng đã bán của Item
+    Item item = detail.getItem();
+    if (item != null) {
+        int currentCount = item.getTotalOrderCount() != null ? item.getTotalOrderCount() : 0;
+        item.setTotalOrderCount(Math.max(0, currentCount - qty));
+        itemRepository.save(item);
+    }
+
+    // Cập nhật lại tổng tiền hóa đơn
+    TableOrder order = detail.getOrder();
+    if (order != null) {
+        BigDecimal price = getSafeUnitPrice(detail);
+        BigDecimal itemTotal = price.multiply(BigDecimal.valueOf(qty)); // Luôn ra số dương
+
+        BigDecimal currentTotal = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
+        order.setTotalAmount(currentTotal.subtract(itemTotal).max(BigDecimal.ZERO));
+        tableOrderRepository.save(order);
+    }
+}
 
     @Override
     @Transactional(readOnly = true)

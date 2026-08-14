@@ -31,11 +31,7 @@ public class CustomerController {
     private final PaymentService paymentService;
     private final StaffOrderService staffOrderService;
     private final SimpMessagingTemplate messagingTemplate;
-
-    // ==========================================
     // I. THÔNG TIN BÀN & GỌI PHỤC VỤ
-    // ==========================================
-
     @GetMapping("/table-info/{tableId}")
     public ResponseEntity<Tables> getTableInfo(@PathVariable Long tableId) {
         return ResponseEntity.ok(staffOrderService.getTableInfo(tableId));
@@ -57,16 +53,13 @@ public class CustomerController {
                 ? "Bàn " + tableId + " đang gọi nhân viên!" 
                 : "Bàn " + tableId + " yêu cầu thanh toán!";
         
+        // Báo cho Nhân viên/Admin/Bếp VÀ Khách hàng tại bàn
         notifyStaffAndKitchen(tableId, type, message);
         notifyCustomerTable(tableId, type, message);
 
         return ResponseEntity.ok(Map.of("message", message));
     }
-
-    // ==========================================
     // II. GIỎ HÀNG TẠM
-    // ==========================================
-
     @GetMapping("/cart/{tableId}")
     public ResponseEntity<CartResponseDTO> getCartOverview(@PathVariable Long tableId) {
         return ResponseEntity.ok(cartService.getCartOverview(tableId));
@@ -114,23 +107,17 @@ public class CustomerController {
         return ResponseEntity.ok(Map.of("message", "Đã xóa toàn bộ món trong giỏ hàng tạm!"));
     }
 
-    // ==========================================
-    // III. BẤM GỌI MÓN
-    // ==========================================
-
+    // III. BẤM GỌI MÓN (ĐỐI CHIẾU CHUẨN CẢ SERVICE)
     @PostMapping("/confirm-order")
     public ResponseEntity<Map<String, String>> confirmOrder(@RequestParam Long tableId) {
+        // 🟢 Trong CartServiceImpl.confirmOrder() đã tích hợp bắn Socket NEW_ORDER_SUBMITTED 
+        // cho cả /topic/table-events và /topic/table/{tableId} nên không bắn lại ở đây để tránh trùng lặp.
         cartService.confirmOrder(tableId);
-        
-        notifyStaffAndKitchen(tableId, "NEW_ORDER", "Bàn " + tableId + " vừa gửi đơn món mới!");
-        notifyCustomerTable(tableId, "ORDER_SUBMITTED", "Đơn hàng của bạn đã gửi xuống bếp thành công!");
 
         return ResponseEntity.ok(Map.of("message", "Đã gửi đơn hàng thành công xuống bếp!"));
     }
 
-    // ==========================================
     // IV. YÊU CẦU THANH TOÁN & HÓA ĐƠN
-    // ==========================================
 
     @PostMapping("/payment/cash")
     public ResponseEntity<Map<String, String>> processCashPayment(@RequestParam Long tableId) {
@@ -146,22 +133,19 @@ public class CustomerController {
     public ResponseEntity<TableOrderSummaryDTO> getInvoiceSummary(@PathVariable Long tableId) {
         return ResponseEntity.ok(paymentService.getInvoiceSummaryDTO(tableId));
     }
-
-    // ==========================================
-    // HELPER WEBSOCKET
-    // ==========================================
-
+    // HELPER WEBSOCKET (ĐỒNG BỘ 1 KÊNH TABLE-EVENTS)
     private void notifyStaffAndKitchen(Long tableId, String type, String message) {
         try {
             Map<String, Object> payload = new HashMap<>();
             payload.put("tableId", tableId);
             payload.put("type", type);
             payload.put("message", message);
+            payload.put("timestamp", System.currentTimeMillis());
             
-            // 🟢 Đã đổi từ "/topic/staff-requests" sang "/topic/staff-events"
-            messagingTemplate.convertAndSend("/topic/staff-events", payload);
+            // Đã chuyển chuẩn kênh chung: /topic/table-events
+            messagingTemplate.convertAndSend("/topic/table-events", payload);
         } catch (Exception e) {
-            log.error("Lỗi gửi WebSocket tới /topic/staff-events: {}", e.getMessage());
+            log.error("Lỗi gửi WebSocket tới /topic/table-events: {}", e.getMessage());
         }
     }
 
@@ -171,6 +155,8 @@ public class CustomerController {
             payload.put("tableId", tableId);
             payload.put("type", type);
             payload.put("message", message);
+            payload.put("timestamp", System.currentTimeMillis());
+
             messagingTemplate.convertAndSend("/topic/table/" + tableId, payload);
         } catch (Exception e) {
             log.error("Lỗi gửi WebSocket tới /topic/table/{}: {}", tableId, e.getMessage());

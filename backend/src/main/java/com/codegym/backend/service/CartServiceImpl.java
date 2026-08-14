@@ -28,69 +28,75 @@ public class CartServiceImpl implements CartService {
     private final TableOrderRepository tableOrderRepository;
     private final OrderDetailRepository orderDetailRepository;
     private final ItemRepository itemRepository;
-    private final SimpMessagingTemplate messagingTemplate; // 🟢 Inject SimpMessagingTemplate
+    private final SimpMessagingTemplate messagingTemplate;
 
-    @Override
-    @Transactional
-    public void addItemToCart(Long tableId, Long itemId, Integer quantity, String note) {
-        Tables table = getTableEntity(tableId);
-
-        boolean isWaitingPayment = tableOrderRepository
-                .findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.WAITING_PAYMENT)
-                .isPresent();
-        if (isWaitingPayment) {
-            throw new RuntimeException("Bàn đang chờ thanh toán, không thể đặt thêm món!");
-        }
-
-        Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Món ăn không tồn tại với ID: " + itemId));
-
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                .orElseGet(() -> {
-                    table.setIsOccupied(true);
-                    tablesRepository.save(table);
-
-                    TableOrder newOrder = TableOrder.builder()
-                            .table(table)
-                            .openAt(LocalDateTime.now())
-                            .totalAmount(BigDecimal.ZERO) 
-                            .status(StatusTableOrder.OPEN)
-                            .build();
-                    return tableOrderRepository.save(newOrder);
-                });
-
-        List<OrderDetail> existingDetails = orderDetailRepository
-                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
-
-        int addQty = (quantity != null && quantity > 0) ? quantity : 1;
-
-        if (!existingDetails.isEmpty()) {
-            OrderDetail detail = existingDetails.get(0);
-            int currentQty = detail.getQuantity() != null ? detail.getQuantity() : 0;
-            detail.setQuantity(currentQty + addQty);
-            
-            if (note != null && !note.trim().isEmpty()) {
-                if (detail.getNote() != null && !detail.getNote().trim().isEmpty()) {
-                    detail.setNote(detail.getNote().trim() + ", " + note.trim());
-                } else {
-                    detail.setNote(note.trim());
-                }
-            }
-            orderDetailRepository.save(detail);
-        } else {
-            BigDecimal price = item.getPrice() != null ? item.getPrice() : BigDecimal.ZERO;
-            OrderDetail newDetail = OrderDetail.builder()
-                    .order(order)
-                    .item(item)
-                    .quantity(addQty)
-                    .unitPrice(price)
-                    .note(note != null ? note.trim() : null)
-                    .status(StatusOrderDetail.PENDING)
-                    .build();
-
-            orderDetailRepository.save(newDetail);
-        }
+   @Override
+@Transactional
+public void addItemToCart(Long tableId, Long itemId, Integer quantity, String note) {
+    // 🟢 1. Validate số lượng: Chặn số âm và số 0 ngay từ đầu
+    if (quantity != null && quantity <= 0) {
+        throw new IllegalArgumentException("Số lượng đặt món phải lớn hơn 0!");
     }
+
+    Tables table = getTableEntity(tableId);
+
+    boolean isWaitingPayment = tableOrderRepository
+            .findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.WAITING_PAYMENT)
+            .isPresent();
+    if (isWaitingPayment) {
+        throw new RuntimeException("Bàn đang chờ thanh toán, không thể đặt thêm món!");
+    }
+
+    Item item = itemRepository.findById(itemId)
+            .orElseThrow(() -> new RuntimeException("Món ăn không tồn tại với ID: " + itemId));
+
+    TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
+            .orElseGet(() -> {
+                table.setIsOccupied(true);
+                tablesRepository.save(table);
+
+                TableOrder newOrder = TableOrder.builder()
+                        .table(table)
+                        .openAt(LocalDateTime.now())
+                        .totalAmount(BigDecimal.ZERO) 
+                        .status(StatusTableOrder.OPEN)
+                        .build();
+                return tableOrderRepository.save(newOrder);
+            });
+
+    List<OrderDetail> existingDetails = orderDetailRepository
+            .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId, StatusOrderDetail.PENDING);
+
+    // Mặc định là 1 nếu Frontend không truyền quantity
+    int addQty = (quantity != null) ? quantity : 1;
+
+    if (!existingDetails.isEmpty()) {
+        OrderDetail detail = existingDetails.get(0);
+        int currentQty = detail.getQuantity() != null ? detail.getQuantity() : 0;
+        detail.setQuantity(currentQty + addQty);
+        
+        if (note != null && !note.trim().isEmpty()) {
+            if (detail.getNote() != null && !detail.getNote().trim().isEmpty()) {
+                detail.setNote(detail.getNote().trim() + ", " + note.trim());
+            } else {
+                detail.setNote(note.trim());
+            }
+        }
+        orderDetailRepository.save(detail);
+    } else {
+        BigDecimal price = item.getPrice() != null ? item.getPrice() : BigDecimal.ZERO;
+        OrderDetail newDetail = OrderDetail.builder()
+                .order(order)
+                .item(item)
+                .quantity(addQty)
+                .unitPrice(price)
+                .note(note != null ? note.trim() : null)
+                .status(StatusOrderDetail.PENDING)
+                .build();
+
+        orderDetailRepository.save(newDetail);
+    }
+}
 
     @Override
     @Transactional(readOnly = true)
@@ -208,7 +214,7 @@ public class CartServiceImpl implements CartService {
         table.setServiceStatus(ServiceStatus.WAITING_FOOD);
         tablesRepository.save(table);
 
-        // 🟢 BẮN SOCKET REALTIME: Khách vừa chốt đơn -> Báo Bếp & Sơ đồ bàn cập nhật tức thì
+        // BẮN SOCKET REALTIME: Khách vừa chốt đơn -> Báo Bếp & Sơ đồ bàn cập nhật tức thì
         notifyOrderSubmitted(tableId, table.getTableName());
     }
 
