@@ -1,17 +1,5 @@
 package com.codegym.backend.service;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-
 import com.codegym.backend.dto.FeedbackRequestDTO;
 import com.codegym.backend.dto.FeedbackResponseDTO;
 import com.codegym.backend.entity.Customer;
@@ -21,8 +9,19 @@ import com.codegym.backend.repository.CustomerRepository;
 import com.codegym.backend.repository.FeedbackRepository;
 import com.codegym.backend.repository.ItemRepository;
 import com.codegym.backend.repository.OrderDetailRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.io.IOException; // 🟢 THÊM IMPORT NÀY
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,8 +32,9 @@ public class FeedbackServiceImpl implements FeedbackService {
     private final CustomerRepository customerRepository;
     private final ItemRepository itemRepository;
     private final OrderDetailRepository orderDetailRepository;
+    private final CloudinaryService cloudinaryService;
 
-    // 🟢 1. TẠO FEEDBACK VÀ TRẢ VỀ DTO
+    //  1. TẠO FEEDBACK VÀ TRẢ VỀ DTO
     @Override
     @Transactional
     public FeedbackResponseDTO createFeedback(FeedbackRequestDTO dto) {
@@ -42,15 +42,25 @@ public class FeedbackServiceImpl implements FeedbackService {
         Item item = itemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn để đánh giá!"));
 
-        // 🟢 CẬP NHẬT: Chỉ kiểm tra món ăn có trong đơn hay không (Bỏ điều kiện phải
-        // thanh toán PAID)
+        // Chỉ kiểm tra món ăn có trong đơn hay không
         if (dto.getOrderId() != null) {
             boolean isItemInOrder = orderDetailRepository.existsByOrderTableOrderIdAndItemItemId(
                     dto.getOrderId(),
-                    dto.getItemId());
+                    dto.getItemId()
+            );
 
             if (!isItemInOrder) {
                 throw new RuntimeException("Đơn hàng #" + dto.getOrderId() + " không chứa món ăn này!");
+            }
+        }
+
+        // 2. XỬ LÝ UPLOAD ẢNH LÊN CLOUDINARY (ĐÃ BỌC TRY-CATCH)ssdas
+        String finalImageUrl = dto.getImageUrl();
+        if (dto.getImageFile() != null && !dto.getImageFile().isEmpty()) {
+            try {
+                finalImageUrl = cloudinaryService.uploadImage(dto.getImageFile());
+            } catch (IOException e) {
+                throw new RuntimeException("Lỗi tải ảnh lên Cloudinary: " + e.getMessage());
             }
         }
 
@@ -62,7 +72,7 @@ public class FeedbackServiceImpl implements FeedbackService {
 
         if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
             customer = customerRepository.findByAccountUsername(auth.getName()).orElse(null);
-
+            
             if (customer != null) {
                 if (!StringUtils.hasText(email) && customer.getAccount() != null) {
                     email = customer.getAccount().getEmail();
@@ -77,13 +87,13 @@ public class FeedbackServiceImpl implements FeedbackService {
             senderName = "Khách hàng";
         }
 
-        // Lưu Feedback
+        // Lưu Feedback với finalImageUrl đã xử lý
         Feedback feedback = Feedback.builder()
                 .content(dto.getContent())
                 .rating(dto.getRating())
                 .senderName(senderName)
                 .email(email)
-                .imageUrl(dto.getImageUrl())
+                .imageUrl(finalImageUrl)
                 .sentAt(LocalDateTime.now())
                 .customer(customer)
                 .item(item)

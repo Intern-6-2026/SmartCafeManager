@@ -5,10 +5,14 @@ import Logo from "./Logo";
 
 function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  const [userName, setUserName] = useState(() => localStorage.getItem("userName") || "");
-  const [isLoggedIn, setIsLoggedIn] = useState(() => Boolean(localStorage.getItem("token")));
+  const [userName, setUserName] = useState(
+    () => localStorage.getItem("userName") || "",
+  );
+  const [isLoggedIn, setIsLoggedIn] = useState(() =>
+    Boolean(localStorage.getItem("token")),
+  );
   const [roleName, setRoleName] = useState(() =>
-    (localStorage.getItem("roleName") || "").toUpperCase()
+    (localStorage.getItem("roleName") || "").toUpperCase(),
   );
   const navigate = useNavigate();
 
@@ -34,25 +38,41 @@ function Header() {
     navigate("/");
   };
 
-  const canManageNews = roleName === "ADMIN";
+  const isAdmin = roleName === "ADMIN";
+  const isStaff = roleName === "STAFF";
 
   const menuItems = [
     { name: "Trang chủ", path: "/home" },
     { name: "Xem Menu", path: "/menu/table/1" },
     { name: "Đặt món", path: "/menu/table/1" },
     { name: "Tin tức", path: "/news" },
+    // Dành riêng cho Admin: Quản lý thu nhập & Quản lý tin tức
+    {
+      name: "Thống kê thu nhập",
+      path: "/admin/revenue",
+      requireAuth: true,
+      requireAdmin: true,
+    },
     {
       name: "Quản lý tin tức",
       path: "/admin/news",
       requireAuth: true,
-      requireManageNews: true,
+      requireAdmin: true,
+    },
+    // Dành riêng cho Staff & Admin: Quản lý hóa đơn
+    {
+      name: "Quản lý hóa đơn",
+      path: "/admin/invoices",
+      requireAuth: true,
+      requireStaffOrAdmin: true,
     },
     { name: "Hồ sơ", path: "/profile", requireAuth: true },
   ];
 
   return (
     <nav className="relative w-full bg-[#D2A97B] p-4 flex items-center justify-between shadow-md z-50">
-      <Link to="/home" className="flex items-center gap-2">
+      {/* Bấm vào Logo luôn luôn về trang chủ /home */}
+      <Link to="/home" className="flex items-center gap-2 cursor-pointer">
         <Logo className="h-10 w-10" />
         <div className="text-[20px] font-['Inter']">
           <span className="font-bold text-[#000]">NEO</span>
@@ -73,17 +93,24 @@ function Header() {
             <button
               type="button"
               onClick={handleLogout}
-              className="text-sm font-bold text-[#5A3726] hover:underline"
+              className="text-sm font-bold text-[#5A3726] hover:underline cursor-pointer"
             >
               Đăng xuất
             </button>
           </>
         ) : (
-          <Link to="/" className="text-sm font-bold text-[#000] hover:underline">
+          <Link
+            to="/"
+            className="text-sm font-bold text-[#000] hover:underline"
+          >
             Đăng nhập
           </Link>
         )}
-        <button type="button" onClick={() => setIsOpen(!isOpen)} className="text-[#000]">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="text-[#000] cursor-pointer"
+        >
           {isOpen ? <X size={28} /> : <Menu size={28} />}
         </button>
       </div>
@@ -93,7 +120,9 @@ function Header() {
           {menuItems
             .filter((item) => {
               if (item.requireAuth && !isLoggedIn) return false;
-              if (item.requireManageNews && !canManageNews) return false;
+              if (item.requireAdmin && !isAdmin) return false;
+              if (item.requireStaffOrAdmin && !isAdmin && !isStaff)
+                return false;
               return true;
             })
             .map((item) => (

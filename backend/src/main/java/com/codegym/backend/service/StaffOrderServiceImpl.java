@@ -1,16 +1,5 @@
 package com.codegym.backend.service;
 
-import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.codegym.backend.dto.ActiveOrderDTO;
 import com.codegym.backend.dto.OrderDetailResponseDTO;
 import com.codegym.backend.entity.OrderDetail;
@@ -23,9 +12,18 @@ import com.codegym.backend.enums.StatusTableOrder;
 import com.codegym.backend.repository.OrderDetailRepository;
 import com.codegym.backend.repository.TableOrderRepository;
 import com.codegym.backend.repository.TablesRepository;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -38,6 +36,12 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     private final TableOrderRepository tableOrderRepository;
     private final PaymentService paymentService;
     private final SimpMessagingTemplate messagingTemplate;
+
+    // Danh sách các trạng thái đơn hàng được coi là đang hoạt động trên bàn
+    private static final List<StatusTableOrder> ACTIVE_ORDER_STATUSES = List.of(
+            StatusTableOrder.OPEN, 
+            StatusTableOrder.WAITING_PAYMENT
+    );
 
     // ==========================================
     // I. SƠ ĐỒ BÀN & CHI TIẾT PANELS
@@ -62,7 +66,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         Tables table = getTableInfo(tableId);
 
         TableOrder activeOrder = tableOrderRepository
-                .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                .findByTableTableIdAndStatusIn(tableId, ACTIVE_ORDER_STATUSES)
                 .orElse(null);
 
         if (activeOrder == null) {
@@ -76,22 +80,26 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
 
-        SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
-        String formattedTime = activeOrder.getCreatedAt() != null
-                ? timeFormatter.format(activeOrder.getCreatedAt())
+        // 🟢 Sửa lỗi định dạng thời gian cho LocalDateTime
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+        String formattedTime = activeOrder.getOpenAt() != null 
+                ? activeOrder.getOpenAt().format(timeFormatter) 
                 : "";
 
-        List<ActiveOrderDTO.OrderItemDto> itemDtos = details.stream()
-                .map(detail -> ActiveOrderDTO.OrderItemDto.builder()
-                        .orderDetailId(detail.getOrderDetailId())
-                        .itemName(detail.getItem().getItemName())
-                        .quantity(detail.getQuantity())
-                        .unitPrice(detail.getUnitPrice())
-                        .subTotal(detail.getUnitPrice().multiply(BigDecimal.valueOf(detail.getQuantity())))
-                        .status(detail.getStatus() != null ? detail.getStatus().name() : null)
-                        .note(detail.getNote())
-                        .build())
-                .collect(Collectors.toList());
+        List<ActiveOrderDTO.OrderItemDto> itemDtos = details.stream().map(detail -> {
+            int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
+            BigDecimal price = detail.getUnitPrice() != null ? detail.getUnitPrice() : BigDecimal.ZERO;
+            
+            return ActiveOrderDTO.OrderItemDto.builder()
+                    .orderDetailId(detail.getOrderDetailId())
+                    .itemName(detail.getItem() != null ? detail.getItem().getItemName() : "Món không xác định")
+                    .quantity(qty)
+                    .unitPrice(price)
+                    .subTotal(price.multiply(BigDecimal.valueOf(qty)))
+                    .status(detail.getStatus() != null ? detail.getStatus().name() : null)
+                    .note(detail.getNote())
+                    .build();
+        }).collect(Collectors.toList());
 
         return ActiveOrderDTO.builder()
                 .tableId(table.getTableId())
@@ -100,7 +108,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
                 .hasActiveOrder(true)
                 .tableOrderId(activeOrder.getTableOrderId())
                 .orderTime(formattedTime)
-                .totalAmount(activeOrder.getTotalAmount())
+                .totalAmount(activeOrder.getTotalAmount() != null ? activeOrder.getTotalAmount() : BigDecimal.ZERO)
                 .items(itemDtos)
                 .build();
     }
@@ -109,21 +117,22 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Transactional(readOnly = true)
     public List<OrderDetailResponseDTO> getOrderDetailsByTable(Long tableId) {
         TableOrder activeOrder = tableOrderRepository
-                .findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+                .findByTableTableIdAndStatusIn(tableId, ACTIVE_ORDER_STATUSES)
                 .orElseThrow(() -> new RuntimeException("Bàn hiện tại không có đơn hàng active!"));
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
 
         return details.stream().map(item -> {
+            int qty = item.getQuantity() != null ? item.getQuantity() : 0;
             BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
-            BigDecimal total = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal total = unitPrice.multiply(BigDecimal.valueOf(qty));
 
             return OrderDetailResponseDTO.builder()
                     .orderDetailId(item.getOrderDetailId())
                     .itemId(item.getItem() != null ? item.getItem().getItemId() : null)
                     .itemName(item.getItem() != null ? item.getItem().getItemName() : "Món không xác định")
                     .itemImage(item.getItem() != null ? item.getItem().getImageUrl() : null)
-                    .quantity(item.getQuantity())
+                    .quantity(qty)
                     .unitPrice(unitPrice)
                     .totalPrice(total)
                     .note(item.getNote())
@@ -132,25 +141,13 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         }).collect(Collectors.toList());
     }
 
-    // ==========================================
-    // II. THAO TÁC TRÊN ĐƠN HÀNG & THANH TOÁN
-    // ==========================================
-
     @Override
     @Transactional
     public void approveCashPayment(Long tableId) {
-        TableOrder activeOrder = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
-
-        activeOrder.setStatus(StatusTableOrder.PAID);
-        tableOrderRepository.save(activeOrder);
-
+        //  1. Ủy quyền cho PaymentService chốt hóa đơn & giải phóng bàn
         paymentService.completeCheckout(tableId, PaymentMethod.CASH);
 
-        Tables table = getTableInfo(tableId);
-        table.setServiceStatus(ServiceStatus.EMPTY);
-        tablesRepository.save(table);
-
+        //  2. Bắn thông báo realtime
         notifyCustomerTable(tableId, "PAYMENT_SUCCESS", "Thanh toán thành công! Cảm ơn quý khách.");
         notifyStaffAndKitchen(tableId, "CHECKOUT_COMPLETED", "Bàn " + tableId + " đã hoàn tất thanh toán tiền mặt.");
     }
@@ -158,7 +155,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Override
     @Transactional
     public void cancelTableOrder(Long tableId, String reason) {
-        TableOrder activeOrder = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+        TableOrder activeOrder = tableOrderRepository.findByTableTableIdAndStatusIn(tableId, ACTIVE_ORDER_STATUSES)
                 .orElseThrow(() -> new RuntimeException("Bàn không có hóa đơn nào đang mở để hủy!"));
 
         activeOrder.setStatus(StatusTableOrder.CANCELLED);
@@ -173,6 +170,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         Tables table = activeOrder.getTable();
         table.setServiceStatus(ServiceStatus.EMPTY);
+        table.setIsOccupied(false);
         tablesRepository.save(table);
 
         notifyCustomerTable(tableId, "ORDER_CANCELLED", "Hóa đơn đã bị hủy bởi nhân viên. Lý do: " + reason);
@@ -189,19 +187,14 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         notifyStaffAndKitchen(tableId, "TABLE_STATUS_CHANGED", "Bàn " + tableId + " đổi trạng thái sang " + status);
     }
 
-    // ==========================================
-    // III. THAO TÁC HÀNG LOẠT THEO BÀN (NHIỀU LƯỢT ORDER)
-    // ==========================================
-
     @Override
     @Transactional
     public void serveAllItemsByTable(Long tableId) {
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatusIn(tableId, ACTIVE_ORDER_STATUSES)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
 
-        // Lọc các món đang chờ chế biến hoặc chờ ra bàn (ORDERED hoặc CONFIRMED)
         List<OrderDetail> pendingDetails = details.stream()
                 .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED || d.getStatus() == StatusOrderDetail.CONFIRMED)
                 .collect(Collectors.toList());
@@ -215,7 +208,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         }
         orderDetailRepository.saveAll(pendingDetails);
 
-        // Chuyển trạng thái bàn sang SERVING
         Tables table = order.getTable();
         table.setServiceStatus(ServiceStatus.SERVING);
         tablesRepository.save(table);
@@ -227,12 +219,11 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Override
     @Transactional
     public void confirmAllNewItemsByTable(Long tableId) {
-        TableOrder order = tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
+        TableOrder order = tableOrderRepository.findByTableTableIdAndStatusIn(tableId, ACTIVE_ORDER_STATUSES)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng đang mở của bàn ID: " + tableId));
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
 
-        // Lọc các món mới vừa được gọi (ORDERED)
         List<OrderDetail> orderedDetails = details.stream()
                 .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED)
                 .collect(Collectors.toList());
@@ -251,7 +242,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     }
 
     // ==========================================
-    // IV. THAO TÁC CHI TIẾT TỪNG MÓN LẺ (ORDER DETAIL)
+    // IV. THAO TÁC CHI TIẾT TỪNG MÓN LẺ
     // ==========================================
 
     @Override
@@ -285,7 +276,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         orderDetailRepository.save(detail);
 
         Long tableId = detail.getOrder().getTable().getTableId();
-        String itemName = detail.getItem().getItemName();
+        String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
 
         notifyCustomerTable(tableId, "ITEM_SERVED", "Món '" + itemName + "' đã được phục vụ lên bàn.");
     }
@@ -305,7 +296,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         recalculateOrderTotal(order);
 
         Long tableId = order.getTable().getTableId();
-        String itemName = detail.getItem().getItemName();
+        String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
 
         notifyCustomerTable(tableId, "ITEM_CANCELLED", "Món '" + itemName + "' bị hủy do: " + cancelReason);
     }
@@ -320,7 +311,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
             throw new RuntimeException("Không thể sửa món đã được xác nhận hoặc đã chế biến!");
         }
 
-        if (newQuantity <= 0) {
+        if (newQuantity == null || newQuantity <= 0) {
             deleteOrderItem(orderDetailId);
             return;
         }
@@ -335,8 +326,9 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         recalculateOrderTotal(order);
 
         Long tableId = order.getTable().getTableId();
-        notifyCustomerTable(tableId, "ITEM_UPDATED",
-                "Món '" + detail.getItem().getItemName() + "' đã được thay đổi số lượng thành " + newQuantity);
+        String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
+        notifyCustomerTable(tableId, "ITEM_UPDATED", 
+                "Món '" + itemName + "' đã được thay đổi số lượng thành " + newQuantity);
     }
 
     @Override
@@ -350,7 +342,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         }
 
         TableOrder order = detail.getOrder();
-        String itemName = detail.getItem().getItemName();
+        String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
         Long tableId = order.getTable().getTableId();
 
         orderDetailRepository.delete(detail);
@@ -367,10 +359,14 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
 
         BigDecimal newTotal = details.stream()
-                .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED
-                        || d.getStatus() == StatusOrderDetail.CONFIRMED
-                        || d.getStatus() == StatusOrderDetail.SERVED)
-                .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
+                .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED 
+                          || d.getStatus() == StatusOrderDetail.CONFIRMED 
+                          || d.getStatus() == StatusOrderDetail.SERVED)
+                .map(d -> {
+                    BigDecimal price = d.getUnitPrice() != null ? d.getUnitPrice() : BigDecimal.ZERO;
+                    int qty = d.getQuantity() != null ? d.getQuantity() : 0;
+                    return price.multiply(BigDecimal.valueOf(qty));
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         order.setTotalAmount(newTotal);
@@ -378,20 +374,31 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     }
 
     private void notifyCustomerTable(Long tableId, String type, String message) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("tableId", tableId);
-        payload.put("type", type);
-        payload.put("message", message);
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("tableId", tableId);
+            payload.put("type", type);
+            payload.put("message", message);
+            payload.put("timestamp", System.currentTimeMillis());
 
-        messagingTemplate.convertAndSend("/topic/table/" + tableId, payload);
+            messagingTemplate.convertAndSend("/topic/table/" + tableId, payload);
+        } catch (Exception e) {
+            log.error("Lỗi gửi WebSocket tới /topic/table/{}: {}", tableId, e.getMessage());
+        }
     }
 
     private void notifyStaffAndKitchen(Long tableId, String type, String message) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("tableId", tableId);
-        payload.put("type", type);
-        payload.put("message", message);
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("tableId", tableId);
+            payload.put("type", type);
+            payload.put("message", message);
+            payload.put("timestamp", System.currentTimeMillis());
 
-        messagingTemplate.convertAndSend("/topic/staff-requests", payload);
+            // 🟢 Đã đổi từ /topic/staff-requests sang chuẩn chung /topic/table-events
+            messagingTemplate.convertAndSend("/topic/table-events", payload);
+        } catch (Exception e) {
+            log.error("Lỗi gửi WebSocket tới /topic/table-events: {}", e.getMessage());
+        }
     }
 }

@@ -19,6 +19,10 @@ function Body() {
   const [newsTotal, setNewsTotal] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const roleName = (localStorage.getItem("roleName") || "").toUpperCase();
+  const isAdmin = roleName === "ADMIN";
+  const isStaff = roleName === "STAFF";
   const manageNews = canManageNews();
 
   const updateNewsScrollState = () => {
@@ -42,17 +46,18 @@ function Body() {
 
   useEffect(() => {
     getLatestItems().then((res) => {
-      console.log("Dữ liệu món mới:", res.data);
       setLatestItems(res.data || []);
     });
     getBestSellerItems().then((res) => {
-      console.log("Dữ liệu bán chạy:", res.data);
       setBestSellerItems(res.data || []);
     });
+
+    // Gọi API lấy tin tức công khai an toàn cho mọi role
     getNewsList(0, 50)
       .then((res) => {
-        setLatestNews(res.data?.content || []);
-        setNewsTotal(res.data?.totalElements ?? (res.data?.content || []).length);
+        const list = res.data?.content || res.data || [];
+        setLatestNews(list);
+        setNewsTotal(res.data?.totalElements ?? list.length);
       })
       .catch(() => {
         setLatestNews([]);
@@ -72,25 +77,46 @@ function Body() {
     };
   }, [latestNews]);
 
-  // --- CẬP NHẬT HÀM XỬ LÝ KHI BẤM VÀO MÓN ĂN ---
   const handleItemClick = async (item) => {
     const itemId = item.itemId || item.id;
-    const tableId = 1; // Mặc định bàn số 1 theo quy ước của team backend
+    const tableId = 1;
 
     try {
-      // 1. Gọi API thêm vào giỏ hàng thật trên server
       await addItemToCart(tableId, itemId, 1, "");
-      console.log("Đã thêm món vào giỏ hàng thành công!");
     } catch (error) {
       console.error("Lỗi khi thêm vào giỏ hàng:", error);
     }
-    window.scrollTo(0, 0); // Cuộn lên đầu trang
-    // 2. Chuyển hướng sang trang menu của bàn số 1
+    window.scrollTo(0, 0);
     navigate(`/menu/table/${tableId}`);
   };
 
   return (
     <main className="w-full">
+      {/* THANH ĐIỀU HƯỚNG NHANH CHO ADMIN / STAFF NẾU CẦN */}
+      {(isAdmin || isStaff) && (
+        <div className="bg-[#33261A] text-[#E7C9A1] px-6 py-2.5 flex justify-between items-center text-sm font-medium">
+          <span>
+            Xin chào, {isAdmin ? "Quản trị viên (Admin)" : "Nhân viên (Staff)"}
+          </span>
+          <div className="flex gap-3">
+            {isAdmin && (
+              <button
+                onClick={() => navigate("/admin/revenue")}
+                className="bg-[#E7C9A1] text-[#33261A] px-3 py-1 rounded-md text-xs font-bold hover:bg-white cursor-pointer"
+              >
+                📊 Xem Thống kê Thu nhập
+              </button>
+            )}
+            <button
+              onClick={() => navigate("/admin/invoices")}
+              className="bg-[#E7C9A1] text-[#33261A] px-3 py-1 rounded-md text-xs font-bold hover:bg-white cursor-pointer"
+            >
+              📑 Quản lý Hóa đơn
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 1. Phần Hero */}
       <section className="relative w-full h-[300px] flex items-center">
         <img
@@ -121,7 +147,7 @@ function Body() {
         </div>
       </section>
 
-      {/* Tin tức trên dashboard — hàng ngang lướt được */}
+      {/* Tin tức trên dashboard */}
       <section className="home-news my-8">
         <div className="home-news-inner">
           <div className="home-news-head">
@@ -188,8 +214,8 @@ function Body() {
                 >
                   {latestNews.map((item) => (
                     <Link
-                      key={item.newsId}
-                      to={`/news/${item.newsId}`}
+                      key={item.newsId || item.id}
+                      to={`/news/${item.newsId || item.id}`}
                       className="news-card home-news-card"
                     >
                       <div className="news-card-media">
@@ -210,7 +236,9 @@ function Body() {
                     </Link>
                   ))}
                   <Link to="/news" className="home-news-see-all-card">
-                    <span className="home-news-see-all-title">Xem tất cả tin tức</span>
+                    <span className="home-news-see-all-title">
+                      Xem tất cả tin tức
+                    </span>
                     <span className="home-news-see-all-sub">
                       Mở trang danh sách đầy đủ
                     </span>
@@ -337,8 +365,17 @@ function Body() {
               className="flex-grow bg-transparent outline-none text-gray-700 placeholder-gray-500 px-2"
             />
           </div>
-          <button className="w-full bg-[#3E2723] text-white py-3 rounded-lg font-bold text-lg hover:bg-[#5D4037] transition-all duration-300 shadow-md">
+          <button className="w-full bg-[#3E2723] text-white py-3 rounded-lg font-bold text-lg hover:bg-[#5D4037] transition-all duration-300 shadow-md cursor-pointer">
             Đăng kí
+          </button>
+          {/* NÚT ĐẶT MÓN NỔI (FLOATING BUTTON) LUÔN HIỆN KHI CUỘN TRANG */}
+          <button
+            onClick={() => navigate("/menu/table/1")}
+            className="fixed bottom-6 right-6 z-50 bg-[#33261A] text-[#E7C9A1] px-5 py-3.5 rounded-full shadow-2xl flex items-center gap-2.5 font-bold text-sm hover:bg-[#4E3928] hover:scale-105 transition-all duration-300 border-2 border-[#E7C9A1] cursor-pointer"
+            title="Đặt món ngay"
+          >
+            <span className="text-lg">☕</span>
+            <span>Đặt món ngay</span>
           </button>
         </div>
       </section>

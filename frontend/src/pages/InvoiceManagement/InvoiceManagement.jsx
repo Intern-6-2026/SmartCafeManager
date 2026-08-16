@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function InvoiceManagement() {
   const navigate = useNavigate();
@@ -7,25 +7,33 @@ export default function InvoiceManagement() {
   const [loading, setLoading] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [filterTable, setFilterTable] = useState("");
-
-  // Thay thế filterDate đơn bằng startDate và endDate
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // Gọi API lấy danh sách hóa đơn từ Backend
+  // Lấy thông tin user động từ localStorage
+  const userName = localStorage.getItem("userName") || "Thành viên";
+  const getInitials = (name) => {
+    if (!name) return "U";
+    const words = name.trim().split(" ");
+    if (words.length >= 2) {
+      return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+  const userInitial = getInitials(userName);
+
+  // Gọi API lấy danh sách hóa đơn từ endpoint mới của backend
   useEffect(() => {
     const fetchInvoices = async () => {
       setLoading(true);
       try {
         const params = new URLSearchParams();
         if (filterTable) params.append("tableId", filterTable);
-
-        // Truyền startDate và endDate nếu có
         if (startDate) params.append("startDate", startDate);
         if (endDate) params.append("endDate", endDate);
 
         const response = await fetch(
-          `http://localhost:8080/api/v1/staff/statistics/invoices?${params.toString()}`,
+          `/api/v1/staff/statistics/invoices?${params.toString()}`,
           {
             method: "GET",
             headers: {
@@ -40,7 +48,7 @@ export default function InvoiceManagement() {
         }
 
         const data = await response.json();
-        setInvoices(data);
+        setInvoices(Array.isArray(data) ? data : data.content || []);
       } catch (error) {
         console.error("Lỗi gọi API hóa đơn:", error);
       } finally {
@@ -55,7 +63,7 @@ export default function InvoiceManagement() {
   const handleViewDetail = async (orderId) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/v1/staff/statistics/invoices/${orderId}`,
+        `/api/v1/staff/statistics/invoices/${orderId}`,
         {
           method: "GET",
           headers: {
@@ -98,7 +106,16 @@ export default function InvoiceManagement() {
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <Link
+          to="/home"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
           <div
             style={{
               width: "38px",
@@ -126,7 +143,7 @@ export default function InvoiceManagement() {
           >
             NEOCAFÉ
           </div>
-        </div>
+        </Link>
 
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <button
@@ -169,9 +186,9 @@ export default function InvoiceManagement() {
                 fontWeight: 700,
               }}
             >
-              CT
+              {userInitial}
             </div>
-            Chí Thanh
+            {userName}
           </div>
         </div>
       </div>
@@ -200,7 +217,7 @@ export default function InvoiceManagement() {
           </div>
         </div>
 
-        {/* Thanh lọc (Thêm Ngày bắt đầu & Ngày kết thúc) */}
+        {/* Thanh lọc */}
         <div
           style={{
             display: "flex",
@@ -334,7 +351,22 @@ export default function InvoiceManagement() {
                     borderBottom: "1px solid #E4D2B8",
                   }}
                 >
-                  Mã hóa đơn
+                  Mã HĐ / Order
+                </th>
+                <th
+                  style={{
+                    textAlign: "left",
+                    fontSize: "11.5px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: ".4px",
+                    color: "#6E5C4A",
+                    padding: "13px 14px",
+                    background: "#F3E9D8",
+                    borderBottom: "1px solid #E4D2B8",
+                  }}
+                >
+                  Mã Hóa Đơn
                 </th>
                 <th
                   style={{
@@ -379,7 +411,7 @@ export default function InvoiceManagement() {
                     borderBottom: "1px solid #E4D2B8",
                   }}
                 >
-                  Thời gian
+                  Thời gian tạo
                 </th>
                 <th
                   style={{
@@ -417,7 +449,7 @@ export default function InvoiceManagement() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan="7"
                     style={{
                       textAlign: "center",
                       padding: "30px",
@@ -455,9 +487,19 @@ export default function InvoiceManagement() {
                         padding: "13px 14px",
                         fontSize: "13px",
                         fontWeight: 600,
+                        color: "#33261A",
                       }}
                     >
-                      {inv.tableName}
+                      {inv.invoiceCode || "N/A"}
+                    </td>
+                    <td
+                      style={{
+                        padding: "13px 14px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {inv.tableName} (ID: {inv.tableId})
                     </td>
                     <td
                       style={{
@@ -482,8 +524,9 @@ export default function InvoiceManagement() {
                       <span
                         style={{
                           padding: "4px 10px",
-                          background: "#EBF3E8",
-                          color: "#3B7A27",
+                          background:
+                            inv.status === "PAID" ? "#EBF3E8" : "#FDF2E9",
+                          color: inv.status === "PAID" ? "#3B7A27" : "#D97706",
                           borderRadius: "20px",
                           fontSize: "12px",
                           fontWeight: 600,
@@ -514,7 +557,7 @@ export default function InvoiceManagement() {
               ) : (
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan="7"
                     style={{
                       textAlign: "center",
                       padding: "30px",
@@ -551,7 +594,7 @@ export default function InvoiceManagement() {
               padding: "24px",
               borderRadius: "16px",
               width: "100%",
-              maxWidth: "420px",
+              maxWidth: "450px",
               border: "1px solid #E4D2B8",
               boxShadow: "0 20px 50px rgba(0,0,0,.4)",
             }}
@@ -561,7 +604,7 @@ export default function InvoiceManagement() {
                 fontFamily: "'Fraunces', serif",
                 fontSize: "20px",
                 fontWeight: 600,
-                marginBottom: "16px",
+                marginBottom: "12px",
                 color: "#33261A",
               }}
             >
@@ -571,7 +614,16 @@ export default function InvoiceManagement() {
               style={{
                 fontSize: "13px",
                 color: "#6E5C4A",
-                marginBottom: "6px",
+                marginBottom: "4px",
+              }}
+            >
+              <strong>Mã hóa đơn:</strong> {selectedInvoice.invoiceCode}
+            </p>
+            <p
+              style={{
+                fontSize: "13px",
+                color: "#6E5C4A",
+                marginBottom: "4px",
               }}
             >
               <strong>Bàn:</strong> {selectedInvoice.tableName}
@@ -580,10 +632,20 @@ export default function InvoiceManagement() {
               style={{
                 fontSize: "13px",
                 color: "#6E5C4A",
+                marginBottom: "4px",
+              }}
+            >
+              <strong>Phương thức thanh toán:</strong>{" "}
+              {selectedInvoice.paymentMethod || "Tiền mặt"}
+            </p>
+            <p
+              style={{
+                fontSize: "13px",
+                color: "#6E5C4A",
                 marginBottom: "16px",
               }}
             >
-              <strong>Thời gian:</strong> {selectedInvoice.createdAt}
+              <strong>Thời gian tạo:</strong> {selectedInvoice.createdAt}
             </p>
 
             <div
@@ -596,24 +658,37 @@ export default function InvoiceManagement() {
                 overflowY: "auto",
               }}
             >
-              {(selectedInvoice.items || []).map((item, idx) => (
-                <div
-                  key={idx}
+              {(selectedInvoice.items || []).length > 0 ? (
+                selectedInvoice.items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "13px",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <span style={{ flex: 1 }}>
+                      {item.itemName} x{item.quantity}
+                    </span>
+                    <span style={{ fontWeight: 600 }}>
+                      {(item.price * item.quantity).toLocaleString()} đ
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
                     fontSize: "13px",
-                    marginBottom: "8px",
+                    color: "#6E5C4A",
+                    textAlign: "center",
                   }}
                 >
-                  <span style={{ flex: 1 }}>
-                    {item.itemName} x{item.quantity}
-                  </span>
-                  <span style={{ fontWeight: 600 }}>
-                    {(item.price * item.quantity).toLocaleString()} đ
-                  </span>
-                </div>
-              ))}
+                  Hóa đơn này không có danh sách mặt hàng chi tiết hoặc dữ liệu
+                  trả về dạng thông tin đơn.
+                </p>
+              )}
             </div>
 
             <div

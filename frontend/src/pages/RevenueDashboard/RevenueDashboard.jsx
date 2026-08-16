@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -26,19 +26,28 @@ export default function RevenueDashboard() {
   });
   const [loading, setLoading] = useState(true);
 
+  // Lấy thông tin user động từ localStorage
+  const userName = localStorage.getItem("userName") || "Thành viên";
+  const getInitials = (name) => {
+    if (!name) return "U";
+    const words = name.trim().split(" ");
+    if (words.length >= 2) {
+      return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+  const userInitial = getInitials(userName);
+
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:8080/api/v1/staff/statistics/dashboard",
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: "Bearer " + localStorage.getItem("token"),
-            },
+        const response = await fetch("/api/v1/staff/statistics/dashboard", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + localStorage.getItem("token"),
           },
-        );
+        });
 
         if (response.ok) {
           const data = await response.json();
@@ -79,7 +88,16 @@ export default function RevenueDashboard() {
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <Link
+          to="/home"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
           <div
             style={{
               width: "38px",
@@ -107,7 +125,7 @@ export default function RevenueDashboard() {
           >
             NEOCAFÉ
           </div>
-        </div>
+        </Link>
 
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <div
@@ -134,9 +152,9 @@ export default function RevenueDashboard() {
                 fontWeight: 700,
               }}
             >
-              CT
+              {userInitial}
             </div>
-            Chí Thanh
+            {userName}
           </div>
         </div>
       </div>
@@ -195,7 +213,6 @@ export default function RevenueDashboard() {
             </h3>
           </div>
 
-          {/* THẺ CLICK CHUYỂN SANG TRANG QUẢN LÝ HÓA ĐƠN THEO Ý ÔNG THỐNG */}
           <div
             onClick={() => navigate("/admin/invoices")}
             title="Nhấn để xem chi tiết danh sách hóa đơn"

@@ -16,8 +16,8 @@ import NewsDetail from "../pages/news/NewsDetail";
 import AdminNewsList from "../pages/news/AdminNewsList";
 import AdminNewsForm from "../pages/news/AdminNewsForm";
 import AdminNewsDetail from "../pages/news/AdminNewsDetail";
-import InvoiceManagement from "../pages/InvoiceManagement/InvoiceManagement"; // Điều chỉnh lại đường dẫn import nếu file của bạn nằm ở thư mục khác
-import RevenueDashboard from "../pages/RevenueDashboard/RevenueDashboard"; // Điều chỉnh lại đường dẫn import nếu file của bạn nằm ở thư mục khác
+import InvoiceManagement from "../pages/InvoiceManagement/InvoiceManagement";
+import RevenueDashboard from "../pages/RevenueDashboard/RevenueDashboard";
 import RequireRole from "../components/RequireRole";
 
 export default function AppRoutes() {
@@ -27,17 +27,14 @@ export default function AppRoutes() {
         <Route path="/" element={<Login />} />
 
         <Route path="/forgot-password" element={<ForgotPassword />} />
-
         <Route path="/otp" element={<Otp />} />
-
         <Route path="/new-password" element={<NewPassword />} />
 
         <Route path="/profile" element={<Profile />} />
-
         <Route path="/edit-profile" element={<EditProfile />} />
-
         <Route path="/change-password" element={<ChangePassword />} />
 
+        {/* Trang chủ dành cho Khách hàng / Chung */}
         <Route
           path="/home"
           element={
@@ -54,6 +51,7 @@ export default function AppRoutes() {
         <Route path="/news" element={<NewsList />} />
         <Route path="/news/:id" element={<NewsDetail />} />
 
+        {/* Quản lý Tin tức (ADMIN) */}
         <Route
           path="/admin/news"
           element={
@@ -87,7 +85,7 @@ export default function AppRoutes() {
           }
         />
 
-        {/* Quản lý hóa đơn */}
+        {/* Quản lý hóa đơn (Dành cho ADMIN và STAFF) */}
         <Route
           path="/admin/invoices"
           element={
@@ -97,7 +95,7 @@ export default function AppRoutes() {
           }
         />
 
-        {/* Thống kê thu nhập */}
+        {/* Thống kê thu nhập (Dành cho ADMIN) */}
         <Route
           path="/admin/revenue"
           element={

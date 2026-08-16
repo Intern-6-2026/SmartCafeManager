@@ -5,7 +5,6 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -21,7 +20,6 @@ import com.codegym.backend.dto.ResetPasswordRequest;
 import com.codegym.backend.dto.VerityOtpRequest;
 import com.codegym.backend.entity.Account;
 import com.codegym.backend.enums.AccountStatus;
-import com.codegym.backend.exception.AppException;
 import com.codegym.backend.repository.AccountRepository;
 import com.codegym.backend.security.JwtTokenProvider;
 
@@ -40,17 +38,14 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(request.getUsername())
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Tài khoản không tồn tại hoặc đã bị xóa!"));
+                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại hoặc đã bị xóa!"));
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new AppException(HttpStatus.FORBIDDEN,
-                    "Tài khoản của bạn chưa được kích hoạt hoặc đang bị khóa!");
+            throw new RuntimeException("Tài khoản của bạn chưa được kích hoạt hoặc đang bị khóa!");
         }
 
         if (account.getRole() == null || account.getRole().getRoleName() == null) {
-            throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Tài khoản chưa được phân quyền trên hệ thống");
+            throw new RuntimeException("Tài khoản chưa được phân quyền trên hệ thống");
         }
         String roleName = account.getRole().getRoleName();
 
@@ -99,7 +94,7 @@ public class AuthService {
     public String verityOTP(VerityOtpRequest request) {
         String email = redisTemplate.opsForValue().get("OTP_VAL:" + request.getToken());
         if (email == null) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Mã OTP không hợp lệ hoặc đã hết hạn!");
+            throw new RuntimeException("Mã OTP không hợp lệ hoặc đã hết hạn!");
         }
 
         String resetTokenUuid = java.util.UUID.randomUUID().toString();
@@ -115,16 +110,13 @@ public class AuthService {
     public String processResetPassword(ResetPasswordRequest request) {
         String email = redisTemplate.opsForValue().get("RESET_UUID:" + request.getToken());
         if (email == null) {
-            throw new AppException(HttpStatus.BAD_REQUEST,
-                    "Mã xác nhận không hợp lệ hoặc đã hết hạn!");
+            throw new RuntimeException("Mã xác nhận không hợp lệ hoặc đã hết hạn!");
         }
         Account account = accountRepository.findByEmailAndDeletedAtIsNull(email)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Tài khoản không tồn tại hoặc đã bị xóa!"));
+                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại hoặc đã bị xóa!"));
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new AppException(HttpStatus.FORBIDDEN,
-                    "Tài khoản của bạn chưa được kích hoạt hoặc đang bị khóa!");
+            throw new RuntimeException("Tài khoản của bạn chưa được kích hoạt hoặc đang bị khóa!");
         }
 
         account.setPassword(passwordEncoder.encode(request.getNewPassword()));
