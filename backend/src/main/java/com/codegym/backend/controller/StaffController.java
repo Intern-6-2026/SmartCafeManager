@@ -52,7 +52,6 @@ public class StaffController {
      */
     @PutMapping("/tables/{tableId}/confirm-all")
     public ResponseEntity<Map<String, String>> confirmAllNewItemsByTable(@PathVariable Long tableId) {
-        // Service đã tự động xử lý DB + bắn WebSocket
         staffOrderService.confirmAllNewItemsByTable(tableId);
         return ResponseEntity.ok(Map.of("message", "Đã duyệt nhận đơn lượt mới!"));
     }
@@ -62,7 +61,6 @@ public class StaffController {
      */
     @PutMapping("/tables/{tableId}/serve-all")
     public ResponseEntity<Map<String, String>> serveAllItemsByTable(@PathVariable Long tableId) {
-        // Service đã tự động xử lý DB + bắn WebSocket
         staffOrderService.serveAllItemsByTable(tableId);
         return ResponseEntity.ok(Map.of("message", "Đã hoàn thành và phục vụ tất cả món lượt này!"));
     }
@@ -70,10 +68,7 @@ public class StaffController {
     // III. XỬ LÝ ĐƠN HÀNG VÀ THANH TOÁN BÀN
     
     @PutMapping("/orders/{tableOrderId}/confirm")
-    public ResponseEntity<Map<String, String>> confirmOrderItems(
-            @PathVariable Long tableOrderId,
-            @RequestParam(required = false) Long tableId) {
-
+    public ResponseEntity<Map<String, String>> confirmOrderItems(@PathVariable Long tableOrderId) {
         staffOrderService.confirmOrderItems(tableOrderId);
         return ResponseEntity.ok(Map.of("message", "Đã xác nhận đơn hàng!"));
     }
@@ -108,10 +103,7 @@ public class StaffController {
     // IV. THAO TÁC MÓN LẺ
     
     @PutMapping("/order-details/{orderDetailId}/serve")
-    public ResponseEntity<Map<String, String>> markItemAsServed(
-            @PathVariable Long orderDetailId,
-            @RequestParam(required = false) Long tableId) {
-
+    public ResponseEntity<Map<String, String>> markItemAsServed(@PathVariable Long orderDetailId) {
         staffOrderService.markItemAsServed(orderDetailId);
         return ResponseEntity.ok(Map.of("message", "Đã chuyển món sang SERVED!"));
     }
@@ -119,8 +111,7 @@ public class StaffController {
     @PutMapping("/order-details/{orderDetailId}/cancel")
     public ResponseEntity<Map<String, String>> cancelOrderItem(
             @PathVariable Long orderDetailId,
-            @RequestParam(required = false, defaultValue = "Hết món") String reason,
-            @RequestParam(required = false) Long tableId) {
+            @RequestParam(required = false, defaultValue = "Hết món") String reason) {
 
         staffOrderService.cancelOrderItem(orderDetailId, reason);
         return ResponseEntity.ok(Map.of("message", "Đã hủy món và cập nhật lại tổng tiền!"));
@@ -130,18 +121,14 @@ public class StaffController {
     public ResponseEntity<Map<String, String>> updateOrderItem(
             @PathVariable Long orderDetailId,
             @RequestParam Integer quantity,
-            @RequestParam(required = false) String note,
-            @RequestParam(required = false) Long tableId) {
+            @RequestParam(required = false) String note) {
 
         staffOrderService.updateOrderItem(orderDetailId, quantity, note);
         return ResponseEntity.ok(Map.of("message", "Cập nhật số lượng/ghi chú thành công!"));
     }
 
     @DeleteMapping("/order-details/{orderDetailId}")
-    public ResponseEntity<Map<String, String>> deleteOrderItem(
-            @PathVariable Long orderDetailId,
-            @RequestParam(required = false) Long tableId) {
-
+    public ResponseEntity<Map<String, String>> deleteOrderItem(@PathVariable Long orderDetailId) {
         staffOrderService.deleteOrderItem(orderDetailId);
         return ResponseEntity.ok(Map.of("message", "Đã xóa món khỏi đơn!"));
     }
