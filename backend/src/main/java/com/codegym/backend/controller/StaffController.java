@@ -16,11 +16,11 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/staff")
+@RequestMapping("/api/v1/admin")
 @CrossOrigin("*")
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
+@PreAuthorize("hasRole('ADMIN')")
 @SuppressWarnings("null")
 public class StaffController {
 
@@ -140,7 +140,6 @@ public class StaffController {
             
         staffOrderService.markItemAsServed(orderDetailId);
 
-        // Báo cho Nhân viên / Bếp
         messagingTemplate.convertAndSend(
                 "/topic/staff/orders/item-update",
                 Map.of(
@@ -151,7 +150,6 @@ public class StaffController {
                 )
         );
 
-        // Báo cho Khách hàng tại bàn cập nhật giao diện
         notifyTableOrderUpdate(tableId, "ITEM_SERVED", "Món ăn đã được mang lên!");
         notifyStaffTableListUpdate();
 
@@ -166,7 +164,6 @@ public class StaffController {
 
         staffOrderService.cancelOrderItem(orderDetailId, reason);
 
-        // Báo cho Nhân viên / Bếp
         messagingTemplate.convertAndSend(
                 "/topic/staff/orders/item-update",
                 Map.of(
@@ -178,7 +175,6 @@ public class StaffController {
                 )
         );
 
-        // Báo cho Khách hàng biết món bị hủy
         notifyTableOrderUpdate(tableId, "ITEM_CANCELLED", "Món ăn bị hủy do: " + reason);
         notifyStaffTableListUpdate();
 

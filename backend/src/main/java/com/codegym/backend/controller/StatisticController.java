@@ -8,6 +8,7 @@ import com.codegym.backend.service.StatisticService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -15,9 +16,10 @@ import java.util.Date;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/staff/statistics")
+@RequestMapping("/api/v1/admin/statistics")
 @CrossOrigin("*")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')") // Chỉ tài khoản có Role ADMIN mới được phép truy cập
 public class StatisticController {
 
     private final StatisticService statisticService;
