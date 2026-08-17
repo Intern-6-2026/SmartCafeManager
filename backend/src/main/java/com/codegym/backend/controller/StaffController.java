@@ -21,7 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
-@SuppressWarnings("null") // Bỏ qua các cảnh báo Null Safety do Eclipse JDT / VS Code kiểm tra với Spring WebSocket
+@SuppressWarnings("null")
 public class StaffController {
 
     private final StaffOrderService staffOrderService;
@@ -70,6 +70,7 @@ public class StaffController {
         staffOrderService.serveAllItemsByTable(tableId);
 
         notifyTableOrderUpdate(tableId, "ALL_SERVED", "Tất cả món ăn đã được phục vụ!");
+        notifyStaffTableListUpdate();
 
         return ResponseEntity.ok(Map.of("message", "Đã hoàn thành và phục vụ tất cả món lượt này!"));
     }
@@ -129,45 +130,64 @@ public class StaffController {
     }
 
     // ==========================================
-    // IV. THAO TÁC MÓN LẺ
+    // IV. THAO TÁC MÓN LẺ (KÈM TABLE_ID ĐỂ BẮN WEBSOCKET)
     // ==========================================
 
-    @PutMapping("/order-details/{orderDetailId}/serve")
-    public ResponseEntity<Map<String, String>> markItemAsServed(@PathVariable Long orderDetailId) {
+    @PutMapping("/tables/{tableId}/order-details/{orderDetailId}/serve")
+    public ResponseEntity<Map<String, String>> markItemAsServed(
+            @PathVariable Long tableId,
+            @PathVariable Long orderDetailId) {
+            
         staffOrderService.markItemAsServed(orderDetailId);
 
+        // Báo cho Nhân viên / Bếp
         messagingTemplate.convertAndSend(
                 "/topic/staff/orders/item-update",
                 Map.of(
+                        "tableId", tableId,
                         "orderDetailId", orderDetailId,
-                        "status", "SERVED"
+                        "status", "SERVED",
+                        "timestamp", System.currentTimeMillis()
                 )
         );
+
+        // Báo cho Khách hàng tại bàn cập nhật giao diện
+        notifyTableOrderUpdate(tableId, "ITEM_SERVED", "Món ăn đã được mang lên!");
+        notifyStaffTableListUpdate();
 
         return ResponseEntity.ok(Map.of("message", "Đã chuyển món sang SERVED!"));
     }
 
-    @PutMapping("/order-details/{orderDetailId}/cancel")
+    @PutMapping("/tables/{tableId}/order-details/{orderDetailId}/cancel")
     public ResponseEntity<Map<String, String>> cancelOrderItem(
+            @PathVariable Long tableId,
             @PathVariable Long orderDetailId,
             @RequestParam(required = false, defaultValue = "Hết món") String reason) {
 
         staffOrderService.cancelOrderItem(orderDetailId, reason);
 
+        // Báo cho Nhân viên / Bếp
         messagingTemplate.convertAndSend(
                 "/topic/staff/orders/item-update",
                 Map.of(
+                        "tableId", tableId,
                         "orderDetailId", orderDetailId,
                         "status", "CANCELLED",
-                        "reason", reason
+                        "reason", reason,
+                        "timestamp", System.currentTimeMillis()
                 )
         );
+
+        // Báo cho Khách hàng biết món bị hủy
+        notifyTableOrderUpdate(tableId, "ITEM_CANCELLED", "Món ăn bị hủy do: " + reason);
+        notifyStaffTableListUpdate();
 
         return ResponseEntity.ok(Map.of("message", "Đã hủy món và cập nhật lại tổng tiền!"));
     }
 
-    @PutMapping("/order-details/{orderDetailId}")
+    @PutMapping("/tables/{tableId}/order-details/{orderDetailId}")
     public ResponseEntity<Map<String, String>> updateOrderItem(
+            @PathVariable Long tableId,
             @PathVariable Long orderDetailId,
             @RequestParam Integer quantity,
             @RequestParam(required = false) String note) {
@@ -177,25 +197,37 @@ public class StaffController {
         messagingTemplate.convertAndSend(
                 "/topic/staff/orders/item-update",
                 Map.of(
+                        "tableId", tableId,
                         "orderDetailId", orderDetailId,
-                        "action", "UPDATE_QUANTITY"
+                        "action", "UPDATE_QUANTITY",
+                        "timestamp", System.currentTimeMillis()
                 )
         );
+
+        notifyTableOrderUpdate(tableId, "ITEM_UPDATED", "Đơn hàng đã được điều chỉnh!");
 
         return ResponseEntity.ok(Map.of("message", "Cập nhật số lượng/ghi chú thành công!"));
     }
 
-    @DeleteMapping("/order-details/{orderDetailId}")
-    public ResponseEntity<Map<String, String>> deleteOrderItem(@PathVariable Long orderDetailId) {
+    @DeleteMapping("/tables/{tableId}/order-details/{orderDetailId}")
+    public ResponseEntity<Map<String, String>> deleteOrderItem(
+            @PathVariable Long tableId,
+            @PathVariable Long orderDetailId) {
+            
         staffOrderService.deleteOrderItem(orderDetailId);
 
         messagingTemplate.convertAndSend(
                 "/topic/staff/orders/item-update",
                 Map.of(
+                        "tableId", tableId,
                         "orderDetailId", orderDetailId,
-                        "action", "DELETE"
+                        "action", "DELETE",
+                        "timestamp", System.currentTimeMillis()
                 )
         );
+
+        notifyTableOrderUpdate(tableId, "ITEM_DELETED", "Đã xóa món khỏi đơn hàng!");
+        notifyStaffTableListUpdate();
 
         return ResponseEntity.ok(Map.of("message", "Đã xóa món khỏi đơn!"));
     }
@@ -210,7 +242,8 @@ public class StaffController {
                 Map.of(
                         "tableId", tableId,
                         "event", eventType,
-                        "message", message
+                        "message", message,
+                        "timestamp", System.currentTimeMillis()
                 )
         );
     }
