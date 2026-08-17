@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+:root {
+  --scm-accent: #c89a63;
+  --scm-accent-soft: #e8d5b7;
+}

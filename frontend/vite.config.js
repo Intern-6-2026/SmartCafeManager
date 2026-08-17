@@ -7,11 +7,24 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  define: {
+    global: "window",
+  },
   server: {
     proxy: {
       "/api": {
         target: "http://localhost:8080",
         changeOrigin: true,
+      },
+      "/ws-news": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        ws: true,
+      },
+      "/ws": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        ws: true,
       },
     },
   },

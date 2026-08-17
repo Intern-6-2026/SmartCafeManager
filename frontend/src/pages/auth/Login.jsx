@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { FaUser, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { loginApi, getApiErrorMessage } from "../../services/apiService";
 import AuthCard from "../../components/AuthCard";
+import { getPostLoginPath } from "../../utils/authRedirect";
+import { notifySuccess, notifyError, notifyWarn } from "../../utils/toast";
 
 /** Trang đăng nhập Smart Cafe */
 export default function Login() {
@@ -32,12 +34,16 @@ export default function Login() {
             localStorage.setItem("userName", userName);
 
             if (requirePasswordChange) {
-                navigate("/change-password");
+                notifyWarn("Mật khẩu cần được đổi trước khi tiếp tục.");
             } else {
-                navigate("/home");
+                notifySuccess("Đăng nhập thành công!");
             }
+
+            navigate(getPostLoginPath(roleName, requirePasswordChange));
         } catch (err) {
-            setErrorMsg(getApiErrorMessage(err, "Đăng nhập thất bại."));
+            const msg = getApiErrorMessage(err, "Đăng nhập thất bại.");
+            setErrorMsg(msg);
+            notifyError(msg);
         } finally {
             setLoading(false);
         }
@@ -111,6 +117,13 @@ export default function Login() {
                                 >
                                     {loading ? "Đang xử lý..." : "Đăng nhập"}
                                 </button>
+
+                                <p className="text-center text-sm text-gray-500 mt-5">
+                                    Chưa có tài khoản?{" "}
+                                    <Link to="/register" className="text-[#B78350] font-semibold hover:underline">
+                                        Đăng ký ngay
+                                    </Link>
+                                </p>
                             </form>
         </AuthCard>
     );

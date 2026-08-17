@@ -12,6 +12,7 @@ import {
   formatNewsDate,
   NEWS_STATUS_LABEL,
 } from "../../utils/newsHelpers";
+import { notifyError, notifySuccess } from "../../utils/toast";
 import "../../styles/news.css";
 
 const PAGE_SIZE = 10;
@@ -83,7 +84,7 @@ export default function AdminNewsList() {
       await deleteNews(id);
       load();
     } catch (err) {
-      alert(getApiErrorMessage(err, "Xóa tin thất bại."));
+      notifyError(getApiErrorMessage(err, "Xóa tin thất bại."));
     } finally {
       setBusyId(null);
     }
@@ -93,9 +94,10 @@ export default function AdminNewsList() {
     setBusyId(id);
     try {
       await changeNewsStatus(id, status);
+      notifySuccess("Cập nhật trạng thái thành công");
       load();
     } catch (err) {
-      alert(getApiErrorMessage(err, "Đổi trạng thái thất bại."));
+      notifyError(getApiErrorMessage(err, "Đổi trạng thái thất bại."));
     } finally {
       setBusyId(null);
     }

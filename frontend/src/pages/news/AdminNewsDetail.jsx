@@ -14,6 +14,7 @@ import {
   isAdminRole,
   canEditOrDeleteNews,
 } from "../../utils/newsHelpers";
+import { notifyError, notifySuccess } from "../../utils/toast";
 import "../../styles/news.css";
 
 export default function AdminNewsDetail() {
@@ -58,7 +59,7 @@ export default function AdminNewsDetail() {
       await deleteNews(id);
       navigate("/admin/news");
     } catch (err) {
-      alert(getApiErrorMessage(err, "Xóa tin thất bại."));
+      notifyError(getApiErrorMessage(err, "Xóa tin thất bại."));
       setBusy(false);
     }
   };
@@ -67,9 +68,10 @@ export default function AdminNewsDetail() {
     setBusy(true);
     try {
       await changeNewsStatus(id, status);
+      notifySuccess("Cập nhật trạng thái thành công");
       load();
     } catch (err) {
-      alert(getApiErrorMessage(err, "Đổi trạng thái thất bại."));
+      notifyError(getApiErrorMessage(err, "Đổi trạng thái thất bại."));
     } finally {
       setBusy(false);
     }

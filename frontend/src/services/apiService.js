@@ -16,8 +16,43 @@ axios.interceptors.request.use(
   }
 );
 
+// Bổ sung: xử lý 403 (đặc biệt mật khẩu quá hạn) — không thay request interceptor cũ
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const data = error?.response?.data;
+    const msg =
+      data?.message ||
+      data?.error ||
+      (typeof data === "string" ? data : "") ||
+      "";
+
+    if (status === 403) {
+      const needPasswordChange =
+        /mật khẩu/i.test(msg) && (/quá hạn|đổi mật khẩu/i.test(msg));
+      if (needPasswordChange && !window.location.pathname.includes("/change-password")) {
+        import("../utils/toast").then(({ notifyWarn }) => {
+          notifyWarn(msg || "Vui lòng đổi mật khẩu để tiếp tục.");
+        });
+        window.location.assign("/change-password");
+      } else if (!needPasswordChange) {
+        import("../utils/toast").then(({ notifyError }) => {
+          notifyError(msg || "Bạn không có quyền thực hiện thao tác này.");
+        });
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export const loginApi = async (username, password) => {
   return await axios.post(`${API_BASE_URL}/auth/login`, { username, password });
+};
+
+export const registerApi = async (payload) => {
+  return await axios.post(`${API_BASE_URL}/auth/register`, payload);
 };
 
 export const forgotPassword = async (email) => {
