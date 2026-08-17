@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import "../../styles/feedback-manager.css";
+import "../styles/feedback.css";
 import { Link } from "react-router-dom";
 import { Client } from '@stomp/stompjs';
-import Logo from "../../components/Logo";
-import { getAllFeedbacks, getApiErrorMessage } from "../../services/apiService";
+import Logo from "../components/Logo";
+import { getAllFeedbacks, getApiErrorMessage } from "../services/apiService";
 
 /* Số phản hồi hiển thị mỗi trang */
 const PAGE_SIZE = 10;
