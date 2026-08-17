@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Client } from '@stomp/stompjs';
 import Logo from "../../components/Logo";
 import { getAllFeedbacks, getApiErrorMessage } from "../../services/apiService";
+import MenuButton from "../../components/menu-button"
 
 /* Số phản hồi hiển thị mỗi trang */
 const PAGE_SIZE = 10;
@@ -179,6 +180,7 @@ function FeedbackManager() {
             <h1 className="brand-name-not-bold">CAFÉ</h1>
           </div>
           <div className="header-title">QUẢN LÝ PHẢN HỒI</div>
+          <MenuButton></MenuButton>
         </div>
       </header>
 

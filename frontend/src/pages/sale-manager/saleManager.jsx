@@ -6,6 +6,8 @@ import "react-toastify/dist/ReactToastify.css";
 import { ToastService } from "../../services/toastService";
 import { Link } from "react-router-dom";
 import Logo from "../../components/Logo";
+import MenuButton from "../../components/menu-button"
+
 import {
   getAllTableInfo,
   getTablesInvoice,
@@ -384,6 +386,7 @@ function SaleManager() {
             <h1 className="brand-name-not-bold">CAFÉ</h1>
           </div>
           <div className="header-title">MÀN HÌNH BÁN HÀNG</div>
+          <MenuButton></MenuButton>
         </div>
       </header>
 
