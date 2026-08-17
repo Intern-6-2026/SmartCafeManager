@@ -113,7 +113,7 @@ function SaleManager() {
     else {
 
       switch (msgType) {
-        case "CART_UPDATED":
+        case "NEW_ORDER_SUBMITTED":
           pushNotification(text, type);
           if (tableId === selectedId) {
             loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
@@ -266,11 +266,11 @@ function SaleManager() {
     try {
       const res = await getActiveOrder(selectedTable.id);
       const order = res.data; // axios bọc dữ liệu trong .data
-      if (!order?.tableOrderId) {
+      if (!order.hasActiveOrder) {
         notify("Không tìm thấy đơn đang mở của bàn này.", "error");
         return;
       }
-      const confirmRes = await staffConfirmOrder(order.tableOrderId);
+      const confirmRes = await staffConfirmOrder(order.tableId);
       notify("Đã xác nhận món.", "success");
       await loadDetails(selectedTable.id); // tải lại để cập nhật trạng thái món
     } catch (err) {
