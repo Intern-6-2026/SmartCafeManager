@@ -11,10 +11,14 @@ import Profile from "../pages/profile/Profile";
 import EditProfile from "../pages/profile/EditProfile";
 import ChangePassword from "../pages/profile/ChangePassword";
 import PaymentSuccess from "../pages/PaymentSuccess/paymentSuccess";
+import NewsList from "../pages/news/NewsList";
+import NewsDetail from "../pages/news/NewsDetail";
+import AdminNewsList from "../pages/news/AdminNewsList";
+import AdminNewsForm from "../pages/news/AdminNewsForm";
+import AdminNewsDetail from "../pages/news/AdminNewsDetail";
 import InvoiceManagement from "../pages/InvoiceManagement/InvoiceManagement";
 import RevenueDashboard from "../pages/RevenueDashboard/RevenueDashboard";
-import SaleManager from "../pages/sale-manager/SaleManager";
-import FeedbackManager from "../pages/feedback-manager/FeedbackManager";
+import RequireRole from "../components/RequireRole";
 
 export default function AppRoutes() {
   return (
@@ -23,20 +27,16 @@ export default function AppRoutes() {
         <Route path="/" element={<Login />} />
 
         <Route path="/forgot-password" element={<ForgotPassword />} />
-
         <Route path="/otp" element={<Otp />} />
-
         <Route path="/new-password" element={<NewPassword />} />
 
         <Route path="/profile" element={<Profile />} />
-
         <Route path="/edit-profile" element={<EditProfile />} />
-
         <Route path="/change-password" element={<ChangePassword />} />
 
-        {/* Route trang chủ nhận QR code quét vào (VD: /home/1 hoặc /home/2) để lưu vào localStorage */}
+        {/* Trang chủ dành cho Khách hàng / Chung */}
         <Route
-          path="/home/:tableId?"
+          path="/home"
           element={
             <>
               <Header />
@@ -46,35 +46,67 @@ export default function AppRoutes() {
           }
         />
 
-        {/* Route menu sạch hoàn toàn, chỉ đọc localStorage ra xài */}
-        <Route path="/menu" element={<ClientMenu />} />
+        <Route path="/menu/table/:tableId" element={<ClientMenu />} />
+
+        <Route path="/news" element={<NewsList />} />
+        <Route path="/news/:id" element={<NewsDetail />} />
+
+        {/* Quản lý Tin tức (ADMIN) */}
+        <Route
+          path="/admin/news"
+          element={
+            <RequireRole roles={["ADMIN"]}>
+              <AdminNewsList />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/news/new"
+          element={
+            <RequireRole roles={["ADMIN"]}>
+              <AdminNewsForm />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/news/:id/edit"
+          element={
+            <RequireRole roles={["ADMIN"]}>
+              <AdminNewsForm />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/news/:id"
+          element={
+            <RequireRole roles={["ADMIN"]}>
+              <AdminNewsDetail />
+            </RequireRole>
+          }
+        />
+
+        {/* Quản lý hóa đơn (Dành cho ADMIN và STAFF) */}
+        <Route
+          path="/admin/invoices"
+          element={
+            <RequireRole roles={["ADMIN", "STAFF"]}>
+              <InvoiceManagement />
+            </RequireRole>
+          }
+        />
+
+        {/* Thống kê thu nhập (Dành cho ADMIN) */}
+        <Route
+          path="/admin/revenue"
+          element={
+            <RequireRole roles={["ADMIN"]}>
+              <RevenueDashboard />
+            </RequireRole>
+          }
+        />
 
         <Route path="/payment-success" element={<PaymentSuccess />} />
-
-        {/* --- CÁC ROUTE CHO ADMIN / QUẢN LÝ --- */}
-        <Route path="/admin/invoices" element={<InvoiceManagement />} />
-        <Route path="/admin/revenue" element={<RevenueDashboard />} />
-  
-        <Route
-            path="/menu/table/:tableId"
-            element={<ClientMenu />}
-        />
-        
-        <Route 
-            path="/payment-success" 
-            element={<PaymentSuccess />} 
-        />
-
-        <Route 
-            path="/sale-manager" 
-            element={<SaleManager />} 
-        />
-
-        <Route 
-            path="/feedback-manager" 
-            element={<FeedbackManager />} 
-          />
-        </Routes>
-      </BrowserRouter>
-    );
+      </Routes>
+    </BrowserRouter>
+  );
 }

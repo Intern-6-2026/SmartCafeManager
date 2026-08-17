@@ -1,115 +1,165 @@
 package com.codegym.backend.controller;
 
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.codegym.backend.dto.CartItemResponse;
-import com.codegym.backend.enums.PaymentMethod;
+import com.codegym.backend.dto.CartItemRequestDTO;
+import com.codegym.backend.dto.CartResponseDTO;
+import com.codegym.backend.dto.TableOrderSummaryDTO;
+import com.codegym.backend.entity.Tables;
 import com.codegym.backend.enums.ServiceStatus;
-import com.codegym.backend.enums.StatusOrderDetail;
-import com.codegym.backend.service.CustomerOrderService;
+import com.codegym.backend.service.CartService;
+import com.codegym.backend.service.OrderService;
+import com.codegym.backend.service.PaymentService;
+import com.codegym.backend.service.StaffOrderService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/items")
+@RequestMapping("/api/v1/customer")
 @CrossOrigin("*")
+@RequiredArgsConstructor
+@Slf4j
 public class CustomerController {
 
-    @Autowired
-    private CustomerOrderService customerOrderService;
+    private final CartService cartService;
+    private final OrderService orderService;
+    private final PaymentService paymentService;
+    private final StaffOrderService staffOrderService;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    // 1. NGHIỆP VỤ: THÊM MÓN VÀO GIỎ TẠM THỜI
-    @PostMapping("/add-item")
-    public ResponseEntity<String> addItemToCart(
-            @RequestParam String tableName,
-            @RequestParam Long itemId,
-            @RequestParam Integer quantity,
-            @RequestParam(required = false, defaultValue = "") String note) {
-        customerOrderService.addItemToCart(tableName, itemId, quantity, note);
-        return ResponseEntity.ok("Đã thêm món vào giỏ hàng tạm thời!");
+    // I. THÔNG TIN BÀN & GỌI PHỤC VỤ
+    @GetMapping("/table-info/{tableId}")
+    public ResponseEntity<Tables> getTableInfo(@PathVariable Long tableId) {
+        return ResponseEntity.ok(staffOrderService.getTableInfo(tableId));
     }
 
-// 2. NGHIỆP VỤ: XEM TẤT CẢ MÓN TRONG GIỎ HÀNG TẠM (Chỉ lấy món PENDING)
-    @GetMapping("/cart")
-    // Đảm bảo kiểu trả về trong ResponseEntity là List<CartItemResponse>
-    public ResponseEntity<List<CartItemResponse>> getTemporaryCart(@RequestParam String tableName) {
-    List<CartItemResponse> cartItems = customerOrderService.getCartByStatus(tableName, StatusOrderDetail.PENDING);
-    return ResponseEntity.ok(cartItems);
-    }
-    // 3. NGHIỆP VỤ: BẤM NÚT [GỌI MÓN] ĐỂ XÁC NHẬN GỬI XUỐNG BẾP (Chuyển PENDING -> CONFIRMED)
-    @PostMapping("/confirm-order")
-    public ResponseEntity<String> confirmOrder(@RequestParam String tableName) {
-        customerOrderService.confirmOrder(tableName);
-        return ResponseEntity.ok("Đã gửi đơn hàng thành công xuống bếp!");
-    }
-
-    // 4. ĐÃ SỬA: XEM TẤT CẢ CÁC MÓN ĐÃ GỌI XUỐNG BẾP (Chuyển sang dùng CartItemResponse DTO sạch)
-    @GetMapping("/order-history")
-    public ResponseEntity<List<CartItemResponse>> getOrderHistory(@RequestParam String tableName) {
-        List<CartItemResponse> orderedItems = customerOrderService.getOrderedItems(tableName);
-        return ResponseEntity.ok(orderedItems);
-    }
-
-    // 5. NGHIỆP VỤ: XEM CHI TIẾT HÓA ĐƠN LỚN (Lấy tổng tiền totalAmount trước khi bấm thanh toán)
-    @GetMapping("/invoice")
-    public ResponseEntity<com.codegym.backend.dto.TableOrderSummaryDTO> getCurrentInvoice(@RequestParam String tableName) {
-        return ResponseEntity.ok(customerOrderService.getInvoiceSummaryDTO(tableName));
-    }
-
-    // 6. NGHIỆP VỤ: KHÁCH ẤN NÚT YÊU CẦU THANH TOÁN (Chọn phương thức CASH, BANK_TRANSFER,...)
-    @PostMapping("/request-checkout")
-    public ResponseEntity<String> requestCheckout(
-            @RequestParam String tableName,
-            @RequestParam PaymentMethod paymentMethod) {
-        customerOrderService.requestCheckout(tableName, paymentMethod);
-        return ResponseEntity.ok("Yêu cầu thanh toán bằng " + paymentMethod + " đã được gửi! Nhân viên sẽ đến ngay.");
-    }
-
-    // 7. NGHIỆP VỤ: CÁC YÊU CẦU DỊCH VỤ KHÁC (Gọi nhân viên, báo sự cố...)
     @PostMapping("/call-service")
-    public ResponseEntity<String> callService(
-            @RequestParam String tableName,
-            @RequestParam ServiceStatus status) {
-        customerOrderService.updateTableServiceStatus(tableName, status);
-        return ResponseEntity.ok("Hệ thống đã ghi nhận yêu cầu: " + status);
-    }
-
-    // 8. NGHIỆP VỤ: SỬA SỐ LƯỢNG SẢN PHẨM TRONG GIỎ HÀNG TẠM
-    @PostMapping("/update-quantity")
-    public ResponseEntity<String> updateCartItemQuantity(
-            @RequestParam String tableName,
-            @RequestParam Long itemId,
-            @RequestParam Integer newQuantity) {
-        
-        if (newQuantity <= 0) {
-            customerOrderService.removeItemFromCart(tableName, itemId);
-            return ResponseEntity.ok("Số lượng nhỏ hơn hoặc bằng 0. Đã xóa món khỏi giỏ hàng!");
+    public ResponseEntity<Map<String, String>> callService(
+            @RequestParam Long tableId,
+            @RequestParam ServiceStatus status
+    ) {
+        if (status != ServiceStatus.CALL_STAFF && status != ServiceStatus.REQUESTING_BILL) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Yêu cầu không hợp lệ!"));
         }
+
+        orderService.updateTableServiceStatus(tableId, status);
+
+        // 🟢 CHỈ BẮN SOCKET KHI KHÁCH GỌI PHỤC VỤ (CALL_STAFF)
+        // Nếu là REQUESTING_BILL thì để API /payment/cash xử lý, tránh bắn trùng 2 lần.
+        if (status == ServiceStatus.CALL_STAFF) {
+            String message = "Bàn " + tableId + " đang gọi nhân viên!";
+            notifyStaffAndKitchen(tableId, "CALL_STAFF", message);
+            notifyCustomerTable(tableId, "CALL_STAFF", message);
+            return ResponseEntity.ok(Map.of("message", message));
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Đã tiếp nhận yêu cầu!"));
+    }
+
+    // II. GIỎ HÀNG TẠM
+    @GetMapping("/cart/{tableId}")
+    public ResponseEntity<CartResponseDTO> getCartOverview(@PathVariable Long tableId) {
+        return ResponseEntity.ok(cartService.getCartOverview(tableId));
+    }
+
+    @PostMapping("/cart/add")
+    public ResponseEntity<Map<String, String>> addItemToCart(@Valid @RequestBody CartItemRequestDTO dto) {
+        cartService.addItemToCart(dto.getTableId(), dto.getItemId(), dto.getQuantity(), dto.getNote());
         
-        customerOrderService.updateItemQuantityInCart(tableName, itemId, newQuantity);
-        return ResponseEntity.ok("Đã cập nhật số lượng món ăn!");
+        notifyCustomerTable(dto.getTableId(), "CART_UPDATED", "Giỏ hàng vừa được cập nhật!");
+        return ResponseEntity.ok(Map.of("message", "Đã thêm món vào giỏ hàng tạm!"));
     }
 
-    // 9. NGHIỆP VỤ: XÓA MỘT SẢN PHẨM KHỎI GIỎ HÀNG TẠM
-    @PostMapping("/remove-item")
-    public ResponseEntity<String> removeItemFromCart(
-            @RequestParam String tableName,
-            @RequestParam Long itemId) {
-        customerOrderService.removeItemFromCart(tableName, itemId);
-        return ResponseEntity.ok("Đã xóa món ăn khỏi giỏ hàng tạm thời!");
+    @PutMapping("/cart/items/{itemId}")
+    public ResponseEntity<Map<String, String>> updateCartItemDetail(
+            @RequestParam Long tableId,
+            @PathVariable Long itemId,
+            @RequestParam(required = false) Integer quantity,
+            @RequestParam(required = false) String note) {
+
+        if (quantity != null && quantity <= 0) {
+            cartService.removeItemFromCart(tableId, itemId);
+            notifyCustomerTable(tableId, "CART_UPDATED", "Đã xóa món khỏi giỏ hàng!");
+            return ResponseEntity.ok(Map.of("message", "Đã xóa món khỏi giỏ hàng!"));
+        }
+
+        cartService.updateCartItemDetail(tableId, itemId, quantity, note);
+        notifyCustomerTable(tableId, "CART_UPDATED", "Giỏ hàng đã thay đổi!");
+        return ResponseEntity.ok(Map.of("message", "Cập nhật giỏ hàng thành công!"));
     }
 
-    // 10. NGHIỆP VỤ: XÓA SẠCH GIỎ HÀNG TẠM (Hủy giỏ hàng)
-    @PostMapping("/clear-cart")
-    public ResponseEntity<String> clearCart(@RequestParam String tableName) {
-        customerOrderService.clearTemporaryCart(tableName);
-        return ResponseEntity.ok("Đã xóa toàn bộ món trong giỏ hàng tạm!");
+    @DeleteMapping("/cart/items/{itemId}")
+    public ResponseEntity<Map<String, String>> removeItemFromCart(
+            @RequestParam Long tableId,
+            @PathVariable Long itemId) {
+        cartService.removeItemFromCart(tableId, itemId);
+        notifyCustomerTable(tableId, "CART_UPDATED", "Đã xóa món khỏi giỏ hàng!");
+        return ResponseEntity.ok(Map.of("message", "Đã xóa món ăn khỏi giỏ hàng!"));
+    }
+
+    @DeleteMapping("/cart/clear")
+    public ResponseEntity<Map<String, String>> clearCart(@RequestParam Long tableId) {
+        cartService.clearTemporaryCart(tableId);
+        notifyCustomerTable(tableId, "CART_UPDATED", "Giỏ hàng đã bị xóa sạch!");
+        return ResponseEntity.ok(Map.of("message", "Đã xóa toàn bộ món trong giỏ hàng tạm!"));
+    }
+
+    // III. BẤM GỌI MÓN
+    @PostMapping("/confirm-order")
+    public ResponseEntity<Map<String, String>> confirmOrder(@RequestParam Long tableId) {
+        cartService.confirmOrder(tableId);
+        return ResponseEntity.ok(Map.of("message", "Đã gửi đơn hàng thành công xuống bếp!"));
+    }
+
+    // IV. YÊU CẦU THANH TOÁN & HÓA ĐƠN
+
+    @PostMapping("/payment/cash")
+    public ResponseEntity<Map<String, String>> processCashPayment(@RequestParam Long tableId) {
+        // 🟢 1. Trong paymentService đã tự động cập nhật DB + bắn Socket PAYMENT_REQUESTED cho Staff
+        paymentService.processCashPayment(tableId);
+        
+        // 🟢 2. Chỉ gửi thông báo phản hồi cho riêng bàn của Khách hàng đó
+        notifyCustomerTable(tableId, "WAITING_PAYMENT", "Đã gửi yêu cầu, vui lòng chờ nhân viên tới thu tiền mặt!");
+
+        return ResponseEntity.ok(Map.of("message", "Đã gửi yêu cầu thanh toán tiền mặt. Vui lòng chờ nhân viên!"));
+    }
+
+    @GetMapping("/invoice-summary/{tableId}")
+    public ResponseEntity<TableOrderSummaryDTO> getInvoiceSummary(@PathVariable Long tableId) {
+        return ResponseEntity.ok(paymentService.getInvoiceSummaryDTO(tableId));
+    }
+
+    // HELPER WEBSOCKET
+    private void notifyStaffAndKitchen(Long tableId, String type, String message) {
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("tableId", tableId);
+            payload.put("type", type);
+            payload.put("message", message);
+            payload.put("timestamp", System.currentTimeMillis());
+            
+            messagingTemplate.convertAndSend("/topic/table-events", payload);
+        } catch (Exception e) {
+            log.error("Lỗi gửi WebSocket tới /topic/table-events: {}", e.getMessage());
+        }
+    }
+
+    private void notifyCustomerTable(Long tableId, String type, String message) {
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("tableId", tableId);
+            payload.put("type", type);
+            payload.put("message", message);
+            payload.put("timestamp", System.currentTimeMillis());
+
+            messagingTemplate.convertAndSend("/topic/table/" + tableId, payload);
+        } catch (Exception e) {
+            log.error("Lỗi gửi WebSocket tới /topic/table/{}: {}", tableId, e.getMessage());
+        }
     }
 }

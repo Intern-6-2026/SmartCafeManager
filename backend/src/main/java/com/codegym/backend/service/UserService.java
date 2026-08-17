@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.codegym.backend.dto.*;
+import com.codegym.backend.dto.ChangePasswordRequest;
+import com.codegym.backend.dto.UpdateProfileRequest;
+import com.codegym.backend.dto.UserProfileResponse;
 import com.codegym.backend.entity.Account;
 import com.codegym.backend.entity.Customer;
 import com.codegym.backend.entity.Employee;
@@ -33,7 +35,7 @@ public class UserService {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
 
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
-                .orElseThrow(() -> new RuntimeException("Account not found or has been deleted!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản hoặc tài khoản đã bị xóa!"));
 
         String roleName = account.getRole() != null ? account.getRole().getRoleName() : "USER";
 
@@ -71,7 +73,7 @@ public class UserService {
                     .build();
         }
 
-        throw new RuntimeException("The account has not been set up with personal information (Profile)!");
+        throw new RuntimeException("Tài khoản chưa được thiết lập thông tin cá nhân!");
     }
 
     @SuppressWarnings("null")
@@ -79,7 +81,7 @@ public class UserService {
     public UserProfileResponse updateProfile(UpdateProfileRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
-                .orElseThrow(() -> new RuntimeException("Account not found!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản!"));
 
         if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
             String newEmail = request.getEmail().trim();
@@ -87,7 +89,7 @@ public class UserService {
             if (!newEmail.equalsIgnoreCase(account.getEmail())) {
                 Optional<Account> existingAccount = accountRepository.findByEmailAndDeletedAtIsNull(newEmail);
                 if (existingAccount.isPresent()) {
-                    throw new RuntimeException("This email is already registered by another account in the system!");
+                    throw new RuntimeException("Email này đã được một tài khoản khác đăng ký trong hệ thống!");
                 }
                 account.setEmail(newEmail);
                 accountRepository.save(account);
@@ -104,12 +106,17 @@ public class UserService {
                 emp.setDateOfBirth(request.getDateOfBirth());
             if (request.getGender() != null)
                 emp.setGender(request.getGender());
-            if (request.getPhoneNumber() != null)
-                emp.setPhoneNumber(request.getPhoneNumber());
+            if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+                String newPhone = request.getPhoneNumber().trim();
+
+                if (employeeRepository.existsByPhoneNumberAndAccountNot(newPhone, account)) {
+                    throw new RuntimeException("Số điện thoại đã tồn tại");
+                }
+
+                emp.setPhoneNumber(newPhone);
+            }
             if (request.getAddress() != null)
                 emp.setAddress(request.getAddress());
-            if (request.getImageUrl() != null)
-                emp.setImageUrl(request.getImageUrl());
 
             employeeRepository.save(emp);
             return getCurrentUserProfile();
@@ -125,37 +132,42 @@ public class UserService {
                 cus.setDateOfBirth(request.getDateOfBirth());
             if (request.getGender() != null)
                 cus.setGender(request.getGender());
-            if (request.getPhoneNumber() != null)
-                cus.setPhoneNumber(request.getPhoneNumber());
+            if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+                String newPhone = request.getPhoneNumber().trim();
+
+                if (customerRepository.existsByPhoneNumberAndAccountNot(newPhone, account)) {
+                    throw new RuntimeException("Số điện thoại đã tồn tại");
+                }
+
+                cus.setPhoneNumber(newPhone);
+            }
             if (request.getAddress() != null)
                 cus.setAddress(request.getAddress());
-            if (request.getImageUrl() != null)
-                cus.setImageUrl(request.getImageUrl());
 
             customerRepository.save(cus);
             return getCurrentUserProfile();
         }
 
-        throw new RuntimeException("No personal profile was found to update!");
+        throw new RuntimeException("Không tìm thấy hồ sơ cá nhân để cập nhật!");
     }
 
     @Transactional
     public String changePassword(ChangePasswordRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
-                .orElseThrow(() -> new RuntimeException("Account does not exist!"));
+                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại!"));
         if (!passwordEncoder.matches(request.getOldPassword(), account.getPassword())) {
-            throw new RuntimeException("Old password is incorrect!");
+            throw new RuntimeException("Mật khẩu cũ không chính xác!");
         }
         if (request.getNewPassword().equals(request.getOldPassword())) {
-            throw new RuntimeException("New password cannot be the same as the old password!");
+            throw new RuntimeException("Mật khẩu mới không được trùng với mật khẩu cũ!");
         }
 
         account.setPassword(passwordEncoder.encode(request.getNewPassword()));
         account.setPasswordChangedAt(new Date());
         accountRepository.save(account);
 
-        return "Password changed successfully!";
+        return "Đổi mật khẩu thành công!";
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -163,7 +175,7 @@ public class UserService {
 
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
-                .orElseThrow(() -> new RuntimeException("Account not found!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản!"));
 
         String newImageUrl = cloudinaryService.uploadImage(file);
         if (newImageUrl == null) {
@@ -173,6 +185,8 @@ public class UserService {
         Optional<Employee> empOpt = employeeRepository.findByAccount(account);
         if (empOpt.isPresent()) {
             Employee emp = empOpt.get();
+            if (emp.getImageUrl() != null)
+                cloudinaryService.deleteImage(emp.getImageUrl());
             emp.setImageUrl(newImageUrl);
             employeeRepository.save(emp);
             return getCurrentUserProfile();
@@ -181,11 +195,13 @@ public class UserService {
         Optional<Customer> cusOpt = customerRepository.findByAccount(account);
         if (cusOpt.isPresent()) {
             Customer cus = cusOpt.get();
+            if (cus.getImageUrl() != null)
+                cloudinaryService.deleteImage(cus.getImageUrl());
             cus.setImageUrl(newImageUrl);
             customerRepository.save(cus);
             return getCurrentUserProfile();
         }
 
-        throw new RuntimeException("No personal profile was found to update!");
+        throw new RuntimeException("Không tìm thấy hồ sơ cá nhân để cập nhật!");
     }
 }

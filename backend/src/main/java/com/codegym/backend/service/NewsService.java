@@ -1,109 +1,241 @@
 package com.codegym.backend.service;
 
-import com.codegym.backend.entity.Account;
-import com.codegym.backend.entity.News;
-import com.codegym.backend.repository.AccountRepository;
-import com.codegym.backend.repository.NewsRepository;
-import lombok.RequiredArgsConstructor;
+import java.util.Date;
+import java.util.Objects;
+import java.util.Set;
+
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Safelist;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Date;
-import java.util.List;
+import com.codegym.backend.dto.NewsListResponse;
+import com.codegym.backend.dto.NewsRequest;
+import com.codegym.backend.entity.Account;
+import com.codegym.backend.entity.News;
+import com.codegym.backend.enums.NewsStatus;
+import com.codegym.backend.repository.AccountRepository;
+import com.codegym.backend.repository.NewsRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class NewsService {
 
-    private final NewsRepository newsRepository;
-    private final CloudinaryService cloudinaryService;
-    private final SimpMessagingTemplate messagingTemplate;
+        private final NewsRepository newsRepository;
+        private final CloudinaryService cloudinaryService;
+        private final SimpMessagingTemplate messagingTemplate;
+        private final AccountRepository accountRepository;
 
-    private final AccountRepository accountRepository;
+        // ==========================================
+        // 1. NHÓM TÁC VỤ PUBLIC (KHÁCH HÀNG / VÃNG LAI)
+        // ==========================================
 
-    public List<News> getAllNews() {
-        return newsRepository.findByDeletedAtIsNullOrderByCreatedAtDesc();
-    }
+        public Page<NewsListResponse> getAllNews(int page, int size) {
+                Pageable pageable = PageRequest.of(page, size);
+                Page<News> newsPage = newsRepository
+                                .findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(NewsStatus.PUBLISHED, pageable);
 
-    @SuppressWarnings("null")
-    @Transactional(rollbackFor = Exception.class)
-    public News createNews(String title, String summary, String content, MultipartFile image) throws Exception {
-        String imageUrl = cloudinaryService.uploadImage(image);
-
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Account curentAccount = accountRepository.findByUsernameAndDeletedAtIsNull(username)
-                .orElseThrow(() -> new RuntimeException("Không timm thấy tài khoản người đăng"));
-
-        News news = News.builder()
-                .title(title)
-                .summary(summary)
-                .content(content)
-                .imageUrl(imageUrl)
-                .author(curentAccount)
-                .build();
-        News savedNews = newsRepository.save(news);
-        messagingTemplate.convertAndSend("/topic/news", "NEW_NEWS_ADDED|" + savedNews.getTitle());
-
-        return savedNews;
-    }
-
-    @SuppressWarnings("null")
-    @Transactional(rollbackFor = Exception.class)
-    public News updateNews(Long id, String title, String summary, String content, MultipartFile image)
-            throws Exception {
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-                .stream()
-                .anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
-
-        News news = newsRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin tức!"));
-
-        String authorName = news.getAuthor().getUsername();
-
-        if (!currentUsername.equals(authorName) && !isAdmin) {
-            throw new RuntimeException("Lỗi phân quyền: Bạn không có quyền sửa bài viết này");
+                return newsPage.map(news -> NewsListResponse.builder()
+                                .newsId(news.getNewsId())
+                                .title(news.getTitle())
+                                .summary(news.getSummary())
+                                .imageUrl(news.getImageUrl())
+                                .createdAt(news.getCreatedAt())
+                                .build());
         }
 
-        news.setTitle(title);
-        news.setSummary(summary);
-        news.setContent(content);
-
-        if (image != null && !image.isEmpty()) {
-            news.setImageUrl(cloudinaryService.uploadImage(image));
+        public News getNewsById(Long id) {
+                return newsRepository.findById(Objects.requireNonNull(id))
+                                .filter(news -> news.getDeletedAt() == null && news.getStatus() == NewsStatus.PUBLISHED)
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Không tìm thấy tin tức, tin tức chưa được duyệt hoặc đã bị xóa!"));
         }
 
-        News updatedNews = newsRepository.save(news);
-        messagingTemplate.convertAndSend("/topic/news", "NEWS_UPDATED|" + updatedNews.getNewsId());
+        // ==========================================
+        // 2. NHÓM TÁC VỤ QUẢN LÝ (STAFF & ADMIN)
+        // ==========================================
 
-        return updatedNews;
-    }
+        @Transactional(rollbackFor = Exception.class)
+        public News createNews(NewsRequest request) throws Exception {
+                String title = normalizeText(request.getTitle());
+                String summary = normalizeOptionalText(request.getSummary());
+                String content = normalizeText(request.getContent());
+                MultipartFile image = request.getImage();
 
-    @SuppressWarnings("null")
-    @Transactional(rollbackFor = Exception.class)
-    public void deleteNews(Long id) {
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+                String imageUrl = null;
+                if (image != null && !image.isEmpty()) {
+                        validateImage(image);
+                        imageUrl = cloudinaryService.uploadImage(image);
+                }
 
-        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-                .stream()
-                .anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
+                summary = sanitizeHtml(summary);
+                content = sanitizeHtml(content);
 
-        News news = newsRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin tức!"));
+                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                Account curentAccount = accountRepository.findByUsernameAndDeletedAtIsNull(username)
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản người đăng"));
+                boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                                .stream().anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
 
-        String authorName = news.getAuthor().getUsername();
+                News news = News.builder()
+                                .title(title)
+                                .summary(summary)
+                                .content(content)
+                                .imageUrl(imageUrl)
+                                .author(curentAccount)
+                                .status(isAdmin ? NewsStatus.PUBLISHED : NewsStatus.PENDING)
+                                .build();
 
-        if (!currentUsername.equals(authorName) && !isAdmin) {
-            throw new RuntimeException("Lỗi phân quyền: Bạn không có quyền sửa bài viết này");
+                News savedNews = newsRepository.save(Objects.requireNonNull(news));
+
+                if (savedNews.getStatus() == NewsStatus.PUBLISHED) {
+                        messagingTemplate.convertAndSend("/topic/news", "NEW_NEWS_ADDED|" + savedNews.getTitle());
+                }
+
+                return savedNews;
         }
 
-        news.setDeletedAt(new Date());
-        newsRepository.save(news);
+        @Transactional(rollbackFor = Exception.class)
+        public News updateNews(Long id, NewsRequest request) throws Exception {
+                String title = normalizeText(request.getTitle());
+                String summary = normalizeOptionalText(request.getSummary());
+                String content = normalizeText(request.getContent());
+                MultipartFile image = request.getImage();
 
-        messagingTemplate.convertAndSend("/topic/news", "NEWS_DELETED|" + id);
-    }
+                String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+                boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                                .stream().anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
+
+                News news = newsRepository.findById(Objects.requireNonNull(id))
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin tức!"));
+
+                String authorName = news.getAuthor().getUsername();
+
+                if (!currentUsername.equals(authorName) && !isAdmin) {
+                        throw new RuntimeException("Lỗi phân quyền: Bạn không có quyền sửa bài viết này");
+                }
+
+                // sanitize inputs before updating
+                summary = sanitizeHtml(summary);
+                content = sanitizeHtml(content);
+
+                news.setTitle(title);
+                news.setSummary(summary);
+                news.setContent(content);
+
+                if (image != null && !image.isEmpty()) {
+                        validateImage(image);
+                        news.setImageUrl(cloudinaryService.uploadImage(image));
+                }
+
+                News updatedNews = newsRepository.save(Objects.requireNonNull(news));
+
+                if (updatedNews.getStatus() == NewsStatus.PUBLISHED) {
+                        messagingTemplate.convertAndSend("/topic/news", "NEWS_UPDATED|" + updatedNews.getNewsId());
+                }
+
+                return updatedNews;
+        }
+
+        @Transactional(rollbackFor = Exception.class)
+        public void deleteNews(Long id) {
+                String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+                boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                                .stream().anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
+
+                News news = newsRepository.findById(Objects.requireNonNull(id))
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin tức!"));
+
+                String authorName = news.getAuthor().getUsername();
+
+                if (!currentUsername.equals(authorName) && !isAdmin) {
+                        throw new RuntimeException("Lỗi phân quyền: Bạn không có quyền xóa bài viết này");
+                }
+
+                news.setDeletedAt(new Date());
+
+                newsRepository.save(Objects.requireNonNull(news));
+
+                messagingTemplate.convertAndSend("/topic/news", "NEWS_DELETED|" + id);
+        }
+
+        // ==========================================
+        // 3. NHÓM TÁC VỤ ĐỘC QUYỀN (CHỈ DÀNH CHO ADMIN)
+        // ==========================================
+
+        public Page<News> getAllNewsForAdmin(int page, int size) {
+                Pageable pageable = PageRequest.of(page, size);
+                return newsRepository.findByDeletedAtIsNullOrderByCreatedAtDesc(pageable);
+        }
+
+        @Transactional(rollbackFor = Exception.class)
+        public News changeNewsStatus(Long id, NewsStatus newStatus) {
+                News news = newsRepository.findById(Objects.requireNonNull(id))
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin tức!"));
+
+                news.setStatus(newStatus);
+
+                News updatedNews = newsRepository.save(Objects.requireNonNull(news));
+
+                if (newStatus == NewsStatus.PUBLISHED) {
+                        messagingTemplate.convertAndSend("/topic/news", "NEW_NEWS_ADDED|" + updatedNews.getTitle());
+                }
+
+                return updatedNews;
+        }
+
+        private String normalizeText(String value) {
+                if (value == null) {
+                        return null;
+                }
+                return value.trim();
+        }
+
+        private String normalizeOptionalText(String value) {
+                if (value == null) {
+                        return null;
+                }
+                return value.trim();
+        }
+
+        private String sanitizeHtml(String html) {
+                if (html == null) {
+                        return null;
+                }
+                return Jsoup.clean(html, Safelist.relaxed());
+        }
+
+        private void validateImage(MultipartFile image) {
+                String contentType = image.getContentType();
+                if (contentType == null || !contentType.startsWith("image/")) {
+                        throw new RuntimeException("File ảnh không hợp lệ, vui lòng tải lên file hình ảnh");
+                }
+
+                String originalFilename = image.getOriginalFilename();
+                if (originalFilename == null || !originalFilename.contains(".")) {
+                        throw new RuntimeException("Tên file ảnh không hợp lệ");
+                }
+
+                String ext = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
+                Set<String> allowedExt = Set.of("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "tiff", "tif",
+                                "heic");
+                if (!allowedExt.contains(ext)) {
+                        throw new RuntimeException("Định dạng file không được hỗ trợ");
+                }
+
+                long maxSizeBytes = 5L * 1024 * 1024;
+                if (image.getSize() > maxSizeBytes) {
+                        throw new RuntimeException("Dung lượng ảnh không được vượt quá 5MB");
+                }
+        }
 }

@@ -2,7 +2,9 @@ package com.codegym.backend.service;
 
 import java.security.SecureRandom;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -32,6 +34,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final StringRedisTemplate redisTemplate;
 
     public LoginResponse login(LoginRequest request) {
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(request.getUsername())
@@ -53,15 +56,11 @@ public class AuthService {
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-        String token = jwtTokenProvider.generateToken(userDetails);
+        long thirtyDaysInMillis = java.time.Duration.ofDays(30).toMillis();
+        boolean requirePasswordChange = account.getPasswordChangedAt() == null ||
+                (System.currentTimeMillis() - account.getPasswordChangedAt().getTime() > thirtyDaysInMillis);
 
-        long thirtyDaysInMillis = 30L * 24 * 60 * 60 * 1000;
-        boolean requirePasswordChange = false;
-
-        if (account.getPasswordChangedAt() == null ||
-                (System.currentTimeMillis() - account.getPasswordChangedAt().getTime() > thirtyDaysInMillis)) {
-            requirePasswordChange = true;
-        }
+        String token = jwtTokenProvider.generateToken(userDetails, requirePasswordChange);
 
         return new LoginResponse(token, "Đăng nhập thành công!", requirePasswordChange, roleName, userName);
     }
@@ -75,60 +74,56 @@ public class AuthService {
             return neutralMessage;
         }
 
+        String email = account.getEmail();
+        if (email == null || email.trim().isEmpty()) {
+            return neutralMessage;
+        }
+
         SecureRandom random = new SecureRandom();
         int otpValue = 100000 + random.nextInt(900000);
         String otp = String.valueOf(otpValue);
 
-        account.setResetToken(otp);
-        account.setResetTokenExpiry(new Date(System.currentTimeMillis() + 5 * 60 * 1000));
+        redisTemplate.opsForValue().set("OTP_VAL:" + otp, email, 5, TimeUnit.MINUTES);
 
-        accountRepository.save(account);
-
-        emailService.sendPasswordResetMail(account.getEmail(), otp);
+        emailService.sendPasswordResetMail(email, otp);
 
         return neutralMessage;
     }
 
     @Transactional
     public String verityOTP(VerityOtpRequest request) {
-        Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
-                .orElseThrow(() -> new RuntimeException("Mã OTP không hợp lệ"));
-
-        if (account.getResetTokenExpiry().before(new Date())) {
-            throw new RuntimeException("Mã khôi phục đã hết hạn(quá 5 phút)");
+        String email = redisTemplate.opsForValue().get("OTP_VAL:" + request.getToken());
+        if (email == null) {
+            throw new RuntimeException("Mã OTP không hợp lệ hoặc đã hết hạn!");
         }
 
         String resetTokenUuid = java.util.UUID.randomUUID().toString();
-        account.setResetToken(resetTokenUuid);
-        account.setResetTokenExpiry(new Date(System.currentTimeMillis() + 5 * 60 * 1000));
-        accountRepository.save(account);
+
+        redisTemplate.opsForValue().set("RESET_UUID:" + resetTokenUuid, email, 5, TimeUnit.MINUTES);
+
+        redisTemplate.delete("OTP_VAL:" + request.getToken());
 
         return resetTokenUuid;
     }
 
     @Transactional
     public String processResetPassword(ResetPasswordRequest request) {
-        Account account = accountRepository.findByResetTokenAndDeletedAtIsNull(request.getToken())
-                .orElseThrow(() -> new RuntimeException("Phiên đổi mật khẩu không hợp lệ hoặc đã bị hủy."));
+        String email = redisTemplate.opsForValue().get("RESET_UUID:" + request.getToken());
+        if (email == null) {
+            throw new RuntimeException("Mã xác nhận không hợp lệ hoặc đã hết hạn!");
+        }
+        Account account = accountRepository.findByEmailAndDeletedAtIsNull(email)
+                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại hoặc đã bị xóa!"));
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new RuntimeException("Tài khoản đang bị khóa hoặc không hoạt động, không thể đổi mật khẩu!");
-        }
-
-        if (account.getResetTokenExpiry().before(new Date())) {
-            account.setResetToken(null);
-            account.setResetTokenExpiry(null);
-            accountRepository.save(account);
-            throw new RuntimeException("Phiên đổi mật khẩu đã hết hạn (quá 5 phút)!");
+            throw new RuntimeException("Tài khoản của bạn chưa được kích hoạt hoặc đang bị khóa!");
         }
 
         account.setPassword(passwordEncoder.encode(request.getNewPassword()));
         account.setPasswordChangedAt(new Date());
-        account.setResetToken(null);
-        account.setResetTokenExpiry(null);
-
         accountRepository.save(account);
+        redisTemplate.delete("RESET_UUID:" + request.getToken());
 
-        return "Cập nhật mật khẩu mới thành công!";
+        return "Mật khẩu đã được đặt lại thành công!";
     }
 }

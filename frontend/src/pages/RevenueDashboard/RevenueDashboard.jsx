@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -12,25 +13,62 @@ import {
   Legend,
 } from "recharts";
 
-const revenueByDay = [
-  { day: "Thứ 2", revenue: 1200000 },
-  { day: "Thứ 3", revenue: 1500000 },
-  { day: "Thứ 4", revenue: 1800000 },
-  { day: "Thứ 5", revenue: 1400000 },
-  { day: "Thứ 6", revenue: 2200000 },
-  { day: "Thứ 7", revenue: 3500000 },
-  { day: "Chủ nhật", revenue: 4000000 },
-];
-
-const categoryData = [
-  { name: "Cà phê", value: 45 },
-  { name: "Trà sữa & Trà", value: 35 },
-  { name: "Bánh ngọt", value: 20 },
-];
-
-const COLORS = ["#33261A", "#9C6B3A", "#D5A874"];
+const COLORS = ["#33261A", "#9C6B3A", "#D5A874", "#6E5C4A"];
 
 export default function RevenueDashboard() {
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    todayRevenue: 0,
+    todayOrderCount: 0,
+    monthRevenue: 0,
+    weeklyRevenue: [],
+    categorySales: [],
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Lấy thông tin user động từ localStorage
+  const userName = localStorage.getItem("userName") || "Thành viên";
+  const getInitials = (name) => {
+    if (!name) return "U";
+    const words = name.trim().split(" ");
+    if (words.length >= 2) {
+      return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+  const userInitial = getInitials(userName);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        const response = await fetch("/api/v1/staff/statistics/dashboard", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setStats({
+            todayRevenue: data.todayRevenue || 0,
+            todayOrderCount: data.todayOrderCount || 0,
+            monthRevenue: data.monthRevenue || 0,
+            weeklyRevenue: data.weeklyRevenue || [],
+            categorySales: data.categorySales || [],
+          });
+        }
+      } catch (error) {
+        console.error("Lỗi khi gọi API thống kê:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
+
   return (
     <div
       style={{
@@ -50,7 +88,16 @@ export default function RevenueDashboard() {
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <Link
+          to="/home"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
           <div
             style={{
               width: "38px",
@@ -78,23 +125,17 @@ export default function RevenueDashboard() {
           >
             NEOCAFÉ
           </div>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "16px",
-            fontSize: "13px",
-            color: "#4A3627",
-          }}
-        >
-          <span>Quản lý</span>
+        </Link>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <div
             style={{
               display: "flex",
               alignItems: "center",
               gap: "8px",
               fontWeight: 600,
+              fontSize: "13px",
+              color: "#4A3627",
             }}
           >
             <div
@@ -111,9 +152,9 @@ export default function RevenueDashboard() {
                 fontWeight: 700,
               }}
             >
-              CT
+              {userInitial}
             </div>
-            Chí Thanh
+            {userName}
           </div>
         </div>
       </div>
@@ -166,26 +207,56 @@ export default function RevenueDashboard() {
                 margin: 0,
               }}
             >
-              2.450.000 đ
+              {loading
+                ? "Đang tải..."
+                : `${stats.todayRevenue.toLocaleString()} đ`}
             </h3>
           </div>
+
           <div
+            onClick={() => navigate("/admin/invoices")}
+            title="Nhấn để xem chi tiết danh sách hóa đơn"
             style={{
               background: "#FFFDF9",
               border: "1px solid #E4D2B8",
               borderRadius: "16px",
               padding: "20px",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#9C6B3A";
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 6px 15px rgba(0,0,0,0.05)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "#E4D2B8";
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "none";
             }}
           >
-            <p
+            <div
               style={{
-                fontSize: "13px",
-                color: "#6E5C4A",
-                marginBottom: "6px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
-              Tổng hóa đơn trong ngày
-            </p>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#6E5C4A",
+                  marginBottom: "6px",
+                }}
+              >
+                Tổng hóa đơn trong ngày
+              </p>
+              <span
+                style={{ fontSize: "12px", color: "#9C6B3A", fontWeight: 600 }}
+              >
+                Xem tất cả ➔
+              </span>
+            </div>
             <h3
               style={{
                 fontSize: "24px",
@@ -194,9 +265,10 @@ export default function RevenueDashboard() {
                 margin: 0,
               }}
             >
-              32 hóa đơn
+              {loading ? "Đang tải..." : `${stats.todayOrderCount} hóa đơn`}
             </h3>
           </div>
+
           <div
             style={{
               background: "#FFFDF9",
@@ -222,12 +294,14 @@ export default function RevenueDashboard() {
                 margin: 0,
               }}
             >
-              45.800.000 đ
+              {loading
+                ? "Đang tải..."
+                : `${stats.monthRevenue.toLocaleString()} đ`}
             </h3>
           </div>
         </div>
 
-        {/* Khu vực hiển thị biểu đồ */}
+        {/* Biểu đồ */}
         <div
           style={{
             display: "grid",
@@ -235,7 +309,7 @@ export default function RevenueDashboard() {
             gap: "24px",
           }}
         >
-          {/* Biểu đồ đường (Line Chart) */}
+          {/* Biểu đồ đường */}
           <div
             style={{
               background: "#FFFDF9",
@@ -257,8 +331,8 @@ export default function RevenueDashboard() {
             </h3>
             <div style={{ height: "280px" }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueByDay}>
-                  <XAxis dataKey="day" stroke="#6E5C4A" fontSize={12} />
+                <LineChart data={stats.weeklyRevenue}>
+                  <XAxis dataKey="dayOfWeek" stroke="#6E5C4A" fontSize={12} />
                   <YAxis stroke="#6E5C4A" fontSize={12} />
                   <Tooltip
                     formatter={(value) => `${value.toLocaleString()} đ`}
@@ -275,7 +349,7 @@ export default function RevenueDashboard() {
             </div>
           </div>
 
-          {/* Biểu đồ tròn (Pie Chart) */}
+          {/* Biểu đồ tròn */}
           <div
             style={{
               background: "#FFFDF9",
@@ -299,14 +373,15 @@ export default function RevenueDashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={categoryData}
+                    data={stats.categorySales}
                     cx="50%"
                     cy="50%"
                     outerRadius={85}
-                    dataKey="value"
+                    dataKey="totalQuantity"
+                    nameKey="categoryName"
                     label
                   >
-                    {categoryData.map((entry, index) => (
+                    {stats.categorySales.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={COLORS[index % COLORS.length]}

@@ -18,7 +18,7 @@ public class OpenApiConfig {
 
         return new OpenAPI()
                 .info(new Info()
-                        .title("Smart Cafe Management API")
+                        .title("API quản lý Smart Cafe")
                         .version("1.0")
                         .description("Tài liệu API cho hệ thống quản lý quán Cafe (Đã tích hợp JWT)")
                         .contact(new Contact().name("CodeGym Team").email("codegymintern@gmail.com")))

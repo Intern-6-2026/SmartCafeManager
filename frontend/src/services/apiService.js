@@ -69,12 +69,56 @@ export const getBestSellerItems = async () => {
   return await axios.get(`${API_BASE_URL}/items/best-sellers`);
 };
 
+export const getNewsList = async (page = 0, size = 6) => {
+  return await axios.get(`${API_BASE_URL}/news`, { params: { page, size } });
+};
+
+export const getNewsById = async (id) => {
+  return await axios.get(`${API_BASE_URL}/news/${id}`);
+};
+
+export const getAdminNewsList = async (page = 0, size = 10) => {
+  return await axios.get(`${API_BASE_URL}/news/admin/all`, { params: { page, size } });
+};
+
+export const getAdminNewsById = async (id) => {
+  return await axios.get(`${API_BASE_URL}/news/${id}`);
+};
+
+export const createNews = async ({ title, summary, content, image }) => {
+  const formData = new FormData();
+  formData.append("title", title);
+  formData.append("summary", summary || "");
+  formData.append("content", content);
+  if (image) formData.append("image", image);
+  return await axios.post(`${API_BASE_URL}/news`, formData);
+};
+
+export const updateNews = async (id, { title, summary, content, image }) => {
+  const formData = new FormData();
+  formData.append("title", title);
+  formData.append("summary", summary || "");
+  formData.append("content", content);
+  if (image) formData.append("image", image);
+  return await axios.put(`${API_BASE_URL}/news/${id}`, formData);
+};
+
+export const deleteNews = async (id) => {
+  return await axios.delete(`${API_BASE_URL}/news/${id}`);
+};
+
+export const changeNewsStatus = async (id, status) => {
+  return await axios.put(`${API_BASE_URL}/news/${id}/status`, null, {
+    params: { status },
+  });
+};
+
 /* Các API gọi món tại bàn — theo tài liệu mới, nằm dưới /api/v1/items */
 const CUSTOMER_URL = `${API_BASE_URL}/customer`;
  
 // API 1: Thêm món vào giỏ tạm thời (note là tuỳ chọn)
 export const addItemToCart = async (tableId, itemId, quantity, note) => {
-  const params = { tableId, itemId, quantity, note };
+  const params = { tableId, itemId, quantity };
   if (note) params.note = note;
   return await axios.post(`${CUSTOMER_URL}/cart/add`, null, { params });
 };
@@ -144,39 +188,6 @@ export const payWithCash = async (tableId) => {
     params: { tableId },
   });
 };
-
-// API cho nhân viên
-
-// API 12: lấy thông tin tất cả các bàn 
-export const getAllTableInfo = async () => {
-  return await axios.get(`${API_BASE_URL}/staff/tables`);
-};
-
-// API 13: xác nhận thanh toán
-export const approvePayment = async (tableId) => {
-  return await axios.post(`${API_BASE_URL}/staff/tables/${tableId}/approve-payment`);
-};
-
-// API 14: lấy thông tin chi tiết hóa đơn của bàn
-export const getTablesInvoice = async (tableId) => {
-  return await axios.get(`${API_BASE_URL}/staff/tables/${tableId}/order-details`);
-};
-
-// API 15: lấy thông tin chi tiết các đơn còn active
-export const getActiveOrder = async (tableId) => {
-  return await axios.get(`${API_BASE_URL}/staff/tables/${tableId}/active-order`);
-};
-
-// API 16: lấy toan bộ feedbacks của khách hàng
-export const getAllFeedbacks = async () => {
-  return await axios.get(`${API_BASE_URL}/feedbacks`);
-};
-
-// API 17: lấy feedbacks của một món cụ thể
-export const getItemFeedbacks = async (itemId) => {
-  return await axios.get(`${API_BASE_URL}/feedbacks/item/${itemId}`);
-};
-
 /* Helper: rút thông báo lỗi từ axios error để hiển thị lên UI */
 const ERROR_MESSAGE_MAP = {
   "Old password is incorrect!": "Mật khẩu hiện tại không đúng.",
