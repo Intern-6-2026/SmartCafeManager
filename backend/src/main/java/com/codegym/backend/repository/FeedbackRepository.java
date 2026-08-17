@@ -18,6 +18,6 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     // 3. Kiểm tra Khách hàng đã đăng nhập đã đánh giá món ăn này chưa
     boolean existsByCustomerCustomerIdAndItemItemIdAndDeletedAtIsNull(Long customerId, Long itemId);
 
-    // 🟢 4. BỔ SUNG: Kiểm tra Khách vãng lai (theo Email) đã đánh giá món ăn này chưa
+    // Kiểm tra Khách vãng lai (theo Email) đã đánh giá món ăn này chưa
     boolean existsByEmailAndItemItemIdAndDeletedAtIsNull(String email, Long itemId);
 }

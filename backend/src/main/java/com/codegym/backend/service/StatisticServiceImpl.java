@@ -26,7 +26,18 @@ public class StatisticServiceImpl implements StatisticService {
 
     private final TableOrderRepository tableOrderRepository;
 
-    // 🟢 1. LẤY HÓA ĐƠN THEO BÀN, TYPE (TODAY/MONTH) VÀ NGÀY
+    // 1. LỌC HÓA ĐƠN THEO BÀN VÀ KHOẢNG THỜI GIAN (LocalDate)
+    @Override
+    @Transactional(readOnly = true)
+    public List<InvoiceResponseDTO> getInvoicesByFilter(Long tableId, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startDateTime = (startDate != null) ? startDate.atStartOfDay() : null;
+        LocalDateTime endDateTime = (endDate != null) ? endDate.atTime(LocalTime.MAX) : null;
+
+        List<TableOrder> orders = tableOrderRepository.filterInvoices(tableId, startDateTime, endDateTime);
+        return orders.stream().map(this::mapToInvoiceDTO).collect(Collectors.toList());
+    }
+
+    // 2. LẤY HÓA ĐƠN THEO TYPE (TODAY/MONTH) VÀ NGÀY LẺ (Date)
     @Override
     @Transactional(readOnly = true)
     public List<InvoiceResponseDTO> getInvoices(Long tableId, String type, Date date) {
@@ -47,11 +58,11 @@ public class StatisticServiceImpl implements StatisticService {
             endDate = today.atTime(LocalTime.MAX);
         }
 
-        List<TableOrder> orders = tableOrderRepository.findInvoicesByTableAndDateRange(tableId, startDate, endDate);
+        // Đã chuyển sang dùng filterInvoices thống nhất
+        List<TableOrder> orders = tableOrderRepository.filterInvoices(tableId, startDate, endDate);
         return orders.stream().map(this::mapToInvoiceDTO).collect(Collectors.toList());
     }
 
-    // 🟢 2. CÁC HÀM OVERLOAD
     @Override
     @Transactional(readOnly = true)
     public List<InvoiceResponseDTO> getInvoices(Long tableId, Date date) {
@@ -64,7 +75,7 @@ public class StatisticServiceImpl implements StatisticService {
         return getInvoices(tableId, "TODAY", null);
     }
 
-    // 🟢 3. LẤY DỮ LIỆU DASHBOARD THỐNG KÊ
+    // 3. LẤY DỮ LIỆU DASHBOARD THỐNG KÊ
     @Override
     @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
@@ -76,15 +87,12 @@ public class StatisticServiceImpl implements StatisticService {
         LocalDateTime startOfMonth = today.with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay();
         LocalDateTime endOfMonth = today.with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
 
-        // A. 3 Thẻ Tổng quan (Lọc chính xác đơn đã thanh toán PAID)
+        // A. Thẻ Tổng quan
         Double todayRevenue = tableOrderRepository.sumRevenueBetween(startOfToday, endOfToday, StatusTableOrder.PAID);
-        
-        // 👈 ĐÃ SỬA: Bổ sung StatusTableOrder.PAID vào hàm đếm hóa đơn
         Long todayOrderCount = tableOrderRepository.countOrdersBetween(startOfToday, endOfToday, StatusTableOrder.PAID);
-        
         Double monthRevenue = tableOrderRepository.sumRevenueBetween(startOfMonth, endOfMonth, StatusTableOrder.PAID);
 
-        // B. Biểu đồ đường theo tuần (Thứ 2 -> Chủ Nhật)
+        // B. Biểu đồ đường theo tuần
         LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         List<DashboardStatsDTO.WeeklyRevenueDTO> weeklyRevenueList = new ArrayList<>();
         String[] dayNames = {"Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"};

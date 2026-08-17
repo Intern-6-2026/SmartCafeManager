@@ -36,7 +36,7 @@ public class FeedbackServiceImpl implements FeedbackService {
     private final OrderDetailRepository orderDetailRepository;
     private final CloudinaryService cloudinaryService;
 
-    // 🟢 1. TẠO FEEDBACK VÀ TRẢ VỀ DTO
+    //  1. TẠO FEEDBACK VÀ TRẢ VỀ DTO
     @Override
     @Transactional
     public FeedbackResponseDTO createFeedback(FeedbackRequestDTO dto) {
@@ -55,7 +55,7 @@ public class FeedbackServiceImpl implements FeedbackService {
             }
         }
 
-        // 🟢 2. XỬ LÝ UPLOAD ẢNH LÊN CLOUDINARY (ĐÃ BỌC TRY-CATCH)
+        // 2. XỬ LÝ UPLOAD ẢNH LÊN CLOUDINARY (ĐÃ BỌC TRY-CATCH)ssdas
         String finalImageUrl = dto.getImageUrl();
         if (dto.getImageFile() != null && !dto.getImageFile().isEmpty()) {
             try {

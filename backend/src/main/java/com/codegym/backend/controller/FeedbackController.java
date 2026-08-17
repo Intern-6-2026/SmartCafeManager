@@ -4,12 +4,15 @@ import com.codegym.backend.dto.FeedbackRequestDTO;
 import com.codegym.backend.dto.FeedbackResponseDTO;
 import com.codegym.backend.service.FeedbackService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,9 +20,11 @@ import java.util.Map;
 @RequestMapping("/api/v1")
 @CrossOrigin("*")
 @RequiredArgsConstructor
+@Slf4j
 public class FeedbackController {
 
     private final FeedbackService feedbackService;
+    private final SimpMessagingTemplate messagingTemplate; // 🟢 Bổ sung WebSocket Template
 
     /**
      * Khách hàng gửi đánh giá mới
@@ -65,6 +70,9 @@ public class FeedbackController {
         dto.setEmail(finalEmail);
 
         FeedbackResponseDTO createdFeedback = feedbackService.createFeedback(dto);
+
+        notifyNewFeedback(createdFeedback);
+
         return ResponseEntity.ok(createdFeedback);
     }
 
@@ -82,5 +90,29 @@ public class FeedbackController {
     public ResponseEntity<Map<String, String>> deleteFeedback(@PathVariable Long feedbackId) {
         feedbackService.deleteFeedback(feedbackId);
         return ResponseEntity.ok(Map.of("message", "Đã xóa đánh giá thành công!"));
+    }
+
+    // ==========================================
+    // HELPER WEBSOCKET
+    // ==========================================
+
+    private void notifyNewFeedback(FeedbackResponseDTO feedback) {
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("type", "NEW_FEEDBACK");
+            payload.put("message", "Vừa có đánh giá " + feedback.getRating() + "⭐ mới!");
+            payload.put("data", feedback);
+
+            // 1. Broadcast channel chung cho cả trang Khách & Nhân viên cùng nghe
+            messagingTemplate.convertAndSend("/topic/feedbacks", payload);
+
+            // 2. Broadcast channel theo món ăn (nếu Frontend cần lắng nghe trực tiếp trang chi tiết món)
+            if (feedback.getItemId() != null) {
+                messagingTemplate.convertAndSend("/topic/item/" + feedback.getItemId() + "/feedbacks", payload);
+            }
+
+        } catch (Exception e) {
+            log.error("Lỗi gửi WebSocket thông báo Feedback: {}", e.getMessage());
+        }
     }
 }

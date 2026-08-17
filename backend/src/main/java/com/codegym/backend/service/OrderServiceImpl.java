@@ -1,404 +1,153 @@
 package com.codegym.backend.service;
 
+import com.codegym.backend.dto.InvoiceDetailResponseDTO;
+import com.codegym.backend.entity.*;
+import com.codegym.backend.enums.*;
+import com.codegym.backend.repository.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.codegym.backend.dto.CartItemResponse;
-import com.codegym.backend.dto.CartResponseDTO;
-import com.codegym.backend.dto.InvoiceDetailResponseDTO;
-import com.codegym.backend.entity.Item;
-import com.codegym.backend.entity.OrderDetail;
-import com.codegym.backend.entity.TableOrder;
-import com.codegym.backend.entity.Tables;
-import com.codegym.backend.enums.ServiceStatus;
-import com.codegym.backend.enums.StatusOrderDetail;
-import com.codegym.backend.enums.StatusTableOrder;
-import com.codegym.backend.repository.FeedbackRepository;
-import com.codegym.backend.repository.ItemRepository;
-import com.codegym.backend.repository.OrderDetailRepository;
-import com.codegym.backend.repository.TableOrderRepository;
-import com.codegym.backend.repository.TablesRepository;
-
-import lombok.RequiredArgsConstructor;
-
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @SuppressWarnings("null")
 public class OrderServiceImpl implements OrderService {
 
-        private final TablesRepository tablesRepository;
-        private final TableOrderRepository tableOrderRepository;
-        private final OrderDetailRepository orderDetailRepository;
-        private final ItemRepository itemRepository;
-        private final FeedbackRepository feedbackRepository;
+    private final TablesRepository tablesRepository;
+    private final TableOrderRepository tableOrderRepository;
+    private final OrderDetailRepository orderDetailRepository;
+    private final ItemRepository itemRepository;
+    private final FeedbackRepository feedbackRepository;
 
-        // ==========================================
-        // I. QUẢN LÝ TRẠNG THÁI BÀN & GIỎ HÀNG
-        // ==========================================
-
-        @Override
-        @Transactional
-        public void updateTableServiceStatus(Long tableId, ServiceStatus status) {
-                if (status == null) {
-                        throw new IllegalArgumentException("Trạng thái phục vụ không được để trống!");
-                }
-
-                Tables table = getTableEntity(tableId);
-                table.setServiceStatus(status);
-
-                // Cập nhật trạng thái occupied đồng bộ với trạng thái EMPTY
-                table.setIsOccupied(status != ServiceStatus.EMPTY);
-
-                tablesRepository.save(table);
+    @Override
+    @Transactional
+    public void updateTableServiceStatus(Long tableId, ServiceStatus status) {
+        if (status == null) {
+            throw new IllegalArgumentException("Trạng thái phục vụ không được để trống!");
         }
 
-        @Override
-        @Transactional
-        public void addItemToCart(Long tableId, Long itemId, Integer quantity, String note) {
-                Tables table = getTableEntity(tableId);
+        Tables table = tablesRepository.findById(tableId)
+                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại với ID: " + tableId));
+        
+        table.setServiceStatus(status);
+        table.setIsOccupied(status != ServiceStatus.EMPTY);
+        tablesRepository.save(table);
+    }
 
-                Item item = itemRepository.findById(itemId)
-                                .orElseThrow(() -> new RuntimeException("Món ăn không tồn tại với ID: " + itemId));
+    @Override
+@Transactional
+public void cancelOrderItemByCustomer(Long orderDetailId, String reason) {
+    OrderDetail detail = orderDetailRepository.findById(orderDetailId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết món ăn ID: " + orderDetailId));
 
-                TableOrder order = tableOrderRepository
-                                .findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                                .orElseGet(() -> {
-                                        table.setIsOccupied(true);
-                                        if (table.getServiceStatus() == null
-                                                        || table.getServiceStatus() == ServiceStatus.EMPTY) {
-                                                table.setServiceStatus(ServiceStatus.SERVING);
-                                        }
-                                        tablesRepository.save(table);
+    if (detail.getStatus() != StatusOrderDetail.ORDERED) {
+        throw new RuntimeException("Không thể hủy món do Bếp đã nhận chế biến hoặc đã phục vụ!");
+    }
 
-                                        TableOrder newOrder = TableOrder.builder()
-                                                        .table(table)
-                                                        .openAt(LocalDateTime.now())
-                                                        .totalAmount(BigDecimal.ZERO)
-                                                        .status(StatusTableOrder.OPEN)
-                                                        .build();
-                                        return tableOrderRepository.save(newOrder);
-                                });
+    // LẤY SỐ LƯỢNG AN TOÀN: Nếu trong DB bị âm hoặc null, ép về số dương chuẩn
+    int rawQty = detail.getQuantity() != null ? detail.getQuantity() : 0;
+    if (rawQty <= 0) {
+        log.warn("Cảnh báo: OrderDetail ID {} có số lượng không hợp lệ ({}), tự động điều chỉnh về 1", orderDetailId, rawQty);
+        rawQty = 1;
+    }
+    final int qty = rawQty; // Dùng số lượng dương chuẩn để tính toán
 
-                List<OrderDetail> existingDetails = orderDetailRepository
-                                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId,
-                                                StatusOrderDetail.PENDING);
+    detail.setStatus(StatusOrderDetail.CANCELLED);
+    if (reason != null && !reason.trim().isEmpty()) {
+        String currentNote = detail.getNote() != null ? detail.getNote() + " | " : "";
+        detail.setNote(currentNote + "Khách hủy: " + reason);
+    }
+    orderDetailRepository.save(detail);
 
-                if (!existingDetails.isEmpty()) {
-                        OrderDetail detail = existingDetails.get(0);
-                        int currentQty = detail.getQuantity() != null ? detail.getQuantity() : 0;
-                        detail.setQuantity(currentQty + (quantity != null ? quantity : 1));
-                        if (note != null && !note.trim().isEmpty()) {
-                                detail.setNote(note);
-                        }
-                } else {
-                        BigDecimal price = item.getPrice() != null ? item.getPrice() : BigDecimal.ZERO;
-                        OrderDetail newDetail = OrderDetail.builder()
-                                        .order(order)
-                                        .item(item)
-                                        .quantity(quantity != null ? quantity : 1)
-                                        .unitPrice(price)
-                                        .note(note)
-                                        .status(StatusOrderDetail.PENDING)
-                                        .build();
+    // Cập nhật lại số lượng đã bán của Item
+    Item item = detail.getItem();
+    if (item != null) {
+        int currentCount = item.getTotalOrderCount() != null ? item.getTotalOrderCount() : 0;
+        item.setTotalOrderCount(Math.max(0, currentCount - qty));
+        itemRepository.save(item);
+    }
 
-                        orderDetailRepository.save(newDetail);
-                }
-        }
+    // Cập nhật lại tổng tiền hóa đơn
+    TableOrder order = detail.getOrder();
+    if (order != null) {
+        BigDecimal price = getSafeUnitPrice(detail);
+        BigDecimal itemTotal = price.multiply(BigDecimal.valueOf(qty)); // Luôn ra số dương
 
-        @Override
-        @Transactional(readOnly = true)
-        public CartResponseDTO getCartOverview(Long tableId) {
-                Tables table = getTableEntity(tableId);
+        BigDecimal currentTotal = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
+        order.setTotalAmount(currentTotal.subtract(itemTotal).max(BigDecimal.ZERO));
+        tableOrderRepository.save(order);
+    }
+}
 
-                TableOrder order = tableOrderRepository
-                                .findByTableTableIdAndStatus(table.getTableId(), StatusTableOrder.OPEN)
-                                .orElse(null);
+    @Override
+    @Transactional(readOnly = true)
+    public InvoiceDetailResponseDTO getInvoiceDetailForCustomer(Long orderId, Long customerId) {
+        TableOrder order = tableOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn ID: " + orderId));
 
-                if (order == null) {
-                        return CartResponseDTO.builder()
-                                        .tableId(table.getTableId())
-                                        .tableName(table.getTableName())
-                                        .currentTotalAmount(BigDecimal.ZERO)
-                                        .orderedItems(List.of())
-                                        .pendingItems(List.of())
-                                        .build();
-                }
+        List<OrderDetail> orderDetails = orderDetailRepository.findByOrderTableOrderId(orderId);
 
-                List<OrderDetail> allDetails = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
-                List<CartItemResponse> pendingItems = new ArrayList<>();
-                List<CartItemResponse> orderedItems = new ArrayList<>();
+        List<InvoiceDetailResponseDTO.OrderItemDTO> itemDTOs = orderDetails.stream()
+                .map(detail -> {
+                    Item item = detail.getItem();
+                    Long itemId = (item != null) ? item.getItemId() : null;
+                    String itemName = (item != null) ? item.getItemName() : "Món đã ngưng bán";
+                    String itemImage = (item != null) ? item.getImageUrl() : null;
 
-                BigDecimal calculatedTotal = BigDecimal.ZERO;
+                    Double unitPrice = (detail.getUnitPrice() != null) ? detail.getUnitPrice().doubleValue() : 0.0;
+                    int quantity = (detail.getQuantity() != null) ? detail.getQuantity() : 0;
 
-                for (OrderDetail detail : allDetails) {
-                        BigDecimal price = getSafeUnitPrice(detail);
-                        int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
-                        BigDecimal itemTotal = price.multiply(BigDecimal.valueOf(qty));
+                    boolean hasFeedback = false;
+                    if (customerId != null && itemId != null) {
+                        hasFeedback = feedbackRepository
+                                .existsByCustomerCustomerIdAndItemItemIdAndDeletedAtIsNull(customerId, itemId);
+                    }
 
-                        if (detail.getStatus() == StatusOrderDetail.PENDING) {
-                                pendingItems.add(mapToCartItemResponse(detail));
-                                calculatedTotal = calculatedTotal.add(itemTotal);
-                        } else if (detail.getStatus() != StatusOrderDetail.CANCELLED) {
-                                orderedItems.add(mapToCartItemResponse(detail));
-                                calculatedTotal = calculatedTotal.add(itemTotal);
-                        }
-                }
+                    return InvoiceDetailResponseDTO.OrderItemDTO.builder()
+                            .itemId(itemId)
+                            .itemName(itemName)
+                            .itemImage(itemImage)
+                            .price(unitPrice)
+                            .quantity(quantity)
+                            .totalPrice(unitPrice * quantity)
+                            .hasFeedback(hasFeedback)
+                            .build();
+                })
+                .collect(Collectors.toList());
 
-                return CartResponseDTO.builder()
-                                .tableOrderId(order.getTableOrderId())
-                                .tableId(table.getTableId())
-                                .tableName(table.getTableName())
-                                .currentTotalAmount(calculatedTotal)
-                                .orderedItems(orderedItems)
-                                .pendingItems(pendingItems)
-                                .build();
-        }
+        LocalDateTime paidDateTime = order.getPaidAt() != null ? order.getPaidAt() : order.getCloseAt();
 
-        @Override
-        @Transactional
-        public void updateCartItemDetail(Long tableId, Long itemId, Integer newQuantity, String newNote) {
-                Tables table = getTableEntity(tableId);
-                TableOrder order = getOpenOrder(table.getTableId());
+        return InvoiceDetailResponseDTO.builder()
+                .orderId(order.getTableOrderId())
+                .invoiceCode(String.format("#HD%04d", order.getTableOrderId()))
+                .tableId(order.getTable() != null ? order.getTable().getTableId() : null)
+                .tableName(order.getTable() != null ? order.getTable().getTableName() : "Mang về")
+                .totalAmount(order.getTotalAmount() != null ? order.getTotalAmount().doubleValue() : 0.0)
+                .status(order.getStatus())
+                .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
+                .paidAt(toDate(paidDateTime))
+                .items(itemDTOs)
+                .build();
+    }
 
-                List<OrderDetail> existingDetails = orderDetailRepository
-                                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId,
-                                                StatusOrderDetail.PENDING);
+    // --- PRIVATE HELPER METHODS ---
 
-                if (existingDetails.isEmpty()) {
-                        throw new RuntimeException("Món ăn không tồn tại trong giỏ tạm!");
-                }
+    private BigDecimal getSafeUnitPrice(OrderDetail detail) {
+        if (detail.getUnitPrice() != null) return detail.getUnitPrice();
+        if (detail.getItem() != null && detail.getItem().getPrice() != null) return detail.getItem().getPrice();
+        return BigDecimal.ZERO;
+    }
 
-                OrderDetail detail = existingDetails.get(0);
-                if (newQuantity != null && newQuantity > 0)
-                        detail.setQuantity(newQuantity);
-                if (newNote != null)
-                        detail.setNote(newNote);
-
-                orderDetailRepository.save(detail);
-        }
-
-        @Override
-        @Transactional
-        public void removeItemFromCart(Long tableId, Long itemId) {
-                Tables table = getTableEntity(tableId);
-                TableOrder order = getOpenOrder(table.getTableId());
-
-                List<OrderDetail> existingDetails = orderDetailRepository
-                                .findByOrderTableOrderIdAndItemItemIdAndStatus(order.getTableOrderId(), itemId,
-                                                StatusOrderDetail.PENDING);
-
-                if (!existingDetails.isEmpty()) {
-                        orderDetailRepository.delete(existingDetails.get(0));
-                }
-        }
-
-        @Override
-        @Transactional
-        public void clearTemporaryCart(Long tableId) {
-                Tables table = getTableEntity(tableId);
-                TableOrder order = getOpenOrder(table.getTableId());
-
-                List<OrderDetail> pendingDetails = orderDetailRepository
-                                .findByOrderTableOrderIdAndStatus(order.getTableOrderId(), StatusOrderDetail.PENDING);
-
-                if (!pendingDetails.isEmpty()) {
-                        orderDetailRepository.deleteAllInBatch(pendingDetails);
-                }
-        }
-
-        @Override
-        @Transactional
-        public void confirmOrder(Long tableId) {
-                Tables table = getTableEntity(tableId);
-                TableOrder order = getOpenOrder(table.getTableId());
-
-                List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
-                boolean hasPending = details.stream().anyMatch(d -> d.getStatus() == StatusOrderDetail.PENDING);
-
-                if (!hasPending) {
-                        throw new RuntimeException("Không có món mới nào trong giỏ hàng tạm!");
-                }
-
-                processPendingToOrderedAndRecalculateTotal(order, details);
-
-                table.setServiceStatus(ServiceStatus.WAITING_FOOD);
-                tablesRepository.save(table);
-        }
-
-        // 🟢 BỔ SUNG: Khách tự hủy món đã bấm đặt (chỉ hủy được khi trạng thái là
-        // ORDERED)
-        @Override
-        @Transactional
-        public void cancelOrderItemByCustomer(Long orderDetailId, String reason) {
-                OrderDetail detail = orderDetailRepository.findById(orderDetailId)
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Không tìm thấy chi tiết món ăn ID: " + orderDetailId));
-
-                if (detail.getStatus() != StatusOrderDetail.ORDERED) {
-                        throw new RuntimeException("Không thể hủy món do Bếp đã nhận chế biến hoặc đã phục vụ!");
-                }
-
-                detail.setStatus(StatusOrderDetail.CANCELLED);
-                if (reason != null && !reason.trim().isEmpty()) {
-                        String currentNote = detail.getNote() != null ? detail.getNote() + " | " : "";
-                        detail.setNote(currentNote + "Khách hủy: " + reason);
-                }
-                orderDetailRepository.save(detail);
-
-                // Giảm lượt order count của Item
-                Item item = detail.getItem();
-                if (item != null) {
-                        int currentCount = item.getTotalOrderCount() != null ? item.getTotalOrderCount() : 0;
-                        int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
-                        item.setTotalOrderCount(Math.max(0, currentCount - qty));
-                        itemRepository.save(item);
-                }
-
-                // Trừ bớt tổng tiền của hóa đơn bàn
-                TableOrder order = detail.getOrder();
-                if (order != null) {
-                        BigDecimal price = getSafeUnitPrice(detail);
-                        int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
-                        BigDecimal itemTotal = price.multiply(BigDecimal.valueOf(qty));
-
-                        BigDecimal currentTotal = order.getTotalAmount() != null ? order.getTotalAmount()
-                                        : BigDecimal.ZERO;
-                        order.setTotalAmount(currentTotal.subtract(itemTotal).max(BigDecimal.ZERO));
-                        tableOrderRepository.save(order);
-                }
-        }
-
-        // ==========================================
-        // II. HÓA ĐƠN & CHI TIẾT
-        // ==========================================
-
-        @Override
-        @Transactional(readOnly = true)
-        public InvoiceDetailResponseDTO getInvoiceDetailForCustomer(Long orderId, Long customerId) {
-                TableOrder order = tableOrderRepository.findById(orderId)
-                                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn ID: " + orderId));
-
-                List<OrderDetail> orderDetails = orderDetailRepository.findByOrderTableOrderId(orderId);
-
-                List<InvoiceDetailResponseDTO.OrderItemDTO> itemDTOs = orderDetails.stream()
-                                .map(detail -> {
-                                        Item item = detail.getItem();
-                                        Long itemId = (item != null) ? item.getItemId() : null;
-                                        String itemName = (item != null) ? item.getItemName() : "Món đã ngưng bán";
-                                        String itemImage = (item != null) ? item.getImageUrl() : null;
-
-                                        Double unitPrice = (detail.getUnitPrice() != null)
-                                                        ? detail.getUnitPrice().doubleValue()
-                                                        : 0.0;
-                                        int quantity = (detail.getQuantity() != null) ? detail.getQuantity() : 0;
-
-                                        boolean hasFeedback = false;
-                                        if (customerId != null && itemId != null) {
-                                                hasFeedback = feedbackRepository
-                                                                .existsByCustomerCustomerIdAndItemItemIdAndDeletedAtIsNull(
-                                                                                customerId, itemId);
-                                        }
-
-                                        return InvoiceDetailResponseDTO.OrderItemDTO.builder()
-                                                        .itemId(itemId)
-                                                        .itemName(itemName)
-                                                        .itemImage(itemImage)
-                                                        .price(unitPrice)
-                                                        .quantity(quantity)
-                                                        .totalPrice(unitPrice * quantity)
-                                                        .hasFeedback(hasFeedback)
-                                                        .build();
-                                })
-                                .collect(Collectors.toList());
-
-                LocalDateTime paidDateTime = order.getPaidAt() != null ? order.getPaidAt() : order.getCloseAt();
-
-                return InvoiceDetailResponseDTO.builder()
-                                .orderId(order.getTableOrderId())
-                                .invoiceCode(String.format("#HD%04d", order.getTableOrderId()))
-                                .tableId(order.getTable() != null ? order.getTable().getTableId() : null)
-                                .tableName(order.getTable() != null ? order.getTable().getTableName() : "Mang về")
-                                .totalAmount(order.getTotalAmount() != null ? order.getTotalAmount().doubleValue()
-                                                : 0.0)
-                                .status(order.getStatus())
-                                .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name()
-                                                : null)
-                                .paidAt(toDate(paidDateTime))
-                                .items(itemDTOs)
-                                .build();
-        }
-
-        // ==========================================
-        // PRIVATE HELPER METHODS
-        // ==========================================
-
-        private Tables getTableEntity(Long tableId) {
-                return tablesRepository.findById(tableId)
-                                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại với ID: " + tableId));
-        }
-
-        private TableOrder getOpenOrder(Long tableId) {
-                return tableOrderRepository.findByTableTableIdAndStatus(tableId, StatusTableOrder.OPEN)
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Không tìm thấy hóa đơn đang mở cho bàn ID: " + tableId));
-        }
-
-        private BigDecimal getSafeUnitPrice(OrderDetail detail) {
-                if (detail.getUnitPrice() != null)
-                        return detail.getUnitPrice();
-                if (detail.getItem() != null && detail.getItem().getPrice() != null)
-                        return detail.getItem().getPrice();
-                return BigDecimal.ZERO;
-        }
-
-        private void processPendingToOrderedAndRecalculateTotal(TableOrder order, List<OrderDetail> details) {
-                BigDecimal totalAmount = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
-
-                for (OrderDetail detail : details) {
-                        if (detail.getStatus() == StatusOrderDetail.PENDING) {
-                                detail.setStatus(StatusOrderDetail.ORDERED);
-                                Item item = detail.getItem();
-                                if (item != null) {
-                                        int currentCount = item.getTotalOrderCount() != null ? item.getTotalOrderCount()
-                                                        : 0;
-                                        int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
-                                        item.setTotalOrderCount(currentCount + qty);
-                                }
-                                BigDecimal price = getSafeUnitPrice(detail);
-                                int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
-                                totalAmount = totalAmount.add(price.multiply(BigDecimal.valueOf(qty)));
-                        }
-                }
-                order.setTotalAmount(totalAmount);
-                tableOrderRepository.save(order);
-        }
-
-        private CartItemResponse mapToCartItemResponse(OrderDetail detail) {
-                return CartItemResponse.builder()
-                                .orderDetailId(detail.getOrderDetailId())
-                                .itemId(detail.getItem() != null ? detail.getItem().getItemId() : null)
-                                .itemName(detail.getItem() != null ? detail.getItem().getItemName() : null)
-                                .price(getSafeUnitPrice(detail))
-                                .quantity(detail.getQuantity() != null ? detail.getQuantity() : 0)
-                                .note(detail.getNote())
-                                .status(detail.getStatus() != null ? detail.getStatus().name() : null)
-                                .tableName(detail.getOrder() != null && detail.getOrder().getTable() != null
-                                                ? detail.getOrder().getTable().getTableName()
-                                                : null)
-                                .build();
-        }
-
-        private Date toDate(LocalDateTime localDateTime) {
-                if (localDateTime == null)
-                        return null;
-                return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
-        }
+    private Date toDate(LocalDateTime localDateTime) {
+        if (localDateTime == null) return null;
+        return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+    }
 }
