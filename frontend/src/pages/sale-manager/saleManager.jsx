@@ -13,7 +13,7 @@ import {
   getApiErrorMessage,
   getActiveOrder,
   staffConfirmOrder,
-  staffServeTable
+  staffServeTable,
 } from "../../services/apiService";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + "đ";
@@ -32,6 +32,7 @@ const STATUS_MAP = {
   CALL_STAFF: "call",
   WAITING_PAYMENT: "bill",
   REQUESTING_BILL: "bill",
+  PAYMENT_REQUESTED: "bill",
 };
 
 const STATUS_LABEL = {
@@ -112,7 +113,7 @@ function SaleManager() {
     else {
 
       switch (msgType) {
-        case "NEW_ORDER":
+        case "CART_UPDATED":
           pushNotification(text, type);
           if (tableId === selectedId) {
             loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
@@ -121,13 +122,6 @@ function SaleManager() {
           break;
         case "CALL_STAFF":
           pushNotification(text, type);
-          loadTables();
-          break;
-        case "CASH_PAYMENT_REQUEST":
-          pushNotification(text, type);
-          if (tableId === selectedId) {
-            loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
-          }
           loadTables();
           break;
         case "ALL_ITEMS_SERVED":
@@ -148,6 +142,17 @@ function SaleManager() {
             loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
           }
           break;
+        case "PAYMENT_REQUESTED":
+          console.log(`[WebSocket] Nhận thông báo PAYMENT_REQUESTED cho bàn ${tableId}`);
+          pushNotification(text, type);
+          loadTables();
+          break;
+        case "TABLE_CLEARED":
+          cosole.log(`[WebSocket] Nhận thông báo TABLE_CLEARED cho bàn ${tableId}`);
+          if (tableId === selectedId) {
+            loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
+          }
+          ToastService.success(`Bàn ${tableId} đã hoàn tất thanh toán.`);
         default:
           break;
       }
@@ -175,6 +180,7 @@ function SaleManager() {
         const busy = list.find((t) => t.status !== "empty");
         return (busy || list[0])?.id ?? null;
       });
+      console.log(`TableList: [${list.map((t) => t.status).join(", ")}].`);
     } catch (err) {
       notify(getApiErrorMessage(err, "Không tải được danh sách bàn."), "error");
     } finally {
@@ -344,9 +350,10 @@ function SaleManager() {
         console.log(`[WebSocket] Đã kết nối.`);
         
         // Đăng ký nhận tin nhắn của staff-requests và table-events
-        client.subscribe(`/topic/staff-requests`, (message) => {
+        client.subscribe(`/topic/table-events`, (message) => {
           if (message.body) {
             const data = JSON.parse(message.body);
+            console.log('[WebSocket] Nhận thông báo:', data);
             notify(data?.message, "info", data?.type, data?.tableId);
           }
         });

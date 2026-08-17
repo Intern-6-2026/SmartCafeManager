@@ -135,9 +135,10 @@ function FeedbackManager() {
         console.log(`[WebSocket] Đã kết nối.`);
         
         // Đăng ký nhận tin nhắn của riêng bàn này
-        client.subscribe(`/topic/staff-requests`, (message) => {
+        client.subscribe(`/topic/table-events`, (message) => {
           if (message.body) {
             const data = JSON.parse(message.body);
+            console.log('[WebSocket] Nhận thông báo:', data);
             onMessageReceived(data?.message, "info", data?.type, data?.tableId); // Gọi hàm callback để update UI
           }
         });

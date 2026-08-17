@@ -229,7 +229,7 @@ export const getItemFeedbacks = async (itemId) => {
 
 // API 18: xác nhận đơn hàng của khách (chuyển trạng thái từ PENDING -> CONFIRMED)
 export const staffConfirmOrder = async (tableOrderId) => {
-  return await axios.put(`${API_BASE_URL}/staff/orders/${tableOrderId}/confirm`);
+  return await axios.put(`${API_BASE_URL}/staff/orders/${tableOrderId}/confirm-all`);
 };
 
 // API 19: xác nhận phục vụ món ăn (chuyển trạng thái từ CONFIRMED -> SERVED)
