@@ -19,6 +19,8 @@ import AdminNewsDetail from "../pages/news/AdminNewsDetail";
 import InvoiceManagement from "../pages/InvoiceManagement/InvoiceManagement";
 import RevenueDashboard from "../pages/RevenueDashboard/RevenueDashboard";
 import RequireRole from "../components/RequireRole";
+import SaleManager from "../pages/sale-manager/saleManager"
+import FeedbackManager from "../pages/feedback-manager/feedbackManager";
 
 export default function AppRoutes() {
   return (
@@ -45,8 +47,6 @@ export default function AppRoutes() {
             </>
           }
         />
-
-        <Route path="/menu/table/:tableId" element={<ClientMenu />} />
 
         <Route path="/news" element={<NewsList />} />
         <Route path="/news/:id" element={<NewsDetail />} />
@@ -105,8 +105,26 @@ export default function AppRoutes() {
           }
         />
 
-        <Route path="/payment-success" element={<PaymentSuccess />} />
-      </Routes>
+        <Route
+            path="/menu"
+            element={<ClientMenu />}
+        />
+        
+        <Route 
+            path="/payment-success" 
+            element={<PaymentSuccess />} 
+        />
+
+        <Route 
+            path="/sale-manager" 
+            element={<SaleManager />} 
+        />
+
+        <Route 
+            path="/feedback-manager" 
+            element={<FeedbackManager />} 
+          />
+        </Routes>
     </BrowserRouter>
   );
 }

@@ -120,7 +120,7 @@ const CUSTOMER_URL = `${API_BASE_URL}/customer`;
 export const addItemToCart = async (tableId, itemId, quantity, note) => {
   const params = { tableId, itemId, quantity };
   if (note) params.note = note;
-  return await axios.post(`${CUSTOMER_URL}/cart/add`, null, { params });
+  return await axios.post(`${CUSTOMER_URL}/cart/add`, params, { headers: { "Content-Type": "application/json", }, });
 };
  
 // API 2: Xem tất cả món trong giỏ hàng tạm thời (PENDING)

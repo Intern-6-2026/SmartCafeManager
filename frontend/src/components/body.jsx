@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import coffeeBeans from "../assets/coffee-beans.jpg";
 import {
   getLatestItems,
@@ -11,6 +11,7 @@ import { canManageNews, formatNewsDate } from "../utils/newsHelpers";
 import "../styles/news.css";
 
 function Body() {
+  const { tableId: urlTableId } = useParams();
   const navigate = useNavigate();
   const newsTrackRef = useRef(null);
   const [latestItems, setLatestItems] = useState([]);
@@ -48,6 +49,9 @@ function Body() {
   useEffect(() => {
     if (urlTableId) {
       localStorage.setItem("tableId", urlTableId);
+    } else {
+      localStorage.setItem("tableId", 1);
+      console.log("Table: "+localStorage.getItem("tableId"));
     }
   }, [urlTableId]);
 
@@ -97,7 +101,7 @@ function Body() {
       console.error("Lỗi khi thêm vào giỏ hàng:", error);
     }
     window.scrollTo(0, 0);
-    navigate(`/menu/table/${tableId}`);
+    navigate(`/menu`);
   };
 
   return (
@@ -144,7 +148,7 @@ function Body() {
           </h1>
           <div className="flex flex-wrap gap-3 mt-2">
             <button
-              onClick={() => navigate("/menu/table/1")}
+              onClick={() => navigate("/menu")}
               className="bg-white text-black px-6 py-2 rounded-full font-medium cursor-pointer hover:bg-gray-100"
             >
               Đặt món
@@ -273,7 +277,7 @@ function Body() {
         <div className="bg-[#EBE2CB] p-6 flex flex-col items-center">
           <h2 className="text-2xl font-bold mb-4">Top 4 món mới nhất</h2>
           <button
-            onClick={() => navigate("/menu/table/1")}
+            onClick={() => navigate("/menu")}
             className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium cursor-pointer"
           >
             Khám phá
@@ -320,7 +324,7 @@ function Body() {
             Top những món bán chạy nhất
           </h2>
           <button
-            onClick={() => navigate("/menu/table/1")}
+            onClick={() => navigate("/menu")}
             className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium cursor-pointer"
           >
             Khám phá
@@ -382,7 +386,7 @@ function Body() {
           </button>
           {/* NÚT ĐẶT MÓN NỔI (FLOATING BUTTON) LUÔN HIỆN KHI CUỘN TRANG */}
           <button
-            onClick={() => navigate("/menu/table/1")}
+            onClick={() => navigate("/menu")}
             className="fixed bottom-6 right-6 z-50 bg-[#33261A] text-[#E7C9A1] px-5 py-3.5 rounded-full shadow-2xl flex items-center gap-2.5 font-bold text-sm hover:bg-[#4E3928] hover:scale-105 transition-all duration-300 border-2 border-[#E7C9A1] cursor-pointer"
             title="Đặt món ngay"
           >
