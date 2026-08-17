@@ -16,7 +16,7 @@ function PaymentSuccess() {
   const approved = Boolean(tableId);
   
   useEffect(() => {
-    callService(tableId, "NORMAL"); // tự động gọi nhân viên sau khi bấm Thanh toán
+    callService(tableId, "NORMAL"); 
     return;
   }, []);
 
