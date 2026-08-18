@@ -17,6 +17,8 @@ import NewsDetail from "../pages/news/NewsDetail";
 import AdminNewsList from "../pages/news/AdminNewsList";
 import AdminNewsForm from "../pages/news/AdminNewsForm";
 import AdminNewsDetail from "../pages/news/AdminNewsDetail";
+import AdminItemList from "../pages/admin-items/AdminItemList";
+import AdminItemForm from "../pages/admin-items/AdminItemForm";
 import RequireRole from "../components/RequireRole";
 
 export default function AppRoutes() {
@@ -106,6 +108,31 @@ export default function AppRoutes() {
                     element={
                         <RequireRole roles={["ADMIN"]}>
                             <AdminNewsDetail />
+                        </RequireRole>
+                    }
+                />
+
+                <Route
+                    path="/admin/items"
+                    element={
+                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                            <AdminItemList />
+                        </RequireRole>
+                    }
+                />
+                <Route
+                    path="/admin/items/new"
+                    element={
+                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                            <AdminItemForm />
+                        </RequireRole>
+                    }
+                />
+                <Route
+                    path="/admin/items/:id/edit"
+                    element={
+                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                            <AdminItemForm />
                         </RequireRole>
                     }
                 />

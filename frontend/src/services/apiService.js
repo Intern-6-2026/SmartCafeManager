@@ -104,6 +104,66 @@ export const getBestSellerItems = async () => {
   return await axios.get(`${API_BASE_URL}/items/best-sellers`);
 };
 
+/* ===== Admin Items (Cloudinary upload qua BE) ===== */
+export const getAdminItemById = async (id) => {
+  return await axios.get(`${API_BASE_URL}/admin/items/${id}`);
+};
+
+export const createAdminItem = async ({
+  itemCode,
+  itemName,
+  price,
+  description,
+  categoryId,
+  newCategoryName,
+  image,
+}) => {
+  const formData = new FormData();
+  formData.append("itemCode", itemCode);
+  formData.append("itemName", itemName);
+  formData.append("price", String(price));
+  if (description != null) formData.append("description", description);
+  if (categoryId != null && categoryId !== "") {
+    formData.append("categoryId", String(categoryId));
+  }
+  if (newCategoryName) formData.append("newCategoryName", newCategoryName);
+  if (image) formData.append("image", image);
+  return await axios.post(`${API_BASE_URL}/admin/items`, formData);
+};
+
+export const updateAdminItem = async (
+  id,
+  {
+    itemCode,
+    itemName,
+    price,
+    description,
+    categoryId,
+    newCategoryName,
+    isAvailable,
+    image,
+  }
+) => {
+  const formData = new FormData();
+  if (itemCode != null) formData.append("itemCode", itemCode);
+  if (itemName != null) formData.append("itemName", itemName);
+  if (price != null && price !== "") formData.append("price", String(price));
+  if (description != null) formData.append("description", description);
+  if (categoryId != null && categoryId !== "") {
+    formData.append("categoryId", String(categoryId));
+  }
+  if (newCategoryName) formData.append("newCategoryName", newCategoryName);
+  if (typeof isAvailable === "boolean") {
+    formData.append("isAvailable", String(isAvailable));
+  }
+  if (image) formData.append("image", image);
+  return await axios.post(`${API_BASE_URL}/admin/items/${id}`, formData);
+};
+
+export const deleteAdminItem = async (id) => {
+  return await axios.delete(`${API_BASE_URL}/admin/items/${id}`);
+};
+
 export const getNewsList = async (page = 0, size = 6) => {
   return await axios.get(`${API_BASE_URL}/news`, { params: { page, size } });
 };
@@ -238,7 +298,25 @@ const ERROR_MESSAGE_MAP = {
 };
 
 export const getApiErrorMessage = (err, fallback = "Đã có lỗi xảy ra.") => {
+  const status = err?.response?.status;
   const data = err?.response?.data;
+
+  if (
+    status === 413 ||
+    err?.code === "ERR_NETWORK" && /upload|multipart/i.test(String(err?.message || ""))
+  ) {
+    return "Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB.";
+  }
+
+  if (typeof data === "string" && /Maximum upload size exceeded|MaxUploadSizeExceeded/i.test(data)) {
+    return "Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB.";
+  }
+  if (data?.message && /Maximum upload size exceeded|MaxUploadSizeExceeded/i.test(data.message)) {
+    return "Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB.";
+  }
+  if (data?.error && /Maximum upload size exceeded|MaxUploadSizeExceeded/i.test(data.error)) {
+    return "Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB.";
+  }
   if (data?.validationErrors && typeof data.validationErrors === "object") {
     const fieldMessages = Object.values(data.validationErrors).filter(Boolean);
     if (fieldMessages.length > 0) {

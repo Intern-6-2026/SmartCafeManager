@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from "./Logo";
 
 function Header() {
@@ -11,6 +11,7 @@ function Header() {
     (localStorage.getItem("roleName") || "").toUpperCase()
   );
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const syncAuth = () => {
@@ -20,8 +21,12 @@ function Header() {
     };
     syncAuth();
     window.addEventListener("storage", syncAuth);
-    return () => window.removeEventListener("storage", syncAuth);
-  }, []);
+    window.addEventListener("focus", syncAuth);
+    return () => {
+      window.removeEventListener("storage", syncAuth);
+      window.removeEventListener("focus", syncAuth);
+    };
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -35,6 +40,7 @@ function Header() {
   };
 
   const canManageNews = roleName === "ADMIN";
+  const canManageItems = roleName === "ADMIN" || roleName === "STAFF";
 
   const menuItems = [
     { name: "Trang chủ", path: "/home" },
@@ -46,6 +52,12 @@ function Header() {
       path: "/admin/news",
       requireAuth: true,
       requireManageNews: true,
+    },
+    {
+      name: "Quản lý món",
+      path: "/admin/items",
+      requireAuth: true,
+      requireManageItems: true,
     },
     { name: "Hồ sơ", path: "/profile", requireAuth: true },
   ];
@@ -83,7 +95,7 @@ function Header() {
             Đăng nhập
           </Link>
         )}
-        <button type="button" onClick={() => setIsOpen(!isOpen)} className="text-[#000]">
+        <button type="button" onClick={() => setIsOpen(!isOpen)} className="text-[#000]" aria-label="Mở menu">
           {isOpen ? <X size={28} /> : <Menu size={28} />}
         </button>
       </div>
@@ -94,6 +106,7 @@ function Header() {
             .filter((item) => {
               if (item.requireAuth && !isLoggedIn) return false;
               if (item.requireManageNews && !canManageNews) return false;
+              if (item.requireManageItems && !canManageItems) return false;
               return true;
             })
             .map((item) => (
