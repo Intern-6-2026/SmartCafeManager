@@ -374,6 +374,7 @@ function SaleManager() {
     };
   }, []);
 
+  
   return (
     <div className="sale-manager">
       <header>
