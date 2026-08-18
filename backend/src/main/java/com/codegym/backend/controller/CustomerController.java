@@ -52,19 +52,25 @@ public class CustomerController {
 
         orderService.updateTableServiceStatus(tableId, status);
 
-        // Notify Realtime: Báo ngay lập tức lên màn hình Sơ đồ bàn của Nhân viên
+        // Lấy tên bàn từ DB để hiển thị lên Toast thông báo phía Nhân viên
+        Tables table = staffOrderService.getTableInfo(tableId);
+        String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
+
+        // Notify Realtime: Báo ngay lập tức lên màn hình Sơ đồ bàn & Thông báo
         messagingTemplate.convertAndSend(
                 "/topic/staff/tables",
                 Map.of(
                         "event", "CALL_SERVICE",
                         "tableId", tableId,
-                        "status", status.name()
+                        "tableName", tableName,
+                        "status", status.name(),
+                        "timestamp", System.currentTimeMillis()
                 )
         );
 
         String message = status == ServiceStatus.CALL_STAFF 
-                ? "Bàn " + tableId + " đang gọi nhân viên!" 
-                : "Đã tiếp nhận yêu cầu!";
+                ? "Đã gửi yêu cầu gọi nhân viên thành công!" 
+                : "Đã gửi yêu cầu thanh toán thành công!";
 
         return ResponseEntity.ok(Map.of("message", message));
     }
@@ -81,9 +87,7 @@ public class CustomerController {
     @PostMapping("/cart/add")
     public ResponseEntity<Map<String, String>> addItemToCart(@Valid @RequestBody CartItemRequestDTO dto) {
         cartService.addItemToCart(dto.getTableId(), dto.getItemId(), dto.getQuantity(), dto.getNote());
-        
         notifyCartUpdate(dto.getTableId());
-        
         return ResponseEntity.ok(Map.of("message", "Đã thêm món vào giỏ hàng tạm!"));
     }
 
@@ -102,7 +106,6 @@ public class CustomerController {
 
         cartService.updateCartItemDetail(tableId, itemId, quantity, note);
         notifyCartUpdate(tableId);
-        
         return ResponseEntity.ok(Map.of("message", "Cập nhật giỏ hàng thành công!"));
     }
 
@@ -113,7 +116,6 @@ public class CustomerController {
             
         cartService.removeItemFromCart(tableId, itemId);
         notifyCartUpdate(tableId);
-        
         return ResponseEntity.ok(Map.of("message", "Đã xóa món ăn khỏi giỏ hàng!"));
     }
 
@@ -121,7 +123,6 @@ public class CustomerController {
     public ResponseEntity<Map<String, String>> clearCart(@RequestParam Long tableId) {
         cartService.clearTemporaryCart(tableId);
         notifyCartUpdate(tableId);
-        
         return ResponseEntity.ok(Map.of("message", "Đã xóa toàn bộ món trong giỏ hàng tạm!"));
     }
 
@@ -133,12 +134,16 @@ public class CustomerController {
     public ResponseEntity<Map<String, String>> confirmOrder(@RequestParam Long tableId) {
         cartService.confirmOrder(tableId);
 
-        // 1. Thông báo cho Nhân viên/Bếp biết có đơn mới cần duyệt/nấu
+        Tables table = staffOrderService.getTableInfo(tableId);
+        String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
+
+        // 1. Thông báo cho Nhân viên/Bếp biết có đơn mới
         messagingTemplate.convertAndSend(
                 "/topic/staff/tables",
                 Map.of(
                         "event", "NEW_ORDER",
                         "tableId", tableId,
+                        "tableName", tableName,
                         "timestamp", System.currentTimeMillis()
                 )
         );
@@ -164,12 +169,17 @@ public class CustomerController {
     public ResponseEntity<Map<String, String>> processCashPayment(@RequestParam Long tableId) {
         paymentService.processCashPayment(tableId);
 
+        Tables table = staffOrderService.getTableInfo(tableId);
+        String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
+
         // Báo cho Nhân viên đến bàn thu tiền
         messagingTemplate.convertAndSend(
                 "/topic/staff/tables",
                 Map.of(
                         "event", "REQUEST_CASH_PAYMENT",
-                        "tableId", tableId
+                        "tableId", tableId,
+                        "tableName", tableName,
+                        "timestamp", System.currentTimeMillis()
                 )
         );
 
@@ -185,9 +195,6 @@ public class CustomerController {
     // HELPER METHODS
     // ==========================================
 
-    /**
-     * Đồng bộ Giỏ hàng tạm giữa các thiết bị đang quét chung 1 mã QR bàn
-     */
     private void notifyCartUpdate(Long tableId) {
         messagingTemplate.convertAndSend(
                 "/topic/tables/" + tableId + "/cart",
