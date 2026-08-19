@@ -15,7 +15,7 @@ import {
   getApiErrorMessage,
   getActiveOrder,
   staffConfirmOrder,
-  staffServeTable,
+  staffServeTable
 } from "../../services/apiService";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + "đ";
