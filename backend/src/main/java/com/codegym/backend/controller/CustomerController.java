@@ -16,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -24,6 +23,7 @@ import java.util.Map;
 @CrossOrigin("*")
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("null")
 public class CustomerController {
 
     private final CartService cartService;
@@ -32,7 +32,10 @@ public class CustomerController {
     private final StaffOrderService staffOrderService;
     private final SimpMessagingTemplate messagingTemplate;
 
+    // ==========================================
     // I. THÔNG TIN BÀN & GỌI PHỤC VỤ
+    // ==========================================
+
     @GetMapping("/table-info/{tableId}")
     public ResponseEntity<Tables> getTableInfo(@PathVariable Long tableId) {
         return ResponseEntity.ok(staffOrderService.getTableInfo(tableId));
@@ -49,19 +52,33 @@ public class CustomerController {
 
         orderService.updateTableServiceStatus(tableId, status);
 
-        // 🟢 CHỈ BẮN SOCKET KHI KHÁCH GỌI PHỤC VỤ (CALL_STAFF)
-        // Nếu là REQUESTING_BILL thì để API /payment/cash xử lý, tránh bắn trùng 2 lần.
-        if (status == ServiceStatus.CALL_STAFF) {
-            String message = "Bàn " + tableId + " đang gọi nhân viên!";
-            notifyStaffAndKitchen(tableId, "CALL_STAFF", message);
-            notifyCustomerTable(tableId, "CALL_STAFF", message);
-            return ResponseEntity.ok(Map.of("message", message));
-        }
+        // Lấy tên bàn từ DB để hiển thị lên Toast thông báo phía Nhân viên
+        Tables table = staffOrderService.getTableInfo(tableId);
+        String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
 
-        return ResponseEntity.ok(Map.of("message", "Đã tiếp nhận yêu cầu!"));
+        // Notify Realtime: Báo ngay lập tức lên màn hình Sơ đồ bàn & Thông báo
+        messagingTemplate.convertAndSend(
+                "/topic/staff/tables",
+                Map.of(
+                        "event", "CALL_SERVICE",
+                        "tableId", tableId,
+                        "tableName", tableName,
+                        "status", status.name(),
+                        "timestamp", System.currentTimeMillis()
+                )
+        );
+
+        String message = status == ServiceStatus.CALL_STAFF 
+                ? "Đã gửi yêu cầu gọi nhân viên thành công!" 
+                : "Đã gửi yêu cầu thanh toán thành công!";
+
+        return ResponseEntity.ok(Map.of("message", message));
     }
 
-    // II. GIỎ HÀNG TẠM
+    // ==========================================
+    // II. GIỎ HÀNG TẠM (ĐỒNG BỘ MULTI-DEVICE CÙNG BÀN)
+    // ==========================================
+
     @GetMapping("/cart/{tableId}")
     public ResponseEntity<CartResponseDTO> getCartOverview(@PathVariable Long tableId) {
         return ResponseEntity.ok(cartService.getCartOverview(tableId));
@@ -70,8 +87,7 @@ public class CustomerController {
     @PostMapping("/cart/add")
     public ResponseEntity<Map<String, String>> addItemToCart(@Valid @RequestBody CartItemRequestDTO dto) {
         cartService.addItemToCart(dto.getTableId(), dto.getItemId(), dto.getQuantity(), dto.getNote());
-        
-        notifyCustomerTable(dto.getTableId(), "CART_UPDATED", "Giỏ hàng vừa được cập nhật!");
+        notifyCartUpdate(dto.getTableId());
         return ResponseEntity.ok(Map.of("message", "Đã thêm món vào giỏ hàng tạm!"));
     }
 
@@ -84,12 +100,12 @@ public class CustomerController {
 
         if (quantity != null && quantity <= 0) {
             cartService.removeItemFromCart(tableId, itemId);
-            notifyCustomerTable(tableId, "CART_UPDATED", "Đã xóa món khỏi giỏ hàng!");
+            notifyCartUpdate(tableId);
             return ResponseEntity.ok(Map.of("message", "Đã xóa món khỏi giỏ hàng!"));
         }
 
         cartService.updateCartItemDetail(tableId, itemId, quantity, note);
-        notifyCustomerTable(tableId, "CART_UPDATED", "Giỏ hàng đã thay đổi!");
+        notifyCartUpdate(tableId);
         return ResponseEntity.ok(Map.of("message", "Cập nhật giỏ hàng thành công!"));
     }
 
@@ -97,34 +113,75 @@ public class CustomerController {
     public ResponseEntity<Map<String, String>> removeItemFromCart(
             @RequestParam Long tableId,
             @PathVariable Long itemId) {
+            
         cartService.removeItemFromCart(tableId, itemId);
-        notifyCustomerTable(tableId, "CART_UPDATED", "Đã xóa món khỏi giỏ hàng!");
+        notifyCartUpdate(tableId);
         return ResponseEntity.ok(Map.of("message", "Đã xóa món ăn khỏi giỏ hàng!"));
     }
 
     @DeleteMapping("/cart/clear")
     public ResponseEntity<Map<String, String>> clearCart(@RequestParam Long tableId) {
         cartService.clearTemporaryCart(tableId);
-        notifyCustomerTable(tableId, "CART_UPDATED", "Giỏ hàng đã bị xóa sạch!");
+        notifyCartUpdate(tableId);
         return ResponseEntity.ok(Map.of("message", "Đã xóa toàn bộ món trong giỏ hàng tạm!"));
     }
 
-    // III. BẤM GỌI MÓN
+    // ==========================================
+    // III. BẤM GỌI MÓN (SUBMIT ORDER)
+    // ==========================================
+
     @PostMapping("/confirm-order")
     public ResponseEntity<Map<String, String>> confirmOrder(@RequestParam Long tableId) {
         cartService.confirmOrder(tableId);
+
+        Tables table = staffOrderService.getTableInfo(tableId);
+        String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
+
+        // 1. Thông báo cho Nhân viên/Bếp biết có đơn mới
+        messagingTemplate.convertAndSend(
+                "/topic/staff/tables",
+                Map.of(
+                        "event", "NEW_ORDER",
+                        "tableId", tableId,
+                        "tableName", tableName,
+                        "timestamp", System.currentTimeMillis()
+                )
+        );
+
+        // 2. Đồng bộ giỏ hàng & danh sách đơn hàng cho Khách hàng tại bàn
+        notifyCartUpdate(tableId);
+        messagingTemplate.convertAndSend(
+                "/topic/tables/" + tableId + "/orders",
+                Map.of(
+                        "event", "ORDER_PLACED",
+                        "message", "Đơn hàng đã được gửi thành công!"
+                )
+        );
+
         return ResponseEntity.ok(Map.of("message", "Đã gửi đơn hàng thành công xuống bếp!"));
     }
 
+    // ==========================================
     // IV. YÊU CẦU THANH TOÁN & HÓA ĐƠN
+    // ==========================================
 
     @PostMapping("/payment/cash")
     public ResponseEntity<Map<String, String>> processCashPayment(@RequestParam Long tableId) {
-        // 🟢 1. Trong paymentService đã tự động cập nhật DB + bắn Socket PAYMENT_REQUESTED cho Staff
         paymentService.processCashPayment(tableId);
-        
-        // 🟢 2. Chỉ gửi thông báo phản hồi cho riêng bàn của Khách hàng đó
-        notifyCustomerTable(tableId, "WAITING_PAYMENT", "Đã gửi yêu cầu, vui lòng chờ nhân viên tới thu tiền mặt!");
+
+        Tables table = staffOrderService.getTableInfo(tableId);
+        String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
+
+        // Báo cho Nhân viên đến bàn thu tiền
+        messagingTemplate.convertAndSend(
+                "/topic/staff/tables",
+                Map.of(
+                        "event", "REQUEST_CASH_PAYMENT",
+                        "tableId", tableId,
+                        "tableName", tableName,
+                        "timestamp", System.currentTimeMillis()
+                )
+        );
 
         return ResponseEntity.ok(Map.of("message", "Đã gửi yêu cầu thanh toán tiền mặt. Vui lòng chờ nhân viên!"));
     }
@@ -134,32 +191,17 @@ public class CustomerController {
         return ResponseEntity.ok(paymentService.getInvoiceSummaryDTO(tableId));
     }
 
-    // HELPER WEBSOCKET
-    private void notifyStaffAndKitchen(Long tableId, String type, String message) {
-        try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("tableId", tableId);
-            payload.put("type", type);
-            payload.put("message", message);
-            payload.put("timestamp", System.currentTimeMillis());
-            
-            messagingTemplate.convertAndSend("/topic/table-events", payload);
-        } catch (Exception e) {
-            log.error("Lỗi gửi WebSocket tới /topic/table-events: {}", e.getMessage());
-        }
-    }
+    // ==========================================
+    // HELPER METHODS
+    // ==========================================
 
-    private void notifyCustomerTable(Long tableId, String type, String message) {
-        try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("tableId", tableId);
-            payload.put("type", type);
-            payload.put("message", message);
-            payload.put("timestamp", System.currentTimeMillis());
-
-            messagingTemplate.convertAndSend("/topic/table/" + tableId, payload);
-        } catch (Exception e) {
-            log.error("Lỗi gửi WebSocket tới /topic/table/{}: {}", tableId, e.getMessage());
-        }
+    private void notifyCartUpdate(Long tableId) {
+        messagingTemplate.convertAndSend(
+                "/topic/tables/" + tableId + "/cart",
+                Map.of(
+                        "event", "CART_UPDATED",
+                        "tableId", tableId
+                )
+        );
     }
 }

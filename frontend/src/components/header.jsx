@@ -46,6 +46,13 @@ function Header() {
     { name: "Xem Menu", path: "/menu/table/1" },
     { name: "Đặt món", path: "/menu/table/1" },
     { name: "Tin tức", path: "/news" },
+    // Dành riêng cho Admin: Quản lý nhân viên & khách hàng
+    {
+      name: "Quản lý nhân viên & khách hàng",
+      path: "/admin/employees",
+      requireAuth: true,
+      requireAdmin: true,
+    },
     // Dành riêng cho Admin: Quản lý thu nhập & Quản lý tin tức
     {
       name: "Thống kê thu nhập",

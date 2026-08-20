@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.codegym.backend.dto.TableOrderInvoiceDTO;
 import com.codegym.backend.dto.TableOrderSummaryDTO;
@@ -81,7 +83,7 @@ public class PaymentServiceImpl implements PaymentService {
                     detail.setStatus(StatusOrderDetail.SERVED);
                 }
             }
-            orderDetailRepository.saveAll(details); // Đã bọc kiểm tra không rỗng
+            orderDetailRepository.saveAll(details);
         }
 
         // 3. GIẢI PHÓNG BÀN: Cập nhật trạng thái bàn về trống để đón khách mới
@@ -91,6 +93,9 @@ public class PaymentServiceImpl implements PaymentService {
             table.setIsOccupied(false);
             tablesRepository.save(table);
         }
+
+        // Bắn Socket thông báo đã giải phóng bàn thành công
+        notifyTableEvents(tableId, "TABLE_CLEARED", "Bàn " + tableId + " đã hoàn tất thanh toán và sẵn sàng đón khách mới!");
     }
 
     @Override
@@ -166,17 +171,34 @@ public class PaymentServiceImpl implements PaymentService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     *  CHỈ BẮN WEBSOCKET KHI CSDL ĐÃ COMMIT THÀNH CÔNG (TRÁNH RACE CONDITION)
+     */
     private void notifyTableEvents(Long tableId, String type, String message) {
-        try {
-            Map<String, Object> payload = Map.of(
-                "tableId", tableId,
-                "type", type,
-                "message", message,
-                "timestamp", System.currentTimeMillis()
-            );
-            messagingTemplate.convertAndSend("/topic/table-events", payload);
-        } catch (Exception e) {
-            log.error("Lỗi bắn WebSocket tại PaymentService cho bàn {}: {}", tableId, e.getMessage());
+        Runnable sendTask = () -> {
+            try {
+                Map<String, Object> payload = Map.of(
+                    "tableId", tableId,
+                    "type", type,
+                    "message", message,
+                    "timestamp", System.currentTimeMillis()
+                );
+                messagingTemplate.convertAndSend("/topic/table-events", payload);
+            } catch (Exception e) {
+                log.error("Lỗi bắn WebSocket tại PaymentService cho bàn {}: {}", tableId, e.getMessage());
+            }
+        };
+
+        // Kiểm tra nếu đang có Transaction -> Chờ COMMIT xong mới chạy sendTask
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sendTask.run();
+                }
+            });
+        } else {
+            sendTask.run();
         }
     }
 }

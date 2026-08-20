@@ -19,8 +19,9 @@ import AdminNewsDetail from "../pages/news/AdminNewsDetail";
 import InvoiceManagement from "../pages/InvoiceManagement/InvoiceManagement";
 import RevenueDashboard from "../pages/RevenueDashboard/RevenueDashboard";
 import RequireRole from "../components/RequireRole";
-import SaleManager from "../pages/sale-manager/saleManager"
+import SaleManager from "../pages/sale-manager/saleManager";
 import FeedbackManager from "../pages/feedback-manager/feedbackManager";
+import EmployeeManagement from "../pages/EmployeeManagement/EmployeeManagement";
 
 export default function AppRoutes() {
   return (
@@ -105,26 +106,24 @@ export default function AppRoutes() {
           }
         />
 
+        {/* Quản lý Nhân viên (Chỉ dành cho ADMIN) */}
         <Route
-            path="/menu"
-            element={<ClientMenu />}
-        />
-        
-        <Route 
-            path="/payment-success" 
-            element={<PaymentSuccess />} 
-        />
-
-        <Route 
-            path="/sale-manager" 
-            element={<SaleManager />} 
+          path="/admin/employees"
+          element={
+            <RequireRole roles={["ADMIN"]}>
+              <EmployeeManagement />
+            </RequireRole>
+          }
         />
 
-        <Route 
-            path="/feedback-manager" 
-            element={<FeedbackManager />} 
-          />
-        </Routes>
+        <Route path="/menu" element={<ClientMenu />} />
+
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+
+        <Route path="/sale-manager" element={<SaleManager />} />
+
+        <Route path="/feedback-manager" element={<FeedbackManager />} />
+      </Routes>
     </BrowserRouter>
   );
 }
