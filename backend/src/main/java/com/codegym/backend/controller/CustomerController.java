@@ -46,17 +46,21 @@ public class CustomerController {
             @RequestParam Long tableId,
             @RequestParam ServiceStatus status
     ) {
-        if (status != ServiceStatus.CALL_STAFF && status != ServiceStatus.REQUESTING_BILL) {
+        if (status == ServiceStatus.REQUESTING_BILL) {
+            // Tái sử dụng luôn luồng thanh toán chuẩn để cập nhật cả Bàn và Hóa đơn
+            paymentService.processCashPayment(tableId);
+            return ResponseEntity.ok(Map.of("message", "Đã gửi yêu cầu thanh toán thành công!"));
+        }
+
+        if (status != ServiceStatus.CALL_STAFF) {
             return ResponseEntity.badRequest().body(Map.of("message", "Yêu cầu không hợp lệ!"));
         }
 
         orderService.updateTableServiceStatus(tableId, status);
 
-        // Lấy tên bàn từ DB để hiển thị lên Toast thông báo phía Nhân viên
         Tables table = staffOrderService.getTableInfo(tableId);
         String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
 
-        // Notify Realtime: Báo ngay lập tức lên màn hình Sơ đồ bàn & Thông báo
         messagingTemplate.convertAndSend(
                 "/topic/staff/tables",
                 Map.of(
@@ -68,11 +72,7 @@ public class CustomerController {
                 )
         );
 
-        String message = status == ServiceStatus.CALL_STAFF 
-                ? "Đã gửi yêu cầu gọi nhân viên thành công!" 
-                : "Đã gửi yêu cầu thanh toán thành công!";
-
-        return ResponseEntity.ok(Map.of("message", message));
+        return ResponseEntity.ok(Map.of("message", "Đã gửi yêu cầu gọi nhân viên thành công!"));
     }
 
     // ==========================================
@@ -167,21 +167,9 @@ public class CustomerController {
 
     @PostMapping("/payment/cash")
     public ResponseEntity<Map<String, String>> processCashPayment(@RequestParam Long tableId) {
+        // Bên trong Service đã bao gồm logic: 
+        // 1. Cập nhật Order, 2. Cập nhật Table, 3. Bắn WebSocket thông báo
         paymentService.processCashPayment(tableId);
-
-        Tables table = staffOrderService.getTableInfo(tableId);
-        String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
-
-        // Báo cho Nhân viên đến bàn thu tiền
-        messagingTemplate.convertAndSend(
-                "/topic/staff/tables",
-                Map.of(
-                        "event", "REQUEST_CASH_PAYMENT",
-                        "tableId", tableId,
-                        "tableName", tableName,
-                        "timestamp", System.currentTimeMillis()
-                )
-        );
 
         return ResponseEntity.ok(Map.of("message", "Đã gửi yêu cầu thanh toán tiền mặt. Vui lòng chờ nhân viên!"));
     }

@@ -50,14 +50,24 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public void requestCheckout(Long tableId, PaymentMethod paymentMethod) {
+        // 1. Tìm hóa đơn đang MỞ của bàn này
         TableOrder order = tableOrderRepository
                 .findByTableTableIdAndStatusIn(tableId, List.of(StatusTableOrder.OPEN, StatusTableOrder.WAITING_PAYMENT))
                 .orElseThrow(() -> new RuntimeException("Bàn " + tableId + " không có hóa đơn mở!"));
 
+        // 2. Chuyển trạng thái hóa đơn -> WAITING_PAYMENT
         order.setStatus(StatusTableOrder.WAITING_PAYMENT);
         order.setPaymentMethod(paymentMethod);
         tableOrderRepository.save(order);
 
+        // 3. THÊM MỚI: Chuyển trạng thái bàn -> REQUESTING_BILL
+        Tables table = order.getTable();
+        if (table != null) {
+            table.setServiceStatus(ServiceStatus.REQUESTING_BILL);
+            tablesRepository.save(table);
+        }
+
+        // 4. Bắn Socket thông báo cho Nhân viên/Thu ngân (Sẽ nháy đỏ trên màn hình thu ngân)
         notifyTableEvents(tableId, "PAYMENT_REQUESTED", "Bàn " + tableId + " yêu cầu thanh toán (" + paymentMethod + ")");
     }
 
