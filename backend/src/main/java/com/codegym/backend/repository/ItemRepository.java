@@ -34,4 +34,5 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             + "WHERE i.deletedAt IS NULL "
             + "ORDER BY i.totalOrderCount DESC")
     List<ItemResponse> findBestSellerItems(Pageable pageable);
+    List<Item> findByIsAvailableFalse();
 }

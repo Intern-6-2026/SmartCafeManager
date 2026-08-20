@@ -69,11 +69,11 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> 
     );
 
 
-    // ==========================================
+    // ===========================================
     // 3. BÁO CÁO & THỐNG KÊ (STATISTICS)
     // ==========================================
 
-    // 🟢 Thống kê doanh thu theo từng danh mục (Linh hoạt truyền tham số Trạng thái)
+    // 🟢 Thống kê doanh thu theo từng danh mục (Linh hoạt truyền tham số Trạng thái)bh
     @Query("SELECT c.categoryId, c.categoryName, COALESCE(SUM(od.quantity * od.unitPrice), 0) " +
            "FROM OrderDetail od " +
            "JOIN od.item i " +

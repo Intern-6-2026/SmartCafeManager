@@ -13,7 +13,7 @@ public interface StaffOrderService {
 
     Tables getTableInfo(Long tableId);
 
-    // 💡 Đổi Map<String, Object> thành ActiveOrderDTO ở đây
+    // 💡 Đổi Map<String, Object> thành ActiveOrderDTO ở dấydada
     ActiveOrderDTO getActiveOrderByTable(Long tableId);
 
     //  (trả về DTO):
@@ -36,4 +36,6 @@ public interface StaffOrderService {
     void deleteOrderItem(Long orderDetailId);
     void serveAllItemsByTable(Long tableId);
     void confirmAllNewItemsByTable(Long tableId);
+    
+    
 }
