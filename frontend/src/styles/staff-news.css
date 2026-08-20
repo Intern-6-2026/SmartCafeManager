@@ -1,0 +1,228 @@
+.news-manager{
+  --bg:#F6EEE1; --tan-light:#E7C9A1; --tan:#D5A874; --tan-deep:#9C6B3A;
+  --ink:#33261A; --ink-soft:#6E5C4A; --card:#FFFDF9; --line:#E4D2B8;
+  --ok:#3F9E5A; --danger:#D6544A; --radius:12px;
+  min-height:100vh; background:var(--bg); color:var(--ink);
+  font-family:'Be Vietnam Pro',sans-serif; -webkit-font-smoothing:antialiased;
+}
+.news-manager *{box-sizing:border-box;}
+
+.news-manager .topbar{
+  background:linear-gradient(160deg,var(--tan-light),var(--tan));
+  padding:14px 22px; display:flex; align-items:center; justify-content:space-between;
+}
+.news-manager .brand{display:flex; align-items:center; gap:10px;}
+.news-manager .brand-mark{
+  width:38px;height:38px;border-radius:50%;background:var(--ink);color:var(--tan-light);
+  display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:19px;
+}
+.news-manager .brand-name{font-family:'Fraunces',serif;font-weight:600;font-size:20px;letter-spacing:.5px;}
+.news-manager .topbar-right{font-size:13px;color:#4A3627;}
+
+.news-manager .wrap{max-width:1080px; margin:0 auto; padding:22px;}
+
+/* Toolbar */
+.news-manager .news-toolbar{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap;}
+.news-manager .filter-left{display:flex; gap:10px; flex-wrap:wrap;}
+.news-manager .news-search,
+.news-manager .news-status-filter{
+  font-family:inherit; font-size:13px; color:var(--ink);
+  border:1px solid var(--line); border-radius:8px; padding:9px 12px; background:#fff; outline:none;
+}
+.news-manager .news-search{min-width:240px;}
+.news-manager .news-search:focus,
+.news-manager .news-status-filter:focus{border-color:var(--tan-deep);}
+.news-manager .news-add-btn{
+  background:var(--tan-deep); color:#fff; border:none; border-radius:8px;
+  padding:10px 18px; font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer;
+}
+.news-manager .news-add-btn:hover{filter:brightness(1.05);}
+
+/* Bảng */
+.news-manager .news-table-wrap{background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden;}
+.news-manager .news-table{width:100%; border-collapse:collapse;}
+.news-manager .news-table thead th{
+  text-align:left; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px;
+  color:var(--ink-soft); padding:13px 16px; background:#F3E9D8; border-bottom:1px solid var(--line);
+}
+.news-manager .news-table tbody td{padding:12px 16px; border-bottom:1px solid var(--line); font-size:13.5px; vertical-align:middle;}
+.news-manager .news-table tbody tr:last-child td{border-bottom:none;}
+.news-manager .news-table tbody tr:hover{background:#FBF4E7;}
+
+.news-manager .title-cell{display:flex; align-items:center; gap:12px;}
+.news-manager .title-thumb{width:56px; height:38px; object-fit:cover; border-radius:6px; flex-shrink:0; border:1px solid var(--line);}
+.news-manager .title-text{font-weight:500; line-height:1.4;}
+
+.news-manager .viewer-link-container{
+  text-align: center; /* Centers horizontally */
+}
+.news-manager .viewers-link{
+  background:none; border:none; color:var(--tan-deep); font-family:inherit; font-size:14px;
+  font-weight:700; cursor:pointer; text-decoration:underline;
+}
+.news-manager .status-badge-container{text-align: center;}
+.news-manager .status-badge{font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; white-space:nowrap;}
+.news-manager .status-badge.status-published{color:var(--ok); background:#E1F5EE;}
+.news-manager .status-badge.status-pending{color:#8A6410; background:#FBF0C9;}
+.news-manager .status-badge.status-rejected{color:#993536; background:#FBEAF0;}
+.news-manager .news-error{margin-bottom:14px; padding:11px 15px; background:#FBEAEA; border:1px solid #D07A7A; border-radius:10px; font-size:13px; color:#8B2C2C;}
+
+.news-manager .action-cell{display:flex; gap:8px;}
+.news-manager .act-btn{
+  width:32px; height:32px; border-radius:7px; border:1px solid var(--line); background:#fff;
+  cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;
+}
+.news-manager .act-btn.edit{color:#2C6BB3; border-color:#B9D2EC;}
+.news-manager .act-btn.edit:hover{background:#EAF2FB;}
+.news-manager .act-btn.del{color:var(--danger); border-color:#E6B4AF;}
+.news-manager .act-btn.del:hover{background:#FBEAEA;}
+.news-manager .act-btn.approve{width:auto; padding:0 12px; color:#0F6E56; border-color:#9FD9C6; font-weight:700; font-size:12.5px;}
+.news-manager .act-btn.approve:hover{background:#E1F5EE;}
+.news-manager .act-btn.reject{width:auto; padding:0 12px; color:#993536; border-color:#E0B0BA; font-weight:700; font-size:12.5px;}
+.news-manager .act-btn.reject:hover{background:#FBEAF0;}
+.news-manager .act-btn:disabled{opacity:.5; cursor:not-allowed;}
+.news-manager .news-empty{text-align:center; padding:40px; color:var(--ink-soft);}
+
+/* Footer + pagination */
+.news-manager .news-foot{display:flex; align-items:center; justify-content:space-between; margin-top:16px; flex-wrap:wrap; gap:10px;}
+.news-manager .news-count{font-size:13px; color:var(--ink-soft);}
+.news-manager .news-pager{display:flex; gap:4px;}
+.news-manager .pg-num,
+.news-manager .pg-btn{
+  min-width:32px; height:32px; border-radius:8px; border:1px solid var(--line);
+  background:var(--card); color:var(--ink); font-family:inherit; font-size:13px; cursor:pointer;
+}
+.news-manager .pg-num.active{background:var(--ink); color:var(--tan-light); border-color:var(--ink); font-weight:700;}
+.news-manager .pg-num:hover:not(.active),
+.news-manager .pg-btn:hover:not(:disabled){border-color:var(--tan-deep);}
+.news-manager .pg-btn:disabled{opacity:.45; cursor:not-allowed;}
+
+/* ============ Modal chung (thêm/sửa + người xem) ============ */
+.news-modal-overlay{
+  position:fixed; inset:0; background:rgba(51,38,26,.5);
+  display:flex; align-items:flex-start; justify-content:center; padding:30px 20px; z-index:150; overflow-y:auto;
+  font-family:'Be Vietnam Pro',sans-serif;
+}
+.news-modal, .viewers-modal{
+  width:100%; background:var(--card,#FFFDF9); border-radius:16px; box-shadow:0 20px 50px rgba(51,38,26,.28);
+  --ink:#33261A; --ink-soft:#6E5C4A; --line:#E4D2B8; --tan-deep:#9C6B3A; --tan-light:#E7C9A1;
+  color:var(--ink);
+}
+.news-modal{max-width:620px;}
+.viewers-modal{max-width:860px;}
+
+.news-modal-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 22px; border-bottom:1px solid var(--line);
+  font-family:'Fraunces',serif; font-size:18px; font-weight:600;
+}
+.news-x{background:none; border:none; font-size:16px; color:var(--ink-soft); cursor:pointer;}
+.news-x:hover{color:var(--ink);}
+
+.news-modal-body{padding:20px 22px; display:flex; flex-direction:column; gap:16px;}
+
+.news-field{display:flex; flex-direction:column; gap:6px;}
+.news-row{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+.news-label{font-size:13px; font-weight:600; color:var(--ink);}
+.news-label .req{color:var(--danger,#D6544A);}
+.news-input{
+  font-family:inherit; font-size:14px; color:var(--ink);
+  border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:#fff; outline:none;
+}
+.news-input:focus{border-color:var(--tan-deep);}
+.news-input.err{border-color:var(--danger,#D6544A);}
+.news-err{font-size:12px; color:var(--danger,#D6544A);}
+
+/* Thumbnail upload */
+.thumb-drop{
+  display:flex; align-items:center; justify-content:center; height:120px; border:2px dashed var(--line);
+  border-radius:10px; color:var(--ink-soft); font-size:13px; font-weight:600; cursor:pointer; background:#FCF7EE;
+}
+.thumb-drop:hover{border-color:var(--tan-deep); color:var(--tan-deep);}
+.thumb-preview{position:relative; width:100%; max-width:280px;}
+.thumb-preview img{width:100%; border-radius:10px; border:1px solid var(--line); display:block;}
+.thumb-remove{
+  position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:50%;
+  border:none; background:rgba(0,0,0,.55); color:#fff; cursor:pointer; font-size:12px;
+}
+
+/* Toggles */
+.news-toggles{display:flex; gap:26px; flex-wrap:wrap;}
+.news-toggle{display:flex; align-items:center; gap:9px; font-size:13.5px; font-weight:600; cursor:pointer; color:var(--ink);}
+.news-toggle input{display:none;}
+.news-toggle .switch{
+  width:40px; height:22px; border-radius:999px; background:#CFC3B1; position:relative; transition:background .18s;
+}
+.news-toggle .switch::after{
+  content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%;
+  background:#fff; transition:transform .18s;
+}
+.news-toggle input:checked + .switch{background:var(--tan-deep);}
+.news-toggle input:checked + .switch::after{transform:translateX(18px);}
+
+.news-modal-foot{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 22px; border-top:1px solid var(--line);
+}
+.foot-right{display:flex; gap:10px;}
+.news-btn{
+  padding:10px 20px; border-radius:8px; font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; border:1px solid transparent;
+}
+.news-btn.primary{background:var(--tan-deep); color:#fff;}
+.news-btn.ghost{background:#fff; color:var(--ink); border-color:var(--line);}
+.news-btn.danger{background:var(--danger,#D6544A); color:#fff;}
+.news-btn:hover{filter:brightness(1.04);}
+
+/* ============ Rich text editor (react-quill) ============ */
+.news-manager .rte,
+.rte{border:1px solid var(--line,#E4D2B8); border-radius:10px; overflow:hidden; background:#fff;}
+
+/* Thanh công cụ Quill khớp tông SmartCafe */
+.rte .ql-toolbar.ql-snow{
+  border:none; border-bottom:1px solid #E4D2B8; background:#F3E9D8;
+  font-family:'Be Vietnam Pro',sans-serif;
+}
+.rte .ql-container.ql-snow{
+  border:none; font-family:'Be Vietnam Pro',sans-serif; font-size:14px; color:#33261A;
+}
+.rte .ql-editor{min-height:190px; max-height:360px; line-height:1.7;}
+.rte .ql-editor.ql-blank::before{color:#A99A85; font-style:normal; font-family:'Be Vietnam Pro',sans-serif;}
+.rte .ql-editor img{max-width:100%; border-radius:8px; margin:8px 0;}
+.rte .ql-editor a{color:#2C6BB3; text-decoration:underline;}
+
+/* Đổi màu icon/nút active sang nâu SmartCafe thay vì xanh mặc định */
+.rte .ql-snow .ql-stroke{stroke:#6E5C4A;}
+.rte .ql-snow .ql-fill{fill:#6E5C4A;}
+.rte .ql-snow .ql-picker{color:#6E5C4A;}
+.rte .ql-snow.ql-toolbar button:hover .ql-stroke,
+.rte .ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.rte .ql-snow .ql-picker-label:hover .ql-stroke{stroke:#9C6B3A;}
+.rte .ql-snow.ql-toolbar button:hover .ql-fill,
+.rte .ql-snow.ql-toolbar button.ql-active .ql-fill{fill:#9C6B3A;}
+.rte .ql-snow.ql-toolbar button:hover,
+.rte .ql-snow.ql-toolbar button.ql-active,
+.rte .ql-snow .ql-picker-label:hover,
+.rte .ql-snow .ql-picker-item:hover{color:#9C6B3A;}
+
+.news-manager .act-none{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:32px; height:32px; color:#B7A88F; font-weight:700;
+}
+ 
+.news-manager .title-cell.clickable{cursor:pointer; border-radius:8px; transition:background .12s;}
+.news-manager .title-cell.clickable:hover{background:#F3E9D8;}
+.news-manager .title-cell.clickable:hover .title-text{color:var(--tan-deep); text-decoration:underline;}
+.news-manager .title-cell.clickable:focus-visible{outline:2px solid var(--tan-deep); outline-offset:2px;}
+ 
+.news-manager .summary-cell{
+  color:#6E5C4A; font-size:13px; line-height:1.5;
+  max-width:240px;
+  overflow:hidden;
+}
+.news-manager .time-cell{
+  color:#6E5C4A; font-size:12.5px; white-space:nowrap;
+}
+ 
+@media(max-width:560px){
+  .news-row{grid-template-columns:1fr;}
+}

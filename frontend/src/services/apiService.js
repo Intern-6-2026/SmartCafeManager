@@ -85,6 +85,10 @@ export const getAdminNewsById = async (id) => {
   return await axios.get(`${API_BASE_URL}/news/${id}`);
 };
 
+export const getStaffNews = async (id) => {
+  return await axios.get(`${API_BASE_URL}/news/my-news`);
+};
+
 export const createNews = async ({ title, summary, content, image }) => {
   const formData = new FormData();
   formData.append("title", title);
