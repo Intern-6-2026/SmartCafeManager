@@ -40,7 +40,7 @@ function Header() {
   };
 
   const canManageNews = roleName === "ADMIN";
-  const canManageItems = roleName === "ADMIN";
+  const canManageItems = roleName === "ADMIN" || roleName === "STAFF";
 
   const menuItems = [
     { name: "Trang chủ", path: "/home" },

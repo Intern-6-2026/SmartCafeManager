@@ -21,6 +21,12 @@ export function extractCategories(items = []) {
 
 export function canManageItems() {
   const role = (localStorage.getItem("roleName") || "").toUpperCase();
+  return role === "ADMIN" || role === "STAFF";
+}
+
+/** Thêm / sửa thông tin món — chỉ ADMIN */
+export function canEditItems() {
+  const role = (localStorage.getItem("roleName") || "").toUpperCase();
   return role === "ADMIN";
 }
 

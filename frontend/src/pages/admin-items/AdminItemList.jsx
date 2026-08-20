@@ -12,12 +12,14 @@ import {
   formatVnd,
   extractCategories,
   availabilityLabel,
+  canEditItems,
 } from "../../utils/itemHelpers";
 import { notifyError, notifySuccess } from "../../utils/toast";
 import "../../styles/admin-items.css";
 
 export default function AdminItemList() {
   const navigate = useNavigate();
+  const canEdit = canEditItems();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -80,7 +82,7 @@ export default function AdminItemList() {
     setBusyId(item.itemId);
     try {
       await restoreAdminItem(item.itemId);
-      notifySuccess("Đã khôi phục món thành công.");
+      notifySuccess("Đã chuyển món sang đang bán.");
       load();
     } catch (err) {
       notifyError(getApiErrorMessage(err, "Khôi phục món thất bại."));
@@ -98,9 +100,11 @@ export default function AdminItemList() {
             <div>
               <h1 className="page-title">Quản lý món</h1>
             </div>
-            <Link to="/admin/items/new" className="items-btn items-btn-primary">
-              + Thêm món mới
-            </Link>
+            {canEdit && (
+              <Link to="/admin/items/new" className="items-btn items-btn-primary">
+                + Thêm món mới
+              </Link>
+            )}
           </div>
 
           <div className="items-toolbar">
@@ -141,10 +145,15 @@ export default function AdminItemList() {
           {!loading && error && <div className="items-error">{error}</div>}
           {!loading && !error && visible.length === 0 && (
             <div className="items-empty">
-              Không có món phù hợp.{" "}
-              <Link to="/admin/items/new" className="items-back">
-                Thêm món đầu tiên →
-              </Link>
+              Không có món phù hợp.
+              {canEdit && (
+                <>
+                  {" "}
+                  <Link to="/admin/items/new" className="items-back">
+                    Thêm món đầu tiên →
+                  </Link>
+                </>
+              )}
             </div>
           )}
 
@@ -192,13 +201,15 @@ export default function AdminItemList() {
                       </td>
                       <td>
                         <div className="items-actions">
-                          <button
-                            type="button"
-                            className="items-btn"
-                            onClick={() => navigate(`/admin/items/${item.itemId}/edit`)}
-                          >
-                            Sửa
-                          </button>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              className="items-btn"
+                              onClick={() => navigate(`/admin/items/${item.itemId}/edit`)}
+                            >
+                              Sửa
+                            </button>
+                          )}
                           {item.isAvailable ? (
                             <button
                               type="button"
@@ -215,7 +226,7 @@ export default function AdminItemList() {
                               disabled={busyId === item.itemId}
                               onClick={() => handleRestore(item)}
                             >
-                              {busyId === item.itemId ? "…" : "Khôi phục"}
+                              {busyId === item.itemId ? "…" : "Đang bán"}
                             </button>
                           )}
                         </div>

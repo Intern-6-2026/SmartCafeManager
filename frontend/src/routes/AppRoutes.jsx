@@ -115,7 +115,7 @@ export default function AppRoutes() {
                 <Route
                     path="/admin/items"
                     element={
-                        <RequireRole roles={["ADMIN"]}>
+                        <RequireRole roles={["ADMIN", "STAFF"]}>
                             <AdminItemList />
                         </RequireRole>
                     }
