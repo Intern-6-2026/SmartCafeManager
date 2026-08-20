@@ -4,7 +4,7 @@ import { Formik, Form, Field } from "formik";
 import Header from "../../components/header";
 import Footer from "../../components/footer";
 import {
-  getAllItems,
+  getAdminItems,
   getAdminItemById,
   createAdminItem,
   updateAdminItem,
@@ -46,7 +46,7 @@ export default function AdminItemForm() {
       setLoading(true);
       setLoadError("");
       try {
-        const listRes = await getAllItems();
+        const listRes = await getAdminItems();
         const list = Array.isArray(listRes.data)
           ? listRes.data
           : listRes.data?.content || [];

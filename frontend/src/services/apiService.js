@@ -104,7 +104,15 @@ export const getBestSellerItems = async () => {
   return await axios.get(`${API_BASE_URL}/items/best-sellers`);
 };
 
-/* ===== Admin Items (Cloudinary upload qua BE) ===== */
+/* ===== Admin Items — theo API BE của Thống (/api/v1/admin/items) ===== */
+export const getAdminItems = async () => {
+  return await axios.get(`${API_BASE_URL}/admin/items`);
+};
+
+export const getAdminDeletedItems = async () => {
+  return await axios.get(`${API_BASE_URL}/admin/items/deleted`);
+};
+
 export const getAdminItemById = async (id) => {
   return await axios.get(`${API_BASE_URL}/admin/items/${id}`);
 };
@@ -162,6 +170,10 @@ export const updateAdminItem = async (
 
 export const deleteAdminItem = async (id) => {
   return await axios.delete(`${API_BASE_URL}/admin/items/${id}`);
+};
+
+export const restoreAdminItem = async (id) => {
+  return await axios.put(`${API_BASE_URL}/admin/items/${id}/restore`);
 };
 
 export const getNewsList = async (page = 0, size = 6) => {

@@ -3,8 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import Header from "../../components/header";
 import Footer from "../../components/footer";
 import {
-  getAllItems,
+  getAdminItems,
   deleteAdminItem,
+  restoreAdminItem,
   getApiErrorMessage,
 } from "../../services/apiService";
 import {
@@ -28,7 +29,7 @@ export default function AdminItemList() {
   const load = () => {
     setLoading(true);
     setError("");
-    getAllItems()
+    getAdminItems()
       .then((res) => {
         const data = Array.isArray(res.data) ? res.data : res.data?.content || [];
         setItems(data);
@@ -70,6 +71,19 @@ export default function AdminItemList() {
       load();
     } catch (err) {
       notifyError(getApiErrorMessage(err, "Xóa món thất bại."));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleRestore = async (item) => {
+    setBusyId(item.itemId);
+    try {
+      await restoreAdminItem(item.itemId);
+      notifySuccess("Đã khôi phục món thành công.");
+      load();
+    } catch (err) {
+      notifyError(getApiErrorMessage(err, "Khôi phục món thất bại."));
     } finally {
       setBusyId(null);
     }
@@ -185,7 +199,7 @@ export default function AdminItemList() {
                           >
                             Sửa
                           </button>
-                          {item.isAvailable && (
+                          {item.isAvailable ? (
                             <button
                               type="button"
                               className="items-btn items-btn-danger"
@@ -193,6 +207,15 @@ export default function AdminItemList() {
                               onClick={() => handleDelete(item)}
                             >
                               {busyId === item.itemId ? "…" : "Ngưng bán"}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="items-btn items-btn-primary"
+                              disabled={busyId === item.itemId}
+                              onClick={() => handleRestore(item)}
+                            >
+                              {busyId === item.itemId ? "…" : "Khôi phục"}
                             </button>
                           )}
                         </div>

@@ -115,7 +115,7 @@ export default function AppRoutes() {
                 <Route
                     path="/admin/items"
                     element={
-                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                        <RequireRole roles={["ADMIN"]}>
                             <AdminItemList />
                         </RequireRole>
                     }
@@ -123,7 +123,7 @@ export default function AppRoutes() {
                 <Route
                     path="/admin/items/new"
                     element={
-                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                        <RequireRole roles={["ADMIN"]}>
                             <AdminItemForm />
                         </RequireRole>
                     }
@@ -131,7 +131,7 @@ export default function AppRoutes() {
                 <Route
                     path="/admin/items/:id/edit"
                     element={
-                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                        <RequireRole roles={["ADMIN"]}>
                             <AdminItemForm />
                         </RequireRole>
                     }
