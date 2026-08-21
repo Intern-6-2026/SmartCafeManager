@@ -34,7 +34,7 @@ public class FeedbackServiceImpl implements FeedbackService {
     private final OrderDetailRepository orderDetailRepository;
     private final CloudinaryService cloudinaryService;
 
-    //  1. TẠO FEEDBACK VÀ TRẢ VỀ DTO
+    // 1. TẠO FEEDBACK VÀ TRẢ VỀ DTO
     @Override
     @Transactional
     public FeedbackResponseDTO createFeedback(FeedbackRequestDTO dto) {
@@ -46,8 +46,7 @@ public class FeedbackServiceImpl implements FeedbackService {
         if (dto.getOrderId() != null) {
             boolean isItemInOrder = orderDetailRepository.existsByOrderTableOrderIdAndItemItemId(
                     dto.getOrderId(),
-                    dto.getItemId()
-            );
+                    dto.getItemId());
 
             if (!isItemInOrder) {
                 throw new RuntimeException("Đơn hàng #" + dto.getOrderId() + " không chứa món ăn này!");
@@ -72,7 +71,7 @@ public class FeedbackServiceImpl implements FeedbackService {
 
         if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
             customer = customerRepository.findByAccountUsername(auth.getName()).orElse(null);
-            
+
             if (customer != null) {
                 if (!StringUtils.hasText(email) && customer.getAccount() != null) {
                     email = customer.getAccount().getEmail();

@@ -13,4 +13,6 @@ public class NewsListResponse {
     private String summary;
     private String imageUrl;
     private Date createdAt;
+    private String author;
+    private String status;
 }

@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.codegym.backend.dto.EmployeeRequest;
 import com.codegym.backend.service.EmployeeService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -36,7 +37,7 @@ public class AdminEmployeeController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createEmployee(
-            @ModelAttribute EmployeeRequest request,
+            @Valid @ModelAttribute EmployeeRequest request,
             @RequestPart(value = "image", required = false) MultipartFile image) {
         try {
             return ResponseEntity.ok(employeeService.createEmployee(request, image));
@@ -49,7 +50,7 @@ public class AdminEmployeeController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateEmployee(
             @PathVariable Long id,
-            @ModelAttribute EmployeeRequest request,
+            @Valid @ModelAttribute EmployeeRequest request,
             @RequestPart(value = "image", required = false) MultipartFile image) {
         try {
             return ResponseEntity.ok(employeeService.updateEmployee(id, request, image));

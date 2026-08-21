@@ -6,6 +6,7 @@ import com.codegym.backend.enums.Gender;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,6 +19,7 @@ public class UpdateProfileRequest {
     @NotBlank(message = "Họ và tên không được để trống")
     private String fullName;
 
+    @Past
     private Date dateOfBirth;
 
     private Gender gender;

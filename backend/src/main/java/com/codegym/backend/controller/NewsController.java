@@ -82,6 +82,17 @@ public class NewsController {
     }
 
     /**
+     * STAFF: Lấy danh sách bài viết của chính mình.
+     */
+    @GetMapping("/my-news")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<?> getMyNews(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(newsService.getMyNews(page, size));
+    }
+
+    /**
      * Xóa mềm một bài viết tin tức.
      */
     @DeleteMapping("/{id}")
@@ -123,5 +134,16 @@ public class NewsController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    /**
+     * STAFF: Lấy danh sách bảng tin chung (Bài của mình + Bài người khác đã duyệt)
+     */
+    @GetMapping("/staff/feed")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<?> getStaffFeed(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(newsService.getStaffFeed(page, size));
     }
 }
