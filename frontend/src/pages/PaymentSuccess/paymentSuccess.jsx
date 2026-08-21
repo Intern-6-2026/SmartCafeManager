@@ -1,6 +1,7 @@
-import React from "react";
+import React, {useEffect} from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import "../../styles/payment-success.css";
+import { callService } from "../../services/apiService";
 
 /* PayPal chuyển hướng về đây kèm query:
    /payment-success?tableId=1&paymentId=PAYID-...&token=EC-...&PayerID=...
@@ -54,7 +55,7 @@ function PaymentSuccess() {
           </div>
         )}
 
-        <Link className="ps-back" to={tableId ? `/menu/table/${tableId}` : "/"}>
+        <Link className="ps-back" to={tableId ? `/menu` : "/"}>
           Quay lại thực đơn
         </Link>
       </div>
