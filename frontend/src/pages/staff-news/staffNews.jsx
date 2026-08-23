@@ -4,14 +4,13 @@ import "../../styles/staff-news.css";
 import NewsEditorModal from "../../components/newsEditorModal";
 import {
   getAdminNewsList,
-  getNewsList,
-  getStaffNews,
   getNewsById,
   createNews,
   updateNews,
   deleteNews,
   changeNewsStatus,
   getApiErrorMessage,
+  getStaffFeed,
 } from "../../services/apiService";
 import { ToastService } from "../../services/toastService";
 import MenuButton from "../../components/menu-button";
@@ -21,11 +20,14 @@ const PAGE_SIZE = 10;
 const STATUS_LABEL = {
   PUBLISHED: "Đã đăng",
   PENDING: "Chờ duyệt",
-  REJECTED: "Từ chối",
 };
 
 /* Đọc role người đang đăng nhập từ localStorage */
 const getRole = () => (localStorage.getItem("roleName") || "").toUpperCase();
+
+/* Username người đang đăng nhập — để đối chiếu quyền sở hữu tin.
+   Chỉnh key nếu app bạn lưu username dưới tên khác. */
+const getUsername = () => localStorage.getItem("userName") || "";
 
 /* Định dạng ISO datetime -> "dd/mm/yyyy HH:MM" (giờ địa phương) */
 const formatDateTime = (iso) => {
@@ -53,7 +55,6 @@ function StaffNewsManager() {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [viewersOf, setViewersOf] = useState(null);
 
   const notify = (msg, type = "info") => {
     const text = String(msg);
@@ -69,25 +70,25 @@ function StaffNewsManager() {
     setLoading(true);
     setError("");
     try {
+      // Cả admin lẫn staff đều xem TẤT CẢ tin; response mới đã kèm field `author`
+      // nên không cần gọi thêm /my-news để biết tin của ai.
       const res = isAdmin
         ? await getAdminNewsList(page, PAGE_SIZE)
-        : await getNewsList(page, PAGE_SIZE);
+        : await getStaffFeed(page, PAGE_SIZE);
       const data = res.data || {};
+      console.log(res.data);
       const list = Array.isArray(data) ? data : data.content || [];
       setNews(list);
       setTotalPages(Math.max(1, data.totalPages || 1));
       setTotalElements(data.totalElements ?? list.length);
 
-      // Staff: nạp danh sách tin của mình để biết tin nào được phép sửa/xoá
+      // Staff: tin được sửa/xoá = tin có author trùng username hiện tại
       if (!isAdmin) {
-        try {
-          const mineRes = await getStaffNews();
-          const mineData = mineRes.data || {};
-          const mineList = Array.isArray(mineData) ? mineData : mineData.content || [];
-          setMyNewsIds(new Set(mineList.map((n) => n.newsId)));
-        } catch {
-          setMyNewsIds(new Set()); // không lấy được thì coi như không sở hữu tin nào
-        }
+        const me = getUsername();
+        const mineIds = list
+          .filter((n) => n.author && n.author === me)
+          .map((n) => n.newsId);
+        setMyNewsIds(new Set(mineIds));
       }
     } catch (err) {
       setNews([]);
@@ -111,6 +112,7 @@ function StaffNewsManager() {
   }, [news, keyword, statusFilter]);
 
   const openAdd = () => { setEditing(null); setEditorOpen(true); };
+  
   /* Mở modal sửa: fetch nội dung đầy đủ bằng getNewsById (danh sách thường chỉ có summary) */
   const openEdit = async (item) => {
     setBusyId(item.newsId);
@@ -203,7 +205,7 @@ function StaffNewsManager() {
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
-            {/* <select
+            <select
               className="news-status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -211,8 +213,7 @@ function StaffNewsManager() {
               <option value="">Tất cả trạng thái</option>
               <option value="PUBLISHED">Đã đăng</option>
               <option value="PENDING">Chờ duyệt</option>
-              <option value="REJECTED">Từ chối</option>
-            </select> */}
+            </select>
           </div>
           <button className="news-add-btn" onClick={openAdd}>＋ Thêm mới</button>
         </div>
@@ -224,17 +225,19 @@ function StaffNewsManager() {
             <thead>
               <tr>
                 <th style={{ width: 48 }}>#</th>
-                <th>Bài viết</th>
-                <th style={{ width: 240 }}>Tóm tắt</th>
+                <th>Tiêu đề</th>
+                <th style={{ width: 220 }}>Tóm tắt</th>
+                <th style={{ width: 130 }}>Tác giả</th>
                 <th style={{ width: 150 }}>Thời gian tạo</th>
+                <th style={{ width: 120 }}>Trạng thái</th>
                 <th style={{ width: isAdmin ? 240 : 120 }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="news-empty">Đang tải...</td></tr>
+                <tr><td colSpan={7} className="news-empty">Đang tải...</td></tr>
               ) : visible.length === 0 ? (
-                <tr><td colSpan={5} className="news-empty">Không có tin tức nào.</td></tr>
+                <tr><td colSpan={7} className="news-empty">Không có tin tức nào.</td></tr>
               ) : (
                 visible.map((n, i) => (
                   <tr key={n.newsId}>
@@ -253,7 +256,13 @@ function StaffNewsManager() {
                       </div>
                     </td>
                     <td className="summary-cell">{n.summary || "—"}</td>
+                    <td className="author-cell">{n.author || "—"}</td>
                     <td className="time-cell">{formatDateTime(n.createdAt)}</td>
+                    <td>
+                      <span className={`status-badge status-${(n.status || "").toLowerCase()}`}>
+                        {STATUS_LABEL[n.status] || n.status}
+                      </span>
+                    </td>
                     <td>
                       <div className="action-cell">
                         {/* Chỉ tin do staff hiện tại tạo (hoặc admin) mới thao tác được */}

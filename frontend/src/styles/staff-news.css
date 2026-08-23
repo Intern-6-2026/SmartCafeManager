@@ -39,7 +39,7 @@
 .news-manager .news-add-btn:hover{filter:brightness(1.05);}
 
 /* Bảng */
-.news-manager .news-table-wrap{background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden;}
+.news-manager .news-table-wrap{background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:auto;}
 .news-manager .news-table{width:100%; border-collapse:collapse;}
 .news-manager .news-table thead th{
   text-align:left; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px;
@@ -225,4 +225,8 @@
  
 @media(max-width:560px){
   .news-row{grid-template-columns:1fr;}
+}
+
+.news-manager .author-cell{
+  color:#33261A; font-size:13px; font-weight:500; white-space:nowrap;
 }
