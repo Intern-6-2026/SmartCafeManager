@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import MenuButton from "../../components/menu-button";
 
 export default function InvoiceManagement() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export default function InvoiceManagement() {
         if (endDate) params.append("endDate", endDate);
 
         const response = await fetch(
-          `/api/v1/staff/statistics/invoices?${params.toString()}`,
+          `/api/v1/admin/statistics/invoices?${params.toString()}`,
           {
             method: "GET",
             headers: {
@@ -63,7 +64,7 @@ export default function InvoiceManagement() {
   const handleViewDetail = async (orderId) => {
     try {
       const response = await fetch(
-        `/api/v1/staff/statistics/invoices/${orderId}`,
+        `/api/v1/admin/statistics/invoices/${orderId}`,
         {
           method: "GET",
           headers: {
@@ -145,52 +146,9 @@ export default function InvoiceManagement() {
           </div>
         </Link>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <button
-            onClick={() => navigate("/admin/revenue")}
-            style={{
-              padding: "7px 14px",
-              background: "#33261A",
-              color: "#E7C9A1",
-              borderRadius: "8px",
-              border: "none",
-              fontSize: "13px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            ➔ Thống kê thu nhập
-          </button>
+        <div className="header-title">MÀN HÌNH QUẢN LÝ HÓA ĐƠN</div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              fontWeight: 600,
-              fontSize: "13px",
-              color: "#4A3627",
-            }}
-          >
-            <div
-              style={{
-                width: "30px",
-                height: "30px",
-                borderRadius: "50%",
-                background: "#33261A",
-                color: "#E7C9A1",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "12px",
-                fontWeight: 700,
-              }}
-            >
-              {userInitial}
-            </div>
-            {userName}
-          </div>
-        </div>
+        <MenuButton></MenuButton>
       </div>
 
       {/* Nội dung chính */}

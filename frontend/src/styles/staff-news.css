@@ -230,3 +230,20 @@
 .news-manager .author-cell{
   color:#33261A; font-size:13px; font-weight:500; white-space:nowrap;
 }
+
+.news-manager .page-title {
+  margin-bottom: 25px;
+  font-family: "Fraunces", serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.news-manager .topbar-right {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: #4A3627;
+}

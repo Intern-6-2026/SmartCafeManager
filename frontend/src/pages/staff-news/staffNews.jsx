@@ -197,6 +197,8 @@ function StaffNewsManager() {
       </div>
 
       <div className="wrap">
+        <h3 className="page-title">Danh Sách Tin Tức</h3>
+
         <div className="news-toolbar">
           <div className="filter-left">
             <input

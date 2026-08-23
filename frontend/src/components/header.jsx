@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "./Logo";
+import MenuButton from "./menu-button";
 
 function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -80,63 +81,9 @@ function Header() {
         </div>
       </Link>
 
-      <div className="flex items-center gap-4">
-        {isLoggedIn ? (
-          <>
-            <Link
-              to="/profile"
-              className="text-sm font-bold text-[#000] hover:underline max-w-[140px] truncate"
-              title={userName}
-            >
-              {userName || "Tài khoản"}
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="text-sm font-bold text-[#5A3726] hover:underline cursor-pointer"
-            >
-              Đăng xuất
-            </button>
-          </>
-        ) : (
-          <Link
-            to="/"
-            className="text-sm font-bold text-[#000] hover:underline"
-          >
-            Đăng nhập
-          </Link>
-        )}
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="text-[#000] cursor-pointer"
-        >
-          {isOpen ? <X size={28} /> : <Menu size={28} />}
-        </button>
-      </div>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 w-full bg-[#D2A97B] shadow-lg border-t border-[#c69c6d] flex flex-col items-center">
-          {menuItems
-            .filter((item) => {
-              if (item.requireAuth && !isLoggedIn) return false;
-              if (item.requireAdmin && !isAdmin) return false;
-              if (item.requireStaffOrAdmin && !isAdmin && !isStaff)
-                return false;
-              return true;
-            })
-            .map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                className="w-full text-center py-4 text-[#000] font-medium border-b border-[#c69c6d] hover:bg-[#c69c6d] transition-all"
-                onClick={() => setIsOpen(false)}
-              >
-                {item.name}
-              </Link>
-            ))}
-        </div>
-      )}
+      <div className="header-title">MÀN HÌNH QUẢN LÝ TIN TỨC</div>
+      
+      <MenuButton></MenuButton>
     </nav>
   );
 }
