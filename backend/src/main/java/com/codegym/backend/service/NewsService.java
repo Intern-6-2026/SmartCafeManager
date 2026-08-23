@@ -51,10 +51,31 @@ public class NewsService {
         }
 
         public News getNewsById(Long id) {
-                return newsRepository.findById(Objects.requireNonNull(id))
-                                .filter(news -> news.getDeletedAt() == null && news.getStatus() == NewsStatus.PUBLISHED)
+                News news = newsRepository.findById(Objects.requireNonNull(id))
+                                .filter(n -> n.getDeletedAt() == null)
                                 .orElseThrow(() -> new RuntimeException(
-                                                "Không tìm thấy tin tức, tin tức chưa được duyệt hoặc đã bị xóa!"));
+                                                "Không tìm thấy tin tức hoặc tin tức đã bị xóa!"));
+
+                if (news.getStatus() == NewsStatus.PUBLISHED) {
+                        return news;
+                }
+
+                org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext()
+                                .getAuthentication();
+                if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                        throw new RuntimeException("Tin tức chưa được duyệt. Khách vãng lai không có quyền truy cập!");
+                }
+
+                String currentUsername = auth.getName();
+                boolean isAdmin = auth.getAuthorities().stream()
+                                .anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
+
+                if (isAdmin || currentUsername.equals(news.getAuthor().getUsername())) {
+                        return news;
+                }
+
+                throw new RuntimeException(
+                                "Lỗi phân quyền: Bạn không có quyền xem bài viết chưa được duyệt của người khác!");
         }
 
         @Transactional(rollbackFor = Exception.class)
