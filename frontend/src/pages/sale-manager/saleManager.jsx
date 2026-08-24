@@ -20,9 +20,6 @@ import {
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + "đ";
 
-/* Tự làm mới lưới bàn (ms) — đặt 0 để tắt */
-const REFRESH_MS = 15000;
-
 /* Ánh xạ serviceStatus của backend sang trạng thái hiển thị.
    Mới xác nhận được "EMPTY" từ tài liệu API, các giá trị còn lại là suy đoán
    -> nếu màu thẻ bàn sai thì sửa bảng này. */
