@@ -121,8 +121,8 @@ function SaleManager() {
     else {
 
       switch (msgType) {
-        case "NEW_ORDER_SUBMITTED":
-          pushNotification(text, type);
+        case "NEW_ORDER":
+          pushNotification('Bàn ' + tableId + ' có đơn mới' , type);
           if (tableId === selectedId) {
             loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
           }
@@ -307,6 +307,9 @@ function SaleManager() {
       notify("Đã xác nhận thanh toán.", "success");
       setLastChange(change);
       setPayOpen(false);
+      //set false để các nút action không hiện khi không còn món nào, gây lỗi 
+      setShowNhanDon(false);
+      setShowServed(false);
       setDoneOpen(true);
     } catch (err) {
       notify(getApiErrorMessage(err, "Xác nhận thanh toán thất bại."), "error");
@@ -357,7 +360,7 @@ function SaleManager() {
     if (!deleteItem || !selectedTable) return;
     setLoading(true);
     try {
-      await staffDeleteOrderedItem(selectedTable.id, deleteItem.id); // id = orderDetailId
+      await staffDeleteOrderedItem(selectedTable.id, deleteItem.id);
       notify("Xóa món thành công.", "success");
       setDeleteItem(null);
       await loadDetails(selectedTable.id);
@@ -430,11 +433,44 @@ function SaleManager() {
       <header>
         <div className="header-row">
           <div className="brand">
-            <Link to="/home">
-              <Logo className="brand-logo" />
+            <Link
+              to="/home"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                textDecoration: "none",
+                color: "inherit",
+              }}
+            >
+              <div
+                style={{
+                  width: "38px",
+                  height: "38px",
+                  borderRadius: "50%",
+                  background: "#33261A",
+                  color: "#E7C9A1",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "'Fraunces', serif",
+                  fontWeight: 600,
+                  fontSize: "19px",
+                }}
+              >
+                N
+              </div>
+              <div
+                style={{
+                  fontFamily: "'Fraunces', serif",
+                  fontWeight: 700,
+                  fontSize: "24px",
+                  letterSpacing: ".5px",
+                }}
+              >
+                NEO
+              </div>
+              <h1 className="brand-name-not-bold">CAFÉ</h1>
             </Link>
-            <h1 className="brand-name-bold">NEO</h1>
-            <h1 className="brand-name-not-bold">CAFÉ</h1>
           </div>
           <div className="header-title">MÀN HÌNH BÁN HÀNG</div>
           <MenuButton></MenuButton>
