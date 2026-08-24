@@ -974,3 +974,51 @@
   color:#D6544A;
   border: none;
 }
+/* ============ Modal sửa món + xác nhận xoá ============ */
+.sale-manager .edit-item-modal,
+.sale-manager .confirm-modal { max-width: 360px; }
+
+.sale-manager .ei-field { margin-bottom: 16px; }
+.sale-manager .ei-label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: var(--ink-soft, #6E5C4A); margin-bottom: 7px;
+}
+.sale-manager .ei-qty { display: flex; align-items: center; gap: 10px; }
+.sale-manager .ei-qty-btn {
+  width: 38px; height: 38px; border-radius: 9px;
+  border: 1px solid var(--line, #E4D2B8); background: #fff;
+  font-size: 20px; font-weight: 700; color: var(--ink, #33261A);
+  cursor: pointer; line-height: 1;
+}
+.sale-manager .ei-qty-btn:hover { border-color: var(--tan-deep, #9C6B3A); background: #FBF4E7; }
+.sale-manager .ei-qty-input {
+  width: 70px; height: 38px; text-align: center;
+  border: 1px solid var(--line, #E4D2B8); border-radius: 9px;
+  font-family: inherit; font-size: 15px; font-weight: 700;
+  color: var(--ink, #33261A); outline: none;
+}
+.sale-manager .ei-qty-input:focus { border-color: var(--tan-deep, #9C6B3A); }
+.sale-manager .ei-note {
+  width: 100%; border: 1px solid var(--line, #E4D2B8); border-radius: 9px;
+  padding: 10px 12px; font-family: inherit; font-size: 14px;
+  color: var(--ink, #33261A); outline: none; resize: vertical;
+}
+.sale-manager .ei-note:focus { border-color: var(--tan-deep, #9C6B3A); }
+
+.sale-manager .confirm-message {
+  font-size: 14px; line-height: 1.6; color: var(--ink, #33261A);
+  margin: 4px 0 20px;
+}
+.sale-manager .btn-danger {
+  width: 100%;
+  padding: 12px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #D6544A; 
+  color: #fff; 
+  border: 1.5px solid #D6544A;
+}
+.sale-manager .btn-danger:hover:not(:disabled) { filter: brightness(1.05); }

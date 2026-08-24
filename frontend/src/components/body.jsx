@@ -237,11 +237,6 @@ function Body() {
                   </Link>
                 </div>
               </div>
-              <div className="home-news-footer">
-                <Link to="/news" className="news-card-more">
-                  Xem tất cả tin tức →
-                </Link>
-              </div>
             </>
           )}
         </div>

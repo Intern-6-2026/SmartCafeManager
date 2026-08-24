@@ -253,6 +253,17 @@ export const staffServeTable = async (tableId) => {
   return await axios.put(`${API_BASE_URL}/staff/tables/${tableId}/serve-all`);
 };
 
+// API 20: chỉnh sửa đơn hàng của bàn
+export const staffEditOrderedItem = async (tableId, orderDetailId, quantity, note) => {
+  return await axios.put(`${API_BASE_URL}/staff/tables/${tableId}/order-details/${orderDetailId}`, null, {
+    params : {quantity, note}
+  });
+};
+
+// API 21: xóa đơn hàng của bàn
+export const staffDeleteOrderedItem = async (tableId, orderDetailId) => {
+  return await axios.delete(`${API_BASE_URL}/staff/tables/${tableId}/order-details/${orderDetailId}`);
+};
 /* Helper: rút thông báo lỗi từ axios error để hiển thị lên UI */
 const ERROR_MESSAGE_MAP = {
   "Old password is incorrect!": "Mật khẩu hiện tại không đúng.",

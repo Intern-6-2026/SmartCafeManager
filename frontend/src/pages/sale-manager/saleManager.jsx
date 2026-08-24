@@ -15,8 +15,12 @@ import {
   getApiErrorMessage,
   getActiveOrder,
   staffConfirmOrder,
-  staffServeTable
+  staffServeTable,
+  staffEditOrderedItem,
+  staffDeleteOrderedItem
 } from "../../services/apiService";
+import EditItemModal from "../../components/editItemModal";
+import ConfirmModal from "../../components/confirmModal";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + "đ";
 
@@ -86,6 +90,8 @@ function SaleManager() {
   const [notifications, setNotifications] = useState([]); // danh sách thông báo
   const [bellOpen, setBellOpen] = useState(false); // mở/đóng bảng thông báo
   const [loading, setLoading] = useState(false);
+  const [editItem, setEditItem] = useState(null); // món đang sửa (mở EditItemModal)
+  const [deleteItem, setDeleteItem] = useState(null); // món chờ xác nhận xoá (mở ConfirmModal)
 
   /* Thêm 1 thông báo vào danh sách (hiện chuông + lắc) */
   const pushNotification = useCallback((text, type = "info") => {
@@ -340,6 +346,50 @@ function SaleManager() {
     return () => document.removeEventListener("keydown", onKey);
   });
 
+  
+  /* ===== API 21: xoá món khỏi hóa đơn của bàn =====
+     Bấm nút xoá -> mở modal xác nhận (tránh bấm nhầm), xác nhận mới gọi API. */
+  const handleRemoveItem = (detail) => {
+    setDeleteItem(detail); // mở ConfirmModal
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteItem || !selectedTable) return;
+    setLoading(true);
+    try {
+      await staffDeleteOrderedItem(selectedTable.id, deleteItem.id); // id = orderDetailId
+      notify("Xóa món thành công.", "success");
+      setDeleteItem(null);
+      await loadDetails(selectedTable.id);
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Xoá món thất bại."), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ===== API 20: chỉnh sửa món trong hóa đơn của bàn =====
+     Mở modal sửa (số lượng + ghi chú). Nếu số lượng = 0 thì mặc định về 1. */
+  const handleEditItem = (detail) => {
+    setEditItem(detail); // mở EditItemModal
+  };
+
+  const submitEdit = async ({ quantity, note }) => {
+    if (!editItem || !selectedTable) return;
+    setLoading(true);
+    try {
+      const qty = Number(quantity) > 0 ? Number(quantity) : 1; // 0 -> mặc định 1
+      await staffEditOrderedItem(selectedTable.id, editItem.id, { quantity: qty, note });
+      notify("Cập nhật món thành công.", "success");
+      setEditItem(null);
+      await loadDetails(selectedTable.id);
+    } catch (err) {
+      notify(getApiErrorMessage(err, "Cập nhật món thất bại."), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const showAccept = selectedTable?.status === "neworder";
   const showPay = selectedTable?.status === "bill";
   
@@ -489,11 +539,34 @@ function SaleManager() {
                                 )}
                               </span>
                               <span className="order-price">{fmt(d.total)}</span>
+                            </div>                           
+                           
+                            <div className="order-bottom" style={{flexDirection: 'row', position: 'relative'}}>
+                              {d.note && <div className="order-item-note" style={{position: 'absolute', left: 0}}>{d.note}</div>}
+                              <div className="order-bottom">
+                                <span className="order-qty">x {d.qty}</span>
+                                <span className="order-unit">{fmt(d.price)}/món</span>
+                              </div>
                             </div>
-                            {d.note && <div className="order-item-note">{d.note}</div>}
                             <div className="order-bottom">
-                              <span className="order-qty">x {d.qty}</span>
-                              <span className="order-unit">{fmt(d.price)}/món</span>
+                              <button
+                                className="remove-btn"
+                                aria-label={`Xoá ${d.name}`}
+                                onClick={() => handleRemoveItem(d)}
+                              >
+                                <img
+                                  src="/images/Icon Remove.png"
+                                  alt=""
+                                  className="remove-icon"
+                                />
+                              </button>
+                              <button
+                                className="edit-btn"
+                                aria-label={`Sửa ${d.name}`}
+                                onClick={() => handleEditItem(d)}
+                              >
+                                ✎
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -705,6 +778,27 @@ function SaleManager() {
           </button>
         </div>
       )}
+
+      {/* Modal sửa món trong hóa đơn */}
+      <EditItemModal
+        open={Boolean(editItem)}
+        item={editItem}
+        loading={loading}
+        onSubmit={submitEdit}
+        onClose={() => setEditItem(null)}
+      />
+
+      {/* Modal xác nhận xoá món */}
+      <ConfirmModal
+        open={Boolean(deleteItem)}
+        title="Xoá món"
+        message={deleteItem ? `Bạn chắc chắn muốn xoá "${deleteItem.name}" khỏi hóa đơn?` : ""}
+        confirmText="Xoá"
+        danger
+        loading={loading}
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteItem(null)}
+      />
     </div>
   );
 }
