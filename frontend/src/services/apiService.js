@@ -31,9 +31,7 @@ axios.interceptors.response.use(
     if (status === 403) {
       const needPasswordChange =
         /mật khẩu/i.test(msg) && (/quá hạn|đổi mật khẩu/i.test(msg));
-      const role = (localStorage.getItem("roleName") || "").toUpperCase();
-      const isInternalStaff = role === "ADMIN" || role === "STAFF";
-      if (needPasswordChange && isInternalStaff && !window.location.pathname.includes("/change-password")) {
+      if (needPasswordChange && !window.location.pathname.includes("/change-password")) {
         import("../utils/toast").then(({ notifyWarn }) => {
           notifyWarn(msg || "Vui lòng đổi mật khẩu để tiếp tục.");
         });

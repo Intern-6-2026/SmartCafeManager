@@ -33,7 +33,7 @@ export default function Login() {
             localStorage.setItem("roleName", roleName);
             localStorage.setItem("userName", userName);
 
-            if (requirePasswordChange && (String(roleName || "").toUpperCase() === "ADMIN" || String(roleName || "").toUpperCase() === "STAFF")) {
+            if (requirePasswordChange) {
                 notifyWarn("Mật khẩu cần được đổi trước khi tiếp tục.");
             } else {
                 notifySuccess("Đăng nhập thành công!");
