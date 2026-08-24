@@ -17,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
@@ -37,7 +39,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     private final PaymentService paymentService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // Danh sách các trạng thái đơn hàng được coi là đang hoạt động trên bàn
     private static final List<StatusTableOrder> ACTIVE_ORDER_STATUSES = List.of(
             StatusTableOrder.OPEN, 
             StatusTableOrder.WAITING_PAYMENT
@@ -80,7 +81,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
 
-        // 🟢 Sửa lỗi định dạng thời gian cho LocalDateTime
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
         String formattedTime = activeOrder.getOpenAt() != null 
                 ? activeOrder.getOpenAt().format(timeFormatter) 
@@ -144,12 +144,8 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Override
     @Transactional
     public void approveCashPayment(Long tableId) {
-        //  1. Ủy quyền cho PaymentService chốt hóa đơn & giải phóng bàn
         paymentService.completeCheckout(tableId, PaymentMethod.CASH);
-
-        //  2. Bắn thông báo realtime
         notifyCustomerTable(tableId, "PAYMENT_SUCCESS", "Thanh toán thành công! Cảm ơn quý khách.");
-        notifyStaffAndKitchen(tableId, "CHECKOUT_COMPLETED", "Bàn " + tableId + " đã hoàn tất thanh toán tiền mặt.");
     }
 
     @Override
@@ -174,7 +170,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         tablesRepository.save(table);
 
         notifyCustomerTable(tableId, "ORDER_CANCELLED", "Hóa đơn đã bị hủy bởi nhân viên. Lý do: " + reason);
-        notifyStaffAndKitchen(tableId, "ORDER_CANCELLED", "Hóa đơn bàn " + tableId + " đã bị hủy.");
+        notifyStaffAndKitchen(tableId, "TABLE_CLEARED", "Hóa đơn bàn " + tableId + " đã bị hủy.");
     }
 
     @Override
@@ -237,8 +233,9 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         }
         orderDetailRepository.saveAll(orderedDetails);
 
-        notifyCustomerTable(tableId, "ALL_ITEMS_CONFIRMED", "Đơn hàng mới của bạn đã được bếp tiếp nhận!");
-        notifyStaffAndKitchen(tableId, "ALL_ITEMS_CONFIRMED", "Bàn " + tableId + " đã được xác nhận đơn lượt mới.");
+        notifyCustomerTable(tableId, "ORDER_CONFIRMED", "Đơn hàng mới của bạn đã được bếp tiếp nhận!");
+        // FIX: Đổi TYPE từ "ALL_ITEMS_CONFIRMED" -> "ORDER_CONFIRMED"
+        notifyStaffAndKitchen(tableId, "ORDER_CONFIRMED", "Bàn " + tableId + " đã được xác nhận đơn lượt mới.");
     }
 
     // ==========================================
@@ -374,31 +371,38 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     }
 
     private void notifyCustomerTable(Long tableId, String type, String message) {
-        try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("tableId", tableId);
-            payload.put("type", type);
-            payload.put("message", message);
-            payload.put("timestamp", System.currentTimeMillis());
-
-            messagingTemplate.convertAndSend("/topic/table/" + tableId, payload);
-        } catch (Exception e) {
-            log.error("Lỗi gửi WebSocket tới /topic/table/{}: {}", tableId, e.getMessage());
-        }
+        sendSocketWithTransactionSync("/topic/tables/" + tableId, tableId, type, message);
     }
 
     private void notifyStaffAndKitchen(Long tableId, String type, String message) {
-        try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("tableId", tableId);
-            payload.put("type", type);
-            payload.put("message", message);
-            payload.put("timestamp", System.currentTimeMillis());
+        // FIX: Đổi Topic từ "/topic/staff/tables" -> "/topic/table-events" để khớp với React Frontend
+        sendSocketWithTransactionSync("/topic/table-events", tableId, type, message);
+    }
 
-            // 🟢 Đã đổi từ /topic/staff-requests sang chuẩn chung /topic/table-events
-            messagingTemplate.convertAndSend("/topic/table-events", payload);
-        } catch (Exception e) {
-            log.error("Lỗi gửi WebSocket tới /topic/table-events: {}", e.getMessage());
+    private void sendSocketWithTransactionSync(String destination, Long tableId, String type, String message) {
+        Runnable sendTask = () -> {
+            try {
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("tableId", tableId);
+                payload.put("type", type);
+                payload.put("message", message);
+                payload.put("timestamp", System.currentTimeMillis());
+
+                messagingTemplate.convertAndSend(destination, payload);
+            } catch (Exception e) {
+                log.error("Lỗi gửi WebSocket tới {}: {}", destination, e.getMessage());
+            }
+        };
+
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sendTask.run();
+                }
+            });
+        } else {
+            sendTask.run();
         }
     }
 }

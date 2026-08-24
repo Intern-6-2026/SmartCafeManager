@@ -36,43 +36,37 @@ public class CustomerController {
     // I. THÔNG TIN BÀN & GỌI PHỤC VỤ
     // ==========================================
 
-    @GetMapping("/table-info/{tableId}")
-    public ResponseEntity<Tables> getTableInfo(@PathVariable Long tableId) {
-        return ResponseEntity.ok(staffOrderService.getTableInfo(tableId));
-    }
-
     @PostMapping("/call-service")
-    public ResponseEntity<Map<String, String>> callService(
-            @RequestParam Long tableId,
-            @RequestParam ServiceStatus status
-    ) {
-        if (status != ServiceStatus.CALL_STAFF && status != ServiceStatus.REQUESTING_BILL) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Yêu cầu không hợp lệ!"));
-        }
+    public ResponseEntity<Map<String, String>> callStaff(@RequestParam Long tableId) {
+        
+        // 1. Cập nhật trạng thái dịch vụ của bàn
+        orderService.updateTableServiceStatus(tableId, ServiceStatus.CALL_STAFF);
 
-        orderService.updateTableServiceStatus(tableId, status);
-
-        // Lấy tên bàn từ DB để hiển thị lên Toast thông báo phía Nhân viên
-        Tables table = staffOrderService.getTableInfo(tableId);
-        String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
-
-        // Notify Realtime: Báo ngay lập tức lên màn hình Sơ đồ bàn & Thông báo
+        // 2. Bắn tín hiệu cho Màn hình Nhân viên / Thu ngân (Đã đổi sang /topic/table-events)
         messagingTemplate.convertAndSend(
-                "/topic/staff/tables",
+                "/topic/table-events",
                 Map.of(
-                        "event", "CALL_SERVICE",
+                        "type", "CALL_STAFF",
                         "tableId", tableId,
-                        "tableName", tableName,
-                        "status", status.name(),
+                        "message", "Bàn " + tableId + " đang gọi nhân viên!",
                         "timestamp", System.currentTimeMillis()
                 )
         );
 
-        String message = status == ServiceStatus.CALL_STAFF 
-                ? "Đã gửi yêu cầu gọi nhân viên thành công!" 
-                : "Đã gửi yêu cầu thanh toán thành công!";
+        // 3. Bắn tín hiệu đồng bộ cho các thiết bị cùng bàn
+        messagingTemplate.convertAndSend(
+                "/topic/tables/" + tableId,
+                Map.of(
+                        "type", "SERVICE_STATUS_CHANGED",
+                        "serviceStatus", "CALL_STAFF",
+                        "message", "Đã gửi yêu cầu gọi nhân viên!"
+                )
+        );
 
-        return ResponseEntity.ok(Map.of("message", message));
+        return ResponseEntity.ok(Map.of(
+                "status", "SUCCESS",
+                "message", "Đã gọi nhân viên thành công!"
+        ));
     }
 
     // ==========================================
@@ -137,23 +131,25 @@ public class CustomerController {
         Tables table = staffOrderService.getTableInfo(tableId);
         String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
 
-        // 1. Thông báo cho Nhân viên/Bếp biết có đơn mới
+        // 1. Thông báo cho Nhân viên & Màn hình Bếp (Đã đổi sang /topic/table-events)
         messagingTemplate.convertAndSend(
-                "/topic/staff/tables",
+                "/topic/table-events",
                 Map.of(
-                        "event", "NEW_ORDER",
+                        "type", "NEW_ORDER", 
                         "tableId", tableId,
                         "tableName", tableName,
                         "timestamp", System.currentTimeMillis()
                 )
         );
 
-        // 2. Đồng bộ giỏ hàng & danh sách đơn hàng cho Khách hàng tại bàn
+        // 2. Báo cho khách tại bàn cập nhật giỏ hàng tạm (về rỗng)
         notifyCartUpdate(tableId);
+
+        // 3. Báo cho khách tại bàn cập nhật danh sách món ĐÃ GỌI
         messagingTemplate.convertAndSend(
-                "/topic/tables/" + tableId + "/orders",
+                "/topic/tables/" + tableId,
                 Map.of(
-                        "event", "ORDER_PLACED",
+                        "type", "ORDER_PLACED",
                         "message", "Đơn hàng đã được gửi thành công!"
                 )
         );
@@ -169,17 +165,23 @@ public class CustomerController {
     public ResponseEntity<Map<String, String>> processCashPayment(@RequestParam Long tableId) {
         paymentService.processCashPayment(tableId);
 
-        Tables table = staffOrderService.getTableInfo(tableId);
-        String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
-
-        // Báo cho Nhân viên đến bàn thu tiền
+        // BỔ SUNG: Bắn tín hiệu ngay lập tức cho màn hình nhân viên/thu ngân
         messagingTemplate.convertAndSend(
-                "/topic/staff/tables",
+                "/topic/table-events",
                 Map.of(
-                        "event", "REQUEST_CASH_PAYMENT",
+                        "type", "PAYMENT_REQUEST",
                         "tableId", tableId,
-                        "tableName", tableName,
+                        "message", "Bàn " + tableId + " yêu cầu thanh toán tiền mặt!",
                         "timestamp", System.currentTimeMillis()
+                )
+        );
+
+        // Báo tín hiệu cho khách hàng
+        messagingTemplate.convertAndSend(
+                "/topic/tables/" + tableId,
+                Map.of(
+                        "type", "PAYMENT_REQUESTED",
+                        "message", "Vui lòng chờ nhân viên đến bàn thu tiền mặt."
                 )
         );
 
@@ -197,9 +199,18 @@ public class CustomerController {
 
     private void notifyCartUpdate(Long tableId) {
         messagingTemplate.convertAndSend(
+                "/topic/tables/" + tableId,
+                Map.of(
+                        "type", "CART_UPDATED",
+                        "tableId", tableId
+                )
+        );
+        
+        // Giữ kênh giỏ hàng tạm nếu frontend có subscribe riêng
+        messagingTemplate.convertAndSend(
                 "/topic/tables/" + tableId + "/cart",
                 Map.of(
-                        "event", "CART_UPDATED",
+                        "type", "CART_UPDATED",
                         "tableId", tableId
                 )
         );

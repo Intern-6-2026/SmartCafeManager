@@ -54,10 +54,28 @@ public class PaymentServiceImpl implements PaymentService {
                 .findByTableTableIdAndStatusIn(tableId, List.of(StatusTableOrder.OPEN, StatusTableOrder.WAITING_PAYMENT))
                 .orElseThrow(() -> new RuntimeException("Bàn " + tableId + " không có hóa đơn mở!"));
 
+        List<OrderDetail> details = orderDetailRepository.findByOrder(order);
+        if (details == null || details.isEmpty()) {
+            throw new RuntimeException("Chưa có món ăn nào được gọi, không thể yêu cầu thanh toán!");
+        }
+
+        boolean hasValidItems = details.stream()
+                .anyMatch(d -> d.getStatus() != StatusOrderDetail.CANCELLED);
+        if (!hasValidItems) {
+            throw new RuntimeException("Chưa có món ăn hợp lệ để thanh toán!");
+        }
+
         order.setStatus(StatusTableOrder.WAITING_PAYMENT);
         order.setPaymentMethod(paymentMethod);
         tableOrderRepository.save(order);
 
+        Tables table = order.getTable();
+        if (table != null) {
+            table.setServiceStatus(ServiceStatus.REQUESTING_BILL);
+            tablesRepository.save(table);
+        }
+
+        // Bắn Socket event PAYMENT_REQUESTED
         notifyTableEvents(tableId, "PAYMENT_REQUESTED", "Bàn " + tableId + " yêu cầu thanh toán (" + paymentMethod + ")");
     }
 
@@ -68,14 +86,12 @@ public class PaymentServiceImpl implements PaymentService {
                 .findByTableTableIdAndStatusIn(tableId, List.of(StatusTableOrder.OPEN, StatusTableOrder.WAITING_PAYMENT))
                 .orElseThrow(() -> new RuntimeException("Bàn " + tableId + " không có hóa đơn chờ hoàn tất thanh toán!"));
 
-        // 1. Cập nhật trạng thái hóa đơn thành Đã thanh toán
         order.setStatus(StatusTableOrder.PAID);
         order.setPaymentMethod(paymentMethod != null ? paymentMethod : PaymentMethod.CASH);
         order.setPaidAt(LocalDateTime.now());
         order.setCloseAt(LocalDateTime.now());
         tableOrderRepository.save(order);
 
-        // 2. Chốt trạng thái các món chi tiết sang SERVED
         List<OrderDetail> details = orderDetailRepository.findByOrder(order);
         if (details != null && !details.isEmpty()) {
             for (OrderDetail detail : details) {
@@ -86,7 +102,6 @@ public class PaymentServiceImpl implements PaymentService {
             orderDetailRepository.saveAll(details);
         }
 
-        // 3. GIẢI PHÓNG BÀN: Cập nhật trạng thái bàn về trống để đón khách mới
         Tables table = order.getTable();
         if (table != null) {
             table.setServiceStatus(ServiceStatus.EMPTY);
@@ -94,8 +109,8 @@ public class PaymentServiceImpl implements PaymentService {
             tablesRepository.save(table);
         }
 
-        // Bắn Socket thông báo đã giải phóng bàn thành công
-        notifyTableEvents(tableId, "TABLE_CLEARED", "Bàn " + tableId + " đã hoàn tất thanh toán và sẵn sàng đón khách mới!");
+        // Bắn Socket event TABLE_CLEARED
+        notifyTableEvents(tableId, "TABLE_CLEARED", "Bàn " + tableId + " đã hoàn tất thanh toán và trống!");
     }
 
     @Override
@@ -171,9 +186,6 @@ public class PaymentServiceImpl implements PaymentService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     *  CHỈ BẮN WEBSOCKET KHI CSDL ĐÃ COMMIT THÀNH CÔNG (TRÁNH RACE CONDITION)
-     */
     private void notifyTableEvents(Long tableId, String type, String message) {
         Runnable sendTask = () -> {
             try {
@@ -189,7 +201,6 @@ public class PaymentServiceImpl implements PaymentService {
             }
         };
 
-        // Kiểm tra nếu đang có Transaction -> Chờ COMMIT xong mới chạy sendTask
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
