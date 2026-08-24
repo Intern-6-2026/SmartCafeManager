@@ -24,9 +24,6 @@ import ConfirmModal from "../../components/confirmModal";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + "đ";
 
-/* Tự làm mới lưới bàn (ms) — đặt 0 để tắt */
-const REFRESH_MS = 15000;
-
 /* Ánh xạ serviceStatus của backend sang trạng thái hiển thị.
    Mới xác nhận được "EMPTY" từ tài liệu API, các giá trị còn lại là suy đoán
    -> nếu màu thẻ bàn sai thì sửa bảng này. */
@@ -78,6 +75,11 @@ const normalizeDetail = (d) => ({
 function SaleManager() {
   const [tables, setTables] = useState([]); // danh sách bàn từ server
   const [selectedId, setSelectedId] = useState(1); // bàn đang chọn
+  // THÊM ĐOẠN NÀY
+  const selectedIdRef = useRef(selectedId);
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
   const [details, setDetails] = useState([]); // chi tiết đơn của bàn đang chọn
   const [openAt, setOpenAt] = useState(""); // giờ mở bàn (order.openAt)
   const [customerName, setCustomerName] = useState(""); // tên khách nếu có
@@ -110,16 +112,18 @@ function SaleManager() {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
-  const notify = ( msg, type = "info", msgType = null, tableId = null) => {
+ const notify = (msg, type = "info", msgType = null, tableId = null) => {
     /* Thông báo dạng toast.
          notify(msg)            -> toast thường (info)
          notify(msg, "success") -> toast xanh
          notify(msg, "error")   -> toast đỏ */
     const text = String(msg);
-    if (type === "success") ToastService.success(text);
-    else if (type === "error") ToastService.error(text);
-    else {
-
+    
+    if (type === "success") {
+      ToastService.success(text);
+    } else if (type === "error") {
+      ToastService.error(text);
+    } else {
       switch (msgType) {
         case "NEW_ORDER":
           pushNotification('Bàn ' + tableId + ' có đơn mới' , type);
@@ -128,44 +132,52 @@ function SaleManager() {
           }
           loadTables();
           break;
+          
         case "CALL_STAFF":
           pushNotification(text, type);
           loadTables();
           break;
+          
         case "ALL_ITEMS_SERVED":
-          if (tableId === selectedId) {
-            loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
+          if (tableId === selectedIdRef.current) {
+            loadDetails(selectedIdRef.current);
           }
           loadTables();
           break;
+          
         case "CHECKOUT_COMPLETE":
           pushNotification(text, type);
-          if (tableId === selectedId) {
-            loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
+          if (tableId === selectedIdRef.current) {
+            loadDetails(selectedIdRef.current);
           }
           loadTables();
           break;
+          
         case "ORDER_CONFIRMED":
-          if (tableId === selectedId) {
-            loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
+          if (tableId === selectedIdRef.current) {
+            loadDetails(selectedIdRef.current);
           }
           break;
+          
         case "PAYMENT_REQUESTED":
           console.log(`[WebSocket] Nhận thông báo PAYMENT_REQUESTED cho bàn ${tableId}`);
           pushNotification(text, type);
           loadTables();
           break;
+          
         case "TABLE_CLEARED":
-          cosole.log(`[WebSocket] Nhận thông báo TABLE_CLEARED cho bàn ${tableId}`);
-          if (tableId === selectedId) {
-            loadDetails(selectedId); // tự động tải lại chi tiết bàn đang xem
+          // Sửa lỗi chính tả cosole -> console
+          console.log(`[WebSocket] Nhận thông báo TABLE_CLEARED cho bàn ${tableId}`);
+          if (tableId === selectedIdRef.current) {
+            loadDetails(selectedIdRef.current); 
           }
           ToastService.success(`Bàn ${tableId} đã hoàn tất thanh toán.`);
+          break; // Đã thêm lệnh break quan trọng ở đây
+          
         default:
           break;
       }
     }
-    
   };
 
   const clearNotifications = () => {
