@@ -379,7 +379,7 @@ function SaleManager() {
     setLoading(true);
     try {
       const qty = Number(quantity) > 0 ? Number(quantity) : 1; // 0 -> mặc định 1
-      await staffEditOrderedItem(selectedTable.id, editItem.id, { quantity: qty, note });
+      await staffEditOrderedItem(selectedTable.id, editItem.id, qty, note);
       notify("Cập nhật món thành công.", "success");
       setEditItem(null);
       await loadDetails(selectedTable.id);

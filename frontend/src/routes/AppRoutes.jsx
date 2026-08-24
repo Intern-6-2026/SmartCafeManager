@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ClientMenu from "../pages/client-menu/client-menu";
 import Login from "../pages/auth/Login";
-import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import Otp from "../pages/auth/Otp";
 import NewPassword from "../pages/auth/NewPassword";
@@ -31,7 +30,6 @@ export default function AppRoutes() {
         <BrowserRouter>
             <Routes>
                 <Route path="/" element={<Login />} />
-                <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/otp" element={<Otp />} />
                 <Route path="/new-password" element={<NewPassword />} />

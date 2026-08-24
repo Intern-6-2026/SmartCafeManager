@@ -31,7 +31,9 @@ axios.interceptors.response.use(
     if (status === 403) {
       const needPasswordChange =
         /mật khẩu/i.test(msg) && (/quá hạn|đổi mật khẩu/i.test(msg));
-      if (needPasswordChange && !window.location.pathname.includes("/change-password")) {
+      const role = (localStorage.getItem("roleName") || "").toUpperCase();
+      const isInternalStaff = role === "ADMIN" || role === "STAFF";
+      if (needPasswordChange && isInternalStaff && !window.location.pathname.includes("/change-password")) {
         import("../utils/toast").then(({ notifyWarn }) => {
           notifyWarn(msg || "Vui lòng đổi mật khẩu để tiếp tục.");
         });
@@ -49,10 +51,6 @@ axios.interceptors.response.use(
 
 export const loginApi = async (username, password) => {
   return await axios.post(`${API_BASE_URL}/auth/login`, { username, password });
-};
-
-export const registerApi = async (payload) => {
-  return await axios.post(`${API_BASE_URL}/auth/register`, payload);
 };
 
 export const forgotPassword = async (email) => {
@@ -197,7 +195,7 @@ export const getStaffNews = async (page = 0, size = 10) => {
 };
 
 export const getStaffFeed = async (page = 0, size = 10) => {
-  return await axios.get(`${API_BASE_URL}/news/staff/feed`, { params: { page, size } });
+  return await axios.get(`${API_BASE_URL}/news/admin/all`, { params: { page, size } });
 };
 
 export const createNews = async ({ title, summary, content, image }) => {
@@ -347,7 +345,7 @@ export const getAllFeedbacks = async () => {
 
 // API 17: lấy feedbacks của một món cụ thể
 export const getItemFeedbacks = async (itemId) => {
-  return await axios.get(`${API_BASE_URL}/feedbacks/item/${itemId}`);
+  return await axios.get(`${API_BASE_URL}/customer/feedbacks/item/${itemId}`);
 };
 
 // API 18: xác nhận đơn hàng của khách (chuyển trạng thái từ PENDING -> CONFIRMED)

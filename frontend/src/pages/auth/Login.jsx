@@ -33,7 +33,7 @@ export default function Login() {
             localStorage.setItem("roleName", roleName);
             localStorage.setItem("userName", userName);
 
-            if (requirePasswordChange) {
+            if (requirePasswordChange && (String(roleName || "").toUpperCase() === "ADMIN" || String(roleName || "").toUpperCase() === "STAFF")) {
                 notifyWarn("Mật khẩu cần được đổi trước khi tiếp tục.");
             } else {
                 notifySuccess("Đăng nhập thành công!");
@@ -117,13 +117,6 @@ export default function Login() {
                                 >
                                     {loading ? "Đang xử lý..." : "Đăng nhập"}
                                 </button>
-
-                                <p className="text-center text-sm text-gray-500 mt-5">
-                                    Chưa có tài khoản?{" "}
-                                    <Link to="/register" className="text-[#B78350] font-semibold hover:underline">
-                                        Đăng ký ngay
-                                    </Link>
-                                </p>
                             </form>
         </AuthCard>
     );
