@@ -21,6 +21,7 @@ import RevenueDashboard from "../pages/RevenueDashboard/RevenueDashboard";
 import RequireRole from "../components/RequireRole";
 import SaleManager from "../pages/sale-manager/saleManager"
 import FeedbackManager from "../pages/feedback-manager/feedbackManager";
+import StaffNewsManager from "../pages/staff-news/staffNews";
 
 export default function AppRoutes() {
   return (
@@ -123,7 +124,16 @@ export default function AppRoutes() {
         <Route 
             path="/feedback-manager" 
             element={<FeedbackManager />} 
-          />
+        />
+
+        <Route
+            path="/staff-news"
+            element={
+              <RequireRole roles={["STAFF"]}>
+                <StaffNewsManager/>
+              </RequireRole>
+            }
+        />
         </Routes>
     </BrowserRouter>
   );

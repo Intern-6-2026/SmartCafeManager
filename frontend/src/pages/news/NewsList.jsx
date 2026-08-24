@@ -65,9 +65,6 @@ export default function NewsList() {
               <span className="page-count">
                 {loading ? "Đang tải…" : `${totalElements} bài viết`}
               </span>
-              <Link to="/home" className="news-btn news-btn-ghost">
-                Về trang chủ
-              </Link>
               {manageNews && (
                 <Link to="/admin/news" className="news-btn news-btn-primary">
                   Quản lý tin tức

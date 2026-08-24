@@ -106,31 +106,6 @@ function Body() {
 
   return (
     <main className="w-full">
-      {/* THANH ĐIỀU HƯỚNG NHANH CHO ADMIN / STAFF NẾU CẦN */}
-      {(isAdmin || isStaff) && (
-        <div className="bg-[#33261A] text-[#E7C9A1] px-6 py-2.5 flex justify-between items-center text-sm font-medium">
-          <span>
-            Xin chào, {isAdmin ? "Quản trị viên (Admin)" : "Nhân viên (Staff)"}
-          </span>
-          <div className="flex gap-3">
-            {isAdmin && (
-              <button
-                onClick={() => navigate("/admin/revenue")}
-                className="bg-[#E7C9A1] text-[#33261A] px-3 py-1 rounded-md text-xs font-bold hover:bg-white cursor-pointer"
-              >
-                📊 Xem Thống kê Thu nhập
-              </button>
-            )}
-            <button
-              onClick={() => navigate("/admin/invoices")}
-              className="bg-[#E7C9A1] text-[#33261A] px-3 py-1 rounded-md text-xs font-bold hover:bg-white cursor-pointer"
-            >
-              📑 Quản lý Hóa đơn
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 1. Phần Hero */}
       <section className="relative w-full h-[300px] flex items-center">
         <img

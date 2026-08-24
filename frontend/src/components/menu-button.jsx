@@ -10,6 +10,7 @@ const MENU_ITEMS = [
   { name: "Quản lý hóa đơn", path: "/admin/invoices", requireAuth: true, requireStaffOrAdmin: true },
   { name: "Quản lý bàn", path: "/sale-manager", requireAuth: true, requireStaffOrAdmin: true },
   { name: "Quản lý phản hồi", path: "/feedback-manager", requireAuth: true, requireStaffOrAdmin: true },
+  { name: "Tin tức nhân viên", path: "/staff-news", requireAuth: true, requireStaffOrAdmin: true},
   { name: "Hồ sơ", path: "/profile", requireAuth: true },
 ];
 

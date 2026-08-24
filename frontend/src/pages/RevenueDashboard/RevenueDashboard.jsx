@@ -12,6 +12,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
+import MenuButton from "../../components/menu-button";
 
 const COLORS = ["#33261A", "#9C6B3A", "#D5A874", "#6E5C4A"];
 
@@ -41,7 +42,7 @@ export default function RevenueDashboard() {
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        const response = await fetch("/api/v1/staff/statistics/dashboard", {
+        const response = await fetch("/api/v1/admin/statistics/dashboard", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -127,36 +128,9 @@ export default function RevenueDashboard() {
           </div>
         </Link>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              fontWeight: 600,
-              fontSize: "13px",
-              color: "#4A3627",
-            }}
-          >
-            <div
-              style={{
-                width: "30px",
-                height: "30px",
-                borderRadius: "50%",
-                background: "#33261A",
-                color: "#E7C9A1",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "12px",
-                fontWeight: 700,
-              }}
-            >
-              {userInitial}
-            </div>
-            {userName}
-          </div>
-        </div>
+        <div className="header-title">THỐNG KÊ THU NHẬP</div>
+
+        <MenuButton></MenuButton>
       </div>
 
       {/* Nội dung chính */}
