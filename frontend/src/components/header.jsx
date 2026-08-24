@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Logo from "./Logo";
+import MenuButton from "./menu-button";
 
 function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,7 +16,6 @@ function Header() {
     (localStorage.getItem("roleName") || "").toUpperCase(),
   );
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     const syncAuth = () => {
@@ -25,12 +25,8 @@ function Header() {
     };
     syncAuth();
     window.addEventListener("storage", syncAuth);
-    window.addEventListener("focus", syncAuth);
-    return () => {
-      window.removeEventListener("storage", syncAuth);
-      window.removeEventListener("focus", syncAuth);
-    };
-  }, [location.pathname]);
+    return () => window.removeEventListener("storage", syncAuth);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -45,13 +41,13 @@ function Header() {
 
   const isAdmin = roleName === "ADMIN";
   const isStaff = roleName === "STAFF";
-  const canManageItems = isAdmin || isStaff;
 
   const menuItems = [
     { name: "Trang chủ", path: "/home" },
     { name: "Xem Menu", path: "/menu/table/1" },
     { name: "Đặt món", path: "/menu/table/1" },
     { name: "Tin tức", path: "/news" },
+    // Dành riêng cho Admin: Quản lý thu nhập & Quản lý tin tức
     {
       name: "Thống kê thu nhập",
       path: "/admin/revenue",
@@ -64,41 +60,19 @@ function Header() {
       requireAuth: true,
       requireAdmin: true,
     },
+    // Dành riêng cho Staff & Admin: Quản lý hóa đơn
     {
       name: "Quản lý hóa đơn",
       path: "/admin/invoices",
       requireAuth: true,
       requireStaffOrAdmin: true,
     },
-    {
-      name: "Quản lý bàn",
-      path: "/sale-manager",
-      requireAuth: true,
-      requireStaffOrAdmin: true,
-    },
-    {
-      name: "Quản lý phản hồi",
-      path: "/feedback-manager",
-      requireAuth: true,
-      requireStaffOrAdmin: true,
-    },
-    {
-      name: "Tin tức nhân viên",
-      path: "/staff-news",
-      requireAuth: true,
-      requireStaffOrAdmin: true,
-    },
-    {
-      name: "Quản lý món",
-      path: "/admin/items",
-      requireAuth: true,
-      requireManageItems: true,
-    },
     { name: "Hồ sơ", path: "/profile", requireAuth: true },
   ];
 
   return (
     <nav className="relative w-full bg-[#D2A97B] p-4 flex items-center justify-between shadow-md z-50">
+      {/* Bấm vào Logo luôn luôn về trang chủ /home */}
       <Link to="/home" className="flex items-center gap-2 cursor-pointer">
         <Logo className="h-10 w-10" />
         <div className="text-[20px] font-['Inter']">
@@ -107,56 +81,9 @@ function Header() {
         </div>
       </Link>
 
-      <div className="flex items-center gap-4">
-        {isLoggedIn ? (
-          <>
-            <Link
-              to="/profile"
-              className="text-sm font-bold text-[#000] hover:underline max-w-[140px] truncate"
-              title={userName}
-            >
-              {userName || "Tài khoản"}
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="text-sm font-bold text-[#5A3726] hover:underline"
-            >
-              Đăng xuất
-            </button>
-          </>
-        ) : (
-          <Link to="/" className="text-sm font-bold text-[#000] hover:underline">
-            Đăng nhập
-          </Link>
-        )}
-        <button type="button" onClick={() => setIsOpen(!isOpen)} className="text-[#000]" aria-label="Mở menu">
-          {isOpen ? <X size={28} /> : <Menu size={28} />}
-        </button>
-      </div>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 w-full bg-[#D2A97B] shadow-lg border-t border-[#c69c6d] flex flex-col items-center">
-          {menuItems
-            .filter((item) => {
-              if (item.requireAuth && !isLoggedIn) return false;
-              if (item.requireAdmin && !isAdmin) return false;
-              if (item.requireStaffOrAdmin && !isAdmin && !isStaff) return false;
-              if (item.requireManageItems && !canManageItems) return false;
-              return true;
-            })
-            .map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                className="w-full text-center py-4 text-[#000] font-medium border-b border-[#c69c6d] hover:bg-[#c69c6d] transition-all"
-                onClick={() => setIsOpen(false)}
-              >
-                {item.name}
-              </Link>
-            ))}
-        </div>
-      )}
+      <div className="header-title">MÀN HÌNH QUẢN LÝ TIN TỨC</div>
+      
+      <MenuButton></MenuButton>
     </nav>
   );
 }
