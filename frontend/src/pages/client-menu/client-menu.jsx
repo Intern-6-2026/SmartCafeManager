@@ -379,6 +379,7 @@ function ClientMenu() {
         client.subscribe(`/topic/table/${tableId}`, (message) => {
           if (message.body) {
             const data = JSON.parse(message.body);
+            console.log('Websocket nhận thông báo: ',data);
             onMessageReceived(data?.message, "info", data?.type, data?.tableId); // Gọi hàm callback để update UI
           }
         });

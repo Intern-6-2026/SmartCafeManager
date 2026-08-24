@@ -82,7 +82,7 @@
   font-family: 'Fraunces', serif;
   line-height: 1;
   margin: 0;
-  letter-spacing: .3px;
+  letter-spacing: .5px;
   color: var(--ink);
   display: inline-block;
 }

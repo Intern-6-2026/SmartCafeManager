@@ -100,11 +100,12 @@ export default function InvoiceManagement() {
       {/* Topbar chuẩn NEOCAFÉ */}
       <div
         style={{
-          background: "linear-gradient(160deg, #E7C9A1, #D5A874)",
-          padding: "14px 22px",
+          background: "#D5A874",
+          padding: "16px 18px 18px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: '10px',
         }}
       >
         <Link
@@ -112,7 +113,6 @@ export default function InvoiceManagement() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "10px",
             textDecoration: "none",
             color: "inherit",
           }}
@@ -137,13 +137,15 @@ export default function InvoiceManagement() {
           <div
             style={{
               fontFamily: "'Fraunces', serif",
-              fontWeight: 600,
-              fontSize: "20px",
+              fontWeight: 700,
+              fontSize: "24px",
               letterSpacing: ".5px",
+              display: "inline-block"
             }}
           >
-            NEOCAFÉ
+            NEO
           </div>
+          <h1 className="brand-name-not-bold" style={{fontSize: '19px', fontWeight: 'lighter', display: "inline-block"}}>CAFÉ</h1>
         </Link>
 
         <div className="header-title">MÀN HÌNH QUẢN LÝ HÓA ĐƠN</div>
