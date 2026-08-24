@@ -17,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
@@ -37,7 +39,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     private final PaymentService paymentService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // Danh sách các trạng thái đơn hàng được coi là đang hoạt động trên bàn
     private static final List<StatusTableOrder> ACTIVE_ORDER_STATUSES = List.of(
             StatusTableOrder.OPEN,
             StatusTableOrder.WAITING_PAYMENT);
@@ -79,7 +80,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(activeOrder.getTableOrderId());
 
-        // 🟢 Sửa lỗi định dạng thời gian cho LocalDateTime
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
         String formattedTime = activeOrder.getOpenAt() != null
                 ? activeOrder.getOpenAt().format(timeFormatter)
@@ -143,12 +143,8 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Override
     @Transactional
     public void approveCashPayment(Long tableId) {
-        // 1. Ủy quyền cho PaymentService chốt hóa đơn & giải phóng bàn
         paymentService.completeCheckout(tableId, PaymentMethod.CASH);
-
-        // 2. Bắn thông báo realtime
         notifyCustomerTable(tableId, "PAYMENT_SUCCESS", "Thanh toán thành công! Cảm ơn quý khách.");
-        notifyStaffAndKitchen(tableId, "CHECKOUT_COMPLETED", "Bàn " + tableId + " đã hoàn tất thanh toán tiền mặt.");
     }
 
     @Override
@@ -173,7 +169,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         tablesRepository.save(table);
 
         notifyCustomerTable(tableId, "ORDER_CANCELLED", "Hóa đơn đã bị hủy bởi nhân viên. Lý do: " + reason);
-        notifyStaffAndKitchen(tableId, "ORDER_CANCELLED", "Hóa đơn bàn " + tableId + " đã bị hủy.");
+        notifyStaffAndKitchen(tableId, "TABLE_CLEARED", "Hóa đơn bàn " + tableId + " đã bị hủy.");
     }
 
     @Override
@@ -241,8 +237,8 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         }
         orderDetailRepository.saveAll(orderedDetails);
 
-        notifyCustomerTable(tableId, "ALL_ITEMS_CONFIRMED", "Đơn hàng mới của bạn đã được bếp tiếp nhận!");
-        notifyStaffAndKitchen(tableId, "ALL_ITEMS_CONFIRMED", "Bàn " + tableId + " đã được xác nhận đơn lượt mới.");
+        notifyCustomerTable(tableId, "ORDER_CONFIRMED", "Đơn hàng mới của bạn đã được bếp tiếp nhận!");
+        notifyStaffAndKitchen(tableId, "ORDER_CONFIRMED", "Bàn " + tableId + " đã được xác nhận đơn lượt mới.");
     }
 
     // ==========================================
@@ -311,10 +307,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
 
-        if (detail.getStatus() != StatusOrderDetail.ORDERED) {
-            throw new RuntimeException("Không thể sửa món đã được xác nhận hoặc đã chế biến!");
-        }
-
         if (newQuantity == null || newQuantity <= 0) {
             deleteOrderItem(orderDetailId);
             return;
@@ -331,8 +323,14 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         Long tableId = order.getTable().getTableId();
         String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
+
+        // 1. Thông báo cho máy của khách hàng
         notifyCustomerTable(tableId, "ITEM_UPDATED",
-                "Món '" + itemName + "' đã được thay đổi số lượng thành " + newQuantity);
+                "Món '" + itemName + "' đã được cập nhật số lượng thành " + newQuantity);
+
+        // 2. Thông báo cho Bếp và các màn hình Nhân viên khác đồng bộ
+        notifyStaffAndKitchen(tableId, "ITEM_UPDATED",
+                "Bàn " + tableId + " vừa cập nhật món '" + itemName + "' (" + newQuantity + ")");
     }
 
     @Override
@@ -341,18 +339,17 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
 
-        if (detail.getStatus() != StatusOrderDetail.ORDERED) {
-            throw new RuntimeException("Không thể xóa món đã được bếp xác nhận!");
-        }
-
         TableOrder order = detail.getOrder();
         String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
         Long tableId = order.getTable().getTableId();
 
         orderDetailRepository.delete(detail);
+        orderDetailRepository.flush();
+
         recalculateOrderTotal(order);
 
         notifyCustomerTable(tableId, "ITEM_DELETED", "Món '" + itemName + "' đã được bỏ khỏi đơn hàng.");
+        notifyStaffAndKitchen(tableId, "ITEM_DELETED", "Bàn " + tableId + " vừa bỏ món '" + itemName + "' khỏi đơn.");
     }
 
     // ==========================================
@@ -378,31 +375,37 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     }
 
     private void notifyCustomerTable(Long tableId, String type, String message) {
-        try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("tableId", tableId);
-            payload.put("type", type);
-            payload.put("message", message);
-            payload.put("timestamp", System.currentTimeMillis());
-
-            messagingTemplate.convertAndSend("/topic/table/" + tableId, payload);
-        } catch (Exception e) {
-            log.error("Lỗi gửi WebSocket tới /topic/table/{}: {}", tableId, e.getMessage());
-        }
+        sendSocketWithTransactionSync("/topic/tables/" + tableId, tableId, type, message);
     }
 
     private void notifyStaffAndKitchen(Long tableId, String type, String message) {
-        try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("tableId", tableId);
-            payload.put("type", type);
-            payload.put("message", message);
-            payload.put("timestamp", System.currentTimeMillis());
+        sendSocketWithTransactionSync("/topic/table-events", tableId, type, message);
+    }
 
-            // 🟢 Đã đổi từ /topic/staff-requests sang chuẩn chung /topic/table-events
-            messagingTemplate.convertAndSend("/topic/table-events", payload);
-        } catch (Exception e) {
-            log.error("Lỗi gửi WebSocket tới /topic/table-events: {}", e.getMessage());
+    private void sendSocketWithTransactionSync(String destination, Long tableId, String type, String message) {
+        Runnable sendTask = () -> {
+            try {
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("tableId", tableId);
+                payload.put("type", type);
+                payload.put("message", message);
+                payload.put("timestamp", System.currentTimeMillis());
+
+                messagingTemplate.convertAndSend(destination, payload);
+            } catch (Exception e) {
+                log.error("Lỗi gửi WebSocket tới {}: {}", destination, e.getMessage());
+            }
+        };
+
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sendTask.run();
+                }
+            });
+        } else {
+            sendTask.run();
         }
     }
 }
