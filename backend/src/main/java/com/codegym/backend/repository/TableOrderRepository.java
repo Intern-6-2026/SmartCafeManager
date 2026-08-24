@@ -129,4 +129,37 @@ public interface TableOrderRepository extends JpaRepository<TableOrder, Long> {
            "AND FUNCTION('YEAR', COALESCE(o.paidAt, o.createdAt)) = FUNCTION('YEAR', CURRENT_DATE) " +
            "AND o.status = :status")
     Double getMonthlyRevenue(@Param("status") StatusTableOrder status);
+
+
+    // ==========================================
+    // 5. CHỨC NĂNG QUẢN LÝ DÀNH CHO ADMIN (ADMIN MANAGEMENT)
+    // ==========================================
+
+    // Admin lọc nâng cao: Tìm tất cả hóa đơn (bao gồm PAID, PENDING, CANCELLED...)
+    @Query("SELECT DISTINCT o FROM TableOrder o " +
+           "LEFT JOIN FETCH o.table t " +
+           "LEFT JOIN FETCH o.customer c " +
+           "LEFT JOIN FETCH o.employee e " +
+           "WHERE (:status IS NULL OR o.status = :status) " +
+           "AND (:tableId IS NULL OR t.tableId = :tableId) " +
+           "AND (:startDate IS NULL OR COALESCE(o.paidAt, o.openAt) >= :startDate) " +
+           "AND (:endDate IS NULL OR COALESCE(o.paidAt, o.openAt) <= :endDate) " +
+           "AND (:keyword IS NULL OR LOWER(c.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "     OR LOWER(c.phoneNumber) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "     OR CAST(o.tableOrderId AS string) LIKE CONCAT('%', :keyword, '%')) " +
+           "ORDER BY o.tableOrderId DESC")
+    List<TableOrder> adminFilterOrders(
+            @Param("status") StatusTableOrder status,
+            @Param("tableId") Long tableId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("keyword") String keyword);
+
+    // Lấy chi tiết đơn hàng đầy đủ kèm Table, Customer, Employee để Admin Sửa/Xem
+    @Query("SELECT o FROM TableOrder o " +
+           "LEFT JOIN FETCH o.table " +
+           "LEFT JOIN FETCH o.customer " +
+           "LEFT JOIN FETCH o.employee " +
+           "WHERE o.tableOrderId = :orderId")
+    Optional<TableOrder> findByIdWithDetails(@Param("orderId") Long orderId);
 }
