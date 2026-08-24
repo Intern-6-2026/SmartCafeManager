@@ -11,7 +11,7 @@ const MENU_ITEMS = [
   { name: "Quản lý món", path: "/admin/items", requireAuth: true, requireAdmin: true },
   { name: "Quản lý bàn", path: "/sale-manager", requireAuth: true, requireStaffOrAdmin: true },
   { name: "Quản lý phản hồi", path: "/feedback-manager", requireAuth: true, requireStaffOrAdmin: true },
-  { name: "Tin tức nhân viên", path: "/staff-news", requireAuth: true, requireStaffOrAdmin: true},
+  { name: "Tin tức nhân viên", path: "/staff-news", requireAuth: true, requireStaff: true},
   { name: "Hồ sơ", path: "/profile", requireAuth: true },
 ];
 
@@ -72,8 +72,9 @@ function MenuButton({ className = "", menuClassName = "", onNavigate }) {
 
   const visibleItems = MENU_ITEMS.filter((item) => {
     if (item.requireAuth && !isLoggedIn) return false;
-    if (item.requireAdmin && !isAdmin) return false;
     if (item.requireStaffOrAdmin && !isAdmin && !isStaff) return false;
+    if (item.requireAdmin && !isAdmin) return false;
+    if (item.requireStaff && !isStaff) return false
     return true;
   });
 
