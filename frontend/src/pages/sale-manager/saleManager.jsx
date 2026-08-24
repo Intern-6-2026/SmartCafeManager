@@ -357,7 +357,7 @@ function SaleManager() {
     if (!deleteItem || !selectedTable) return;
     setLoading(true);
     try {
-      await staffDeleteOrderedItem(selectedTable.id, deleteItem.id); // id = orderDetailId
+      await staffDeleteOrderedItem(selectedTable.id, deleteItem.id);
       notify("Xóa món thành công.", "success");
       setDeleteItem(null);
       await loadDetails(selectedTable.id);
@@ -378,7 +378,7 @@ function SaleManager() {
     if (!editItem || !selectedTable) return;
     setLoading(true);
     try {
-      const qty = Number(quantity) > 0 ? Number(quantity) : 1; // 0 -> mặc định 1
+      const qty = Number(quantity) > 0 ? Number(quantity) : 1; 
       await staffEditOrderedItem(selectedTable.id, editItem.id, { quantity: qty, note });
       notify("Cập nhật món thành công.", "success");
       setEditItem(null);
