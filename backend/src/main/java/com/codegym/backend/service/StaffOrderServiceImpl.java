@@ -234,7 +234,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         orderDetailRepository.saveAll(orderedDetails);
 
         notifyCustomerTable(tableId, "ORDER_CONFIRMED", "Đơn hàng mới của bạn đã được bếp tiếp nhận!");
-        // FIX: Đổi TYPE từ "ALL_ITEMS_CONFIRMED" -> "ORDER_CONFIRMED"
         notifyStaffAndKitchen(tableId, "ORDER_CONFIRMED", "Bàn " + tableId + " đã được xác nhận đơn lượt mới.");
     }
 
@@ -304,10 +303,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
 
-        if (detail.getStatus() != StatusOrderDetail.ORDERED) {
-            throw new RuntimeException("Không thể sửa món đã được xác nhận hoặc đã chế biến!");
-        }
-
         if (newQuantity == null || newQuantity <= 0) {
             deleteOrderItem(orderDetailId);
             return;
@@ -324,8 +319,12 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         Long tableId = order.getTable().getTableId();
         String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
+        
         notifyCustomerTable(tableId, "ITEM_UPDATED", 
-                "Món '" + itemName + "' đã được thay đổi số lượng thành " + newQuantity);
+                "Món '" + itemName + "' đã được cập nhật số lượng: " + newQuantity);
+
+        notifyStaffAndKitchen(tableId, "ITEM_UPDATED", 
+                "Bàn " + tableId + " vừa cập nhật món '" + itemName + "' (" + newQuantity + ")");
     }
 
     @Override
@@ -334,18 +333,17 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         OrderDetail detail = orderDetailRepository.findById(orderDetailId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn hàng!"));
 
-        if (detail.getStatus() != StatusOrderDetail.ORDERED) {
-            throw new RuntimeException("Không thể xóa món đã được bếp xác nhận!");
-        }
-
         TableOrder order = detail.getOrder();
         String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
         Long tableId = order.getTable().getTableId();
 
         orderDetailRepository.delete(detail);
+        orderDetailRepository.flush();
+
         recalculateOrderTotal(order);
 
         notifyCustomerTable(tableId, "ITEM_DELETED", "Món '" + itemName + "' đã được bỏ khỏi đơn hàng.");
+        notifyStaffAndKitchen(tableId, "ITEM_DELETED", "Bàn " + tableId + " vừa bỏ món '" + itemName + "' khỏi đơn.");
     }
 
     // ==========================================
@@ -375,7 +373,6 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     }
 
     private void notifyStaffAndKitchen(Long tableId, String type, String message) {
-        // FIX: Đổi Topic từ "/topic/staff/tables" -> "/topic/table-events" để khớp với React Frontend
         sendSocketWithTransactionSync("/topic/table-events", tableId, type, message);
     }
 

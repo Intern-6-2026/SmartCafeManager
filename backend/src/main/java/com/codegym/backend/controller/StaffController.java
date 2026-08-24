@@ -157,7 +157,9 @@ public class StaffController {
         return ResponseEntity.ok(Map.of("message", "Đã hủy món và cập nhật lại tổng tiền!"));
     }
 
+// CHỈ ADMIN MỚI CÓ QUYỀN SỬA SỐ LƯỢNG / GHI CHÚ
     @PutMapping("/tables/{tableId}/order-details/{orderDetailId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> updateOrderItem(
             @PathVariable Long tableId,
             @PathVariable Long orderDetailId,
@@ -165,22 +167,18 @@ public class StaffController {
             @RequestParam(required = false) String note) {
 
         staffOrderService.updateOrderItem(orderDetailId, quantity, note);
-        sendStaffUpdate(tableId, "TABLE_UPDATED");
-        sendCustomerUpdate(tableId, "ITEM_UPDATED", "Đơn hàng đã được điều chỉnh!");
-        
-        return ResponseEntity.ok(Map.of("message", "Cập nhật số lượng/ghi chú thành công!"));
+        return ResponseEntity.ok(Map.of("message", "Admin đã cập nhật món thành công!"));
     }
 
+    // CHỈ ADMIN MỚI CÓ QUYỀN XÓA MÓN
     @DeleteMapping("/tables/{tableId}/order-details/{orderDetailId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> deleteOrderItem(
             @PathVariable Long tableId,
             @PathVariable Long orderDetailId) {
 
         staffOrderService.deleteOrderItem(orderDetailId);
-        sendStaffUpdate(tableId, "TABLE_UPDATED");
-        sendCustomerUpdate(tableId, "ITEM_DELETED", "Một món ăn đã được xóa khỏi đơn!");
-        
-        return ResponseEntity.ok(Map.of("message", "Đã xóa món khỏi đơn!"));
+        return ResponseEntity.ok(Map.of("message", "Admin đã xóa món khỏi đơn!"));
     }
 
     // ==========================================
