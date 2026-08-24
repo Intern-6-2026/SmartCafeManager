@@ -2,6 +2,7 @@ package com.codegym.backend.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List; // THÊM IMPORT NÀY
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -19,6 +20,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany; // THÊM IMPORT NÀY
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -52,6 +54,10 @@ public class TableOrder extends BaseEntity {
     @JoinColumn(name = "employee_id")
     private Employee employee;
 
+    // THÊM ĐOẠN NÀY ĐỂ KẾT NỐI VỚI CHI TIẾT ĐƠN HÀNG
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
+    private List<OrderDetail> orderDetails;
+
     @Column(name = "open_at", nullable = false)
     private LocalDateTime openAt;
 
@@ -75,9 +81,6 @@ public class TableOrder extends BaseEntity {
 
     @Column(name = "cancel_reason")
     private String cancelReason;
-
-    @Column(name = "updated_by")
-    private String updatedBy;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)

@@ -1,45 +1,41 @@
 package com.codegym.backend.controller;
 
 import com.codegym.backend.dto.AdminTableOrderRequestDTO;
-import com.codegym.backend.entity.TableOrder;
+import com.codegym.backend.dto.TableOrderResponseDTO;
 import com.codegym.backend.service.AdminTableOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/orders")
-@CrossOrigin("*")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
 public class AdminTableOrderController {
 
     private final AdminTableOrderService adminTableOrderService;
 
+    // Lấy tất cả hóa đơn (mới nhất lên đầu)
     @GetMapping
-    public ResponseEntity<List<TableOrder>> getAllOrders() {
+    public ResponseEntity<List<TableOrderResponseDTO>> getAllOrders() {
         return ResponseEntity.ok(adminTableOrderService.getAllOrders());
     }
 
+    // Cập nhật thông tin hóa đơn
     @PutMapping("/{orderId}")
-    public ResponseEntity<TableOrder> updateOrder(
+    public ResponseEntity<TableOrderResponseDTO> updateOrder(
             @PathVariable Long orderId,
             @RequestBody AdminTableOrderRequestDTO dto) {
         return ResponseEntity.ok(adminTableOrderService.updateOrder(orderId, dto));
     }
 
+    // Xóa mềm / Hủy hóa đơn
     @DeleteMapping("/{orderId}")
-    public ResponseEntity<Map<String, String>> deleteOrder(
+    public ResponseEntity<Void> softDeleteOrder(
             @PathVariable Long orderId,
-            @RequestParam(defaultValue = "Admin thao tác hủy đơn") String reason) {
+            @RequestParam(required = false, defaultValue = "") String reason) {
         adminTableOrderService.softDeleteOrder(orderId, reason);
-        return ResponseEntity.ok(Map.of(
-                "message", "Đã hủy và xóa mềm hóa đơn thành công!",
-                "orderId", String.valueOf(orderId)
-        ));
+        return ResponseEntity.noContent().build();
     }
 }

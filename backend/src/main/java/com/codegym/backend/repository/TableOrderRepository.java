@@ -14,7 +14,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TableOrderRepository extends JpaRepository<TableOrder, Long> {
-
+// Thêm dòng này vào để sửa lỗi đỏ
+    List<TableOrder> findAllByOrderByTableOrderIdDesc();
     // ==========================================
     // 1. CHỨC NĂNG BÀN VÀ ĐẶT MÓN (ORDERING)
     // ==========================================
