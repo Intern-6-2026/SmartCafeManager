@@ -35,9 +35,7 @@ public class PaymentController {
     private final PayPalService payPalService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // Địa chỉ domain của Frontend (Đưa vào application.properties nếu muốn cấu hình
-    // động)
-    @Value("${app.frontend.url:http://localhost:3000}")
+    @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
 
     // --- HÓA ĐƠN & THANH TOÁN TẠI QUÁN ---

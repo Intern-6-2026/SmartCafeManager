@@ -39,9 +39,8 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
     // Danh sách các trạng thái đơn hàng được coi là đang hoạt động trên bàn
     private static final List<StatusTableOrder> ACTIVE_ORDER_STATUSES = List.of(
-            StatusTableOrder.OPEN, 
-            StatusTableOrder.WAITING_PAYMENT
-    );
+            StatusTableOrder.OPEN,
+            StatusTableOrder.WAITING_PAYMENT);
 
     // ==========================================
     // I. SƠ ĐỒ BÀN & CHI TIẾT PANELS
@@ -82,14 +81,14 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         // 🟢 Sửa lỗi định dạng thời gian cho LocalDateTime
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-        String formattedTime = activeOrder.getOpenAt() != null 
-                ? activeOrder.getOpenAt().format(timeFormatter) 
+        String formattedTime = activeOrder.getOpenAt() != null
+                ? activeOrder.getOpenAt().format(timeFormatter)
                 : "";
 
         List<ActiveOrderDTO.OrderItemDto> itemDtos = details.stream().map(detail -> {
             int qty = detail.getQuantity() != null ? detail.getQuantity() : 0;
             BigDecimal price = detail.getUnitPrice() != null ? detail.getUnitPrice() : BigDecimal.ZERO;
-            
+
             return ActiveOrderDTO.OrderItemDto.builder()
                     .orderDetailId(detail.getOrderDetailId())
                     .itemName(detail.getItem() != null ? detail.getItem().getItemName() : "Món không xác định")
@@ -144,10 +143,10 @@ public class StaffOrderServiceImpl implements StaffOrderService {
     @Override
     @Transactional
     public void approveCashPayment(Long tableId) {
-        //  1. Ủy quyền cho PaymentService chốt hóa đơn & giải phóng bàn
+        // 1. Ủy quyền cho PaymentService chốt hóa đơn & giải phóng bàn
         paymentService.completeCheckout(tableId, PaymentMethod.CASH);
 
-        //  2. Bắn thông báo realtime
+        // 2. Bắn thông báo realtime
         notifyCustomerTable(tableId, "PAYMENT_SUCCESS", "Thanh toán thành công! Cảm ơn quý khách.");
         notifyStaffAndKitchen(tableId, "CHECKOUT_COMPLETED", "Bàn " + tableId + " đã hoàn tất thanh toán tiền mặt.");
     }
@@ -185,6 +184,11 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         tablesRepository.save(table);
 
         notifyStaffAndKitchen(tableId, "TABLE_STATUS_CHANGED", "Bàn " + tableId + " đổi trạng thái sang " + status);
+
+        if (status == ServiceStatus.SERVING || status == ServiceStatus.NORMAL || status == ServiceStatus.WAITING_FOOD) {
+            notifyCustomerTable(tableId, "STAFF_ACKNOWLEDGED",
+                    "Nhân viên đã tiếp nhận yêu cầu và đang ra bàn của bạn.");
+        }
     }
 
     @Override
@@ -327,7 +331,7 @@ public class StaffOrderServiceImpl implements StaffOrderService {
 
         Long tableId = order.getTable().getTableId();
         String itemName = detail.getItem() != null ? detail.getItem().getItemName() : "Món ăn";
-        notifyCustomerTable(tableId, "ITEM_UPDATED", 
+        notifyCustomerTable(tableId, "ITEM_UPDATED",
                 "Món '" + itemName + "' đã được thay đổi số lượng thành " + newQuantity);
     }
 
@@ -359,9 +363,9 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         List<OrderDetail> details = orderDetailRepository.findByOrderTableOrderId(order.getTableOrderId());
 
         BigDecimal newTotal = details.stream()
-                .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED 
-                          || d.getStatus() == StatusOrderDetail.CONFIRMED 
-                          || d.getStatus() == StatusOrderDetail.SERVED)
+                .filter(d -> d.getStatus() == StatusOrderDetail.ORDERED
+                        || d.getStatus() == StatusOrderDetail.CONFIRMED
+                        || d.getStatus() == StatusOrderDetail.SERVED)
                 .map(d -> {
                     BigDecimal price = d.getUnitPrice() != null ? d.getUnitPrice() : BigDecimal.ZERO;
                     int qty = d.getQuantity() != null ? d.getQuantity() : 0;
