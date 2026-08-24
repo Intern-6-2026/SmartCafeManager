@@ -42,7 +42,7 @@ public class CustomerController {
         // 1. Cập nhật trạng thái dịch vụ của bàn
         orderService.updateTableServiceStatus(tableId, ServiceStatus.CALL_STAFF);
 
-        // 2. Bắn tín hiệu cho Màn hình Nhân viên / Thu ngân (Đã đổi sang /topic/table-events)
+        // 2. Bắn tín hiệu cho Màn hình Nhân viên / Thu ngân
         messagingTemplate.convertAndSend(
                 "/topic/table-events",
                 Map.of(
@@ -131,13 +131,14 @@ public class CustomerController {
         Tables table = staffOrderService.getTableInfo(tableId);
         String tableName = (table != null && table.getTableName() != null) ? table.getTableName() : "Bàn " + tableId;
 
-        // 1. Thông báo cho Nhân viên & Màn hình Bếp (Đã đổi sang /topic/table-events)
+        // 1. Thông báo cho Nhân viên & Màn hình Bếp (Đã bổ sung message)
         messagingTemplate.convertAndSend(
                 "/topic/table-events",
                 Map.of(
                         "type", "NEW_ORDER", 
                         "tableId", tableId,
                         "tableName", tableName,
+                        "message", tableName + " vừa gửi đơn hàng mới xuống bếp!",
                         "timestamp", System.currentTimeMillis()
                 )
         );
@@ -165,7 +166,7 @@ public class CustomerController {
     public ResponseEntity<Map<String, String>> processCashPayment(@RequestParam Long tableId) {
         paymentService.processCashPayment(tableId);
 
-        // BỔ SUNG: Bắn tín hiệu ngay lập tức cho màn hình nhân viên/thu ngân
+        // Bắn tín hiệu ngay lập tức cho màn hình nhân viên/thu ngân
         messagingTemplate.convertAndSend(
                 "/topic/table-events",
                 Map.of(
@@ -198,21 +199,15 @@ public class CustomerController {
     // ==========================================
 
     private void notifyCartUpdate(Long tableId) {
-        messagingTemplate.convertAndSend(
-                "/topic/tables/" + tableId,
-                Map.of(
-                        "type", "CART_UPDATED",
-                        "tableId", tableId
-                )
+        Map<String, Object> payload = Map.of(
+                "type", "CART_UPDATED",
+                "tableId", tableId,
+                "message", "Giỏ hàng tạm đã được cập nhật!"
         );
+
+        messagingTemplate.convertAndSend("/topic/tables/" + tableId, payload);
         
         // Giữ kênh giỏ hàng tạm nếu frontend có subscribe riêng
-        messagingTemplate.convertAndSend(
-                "/topic/tables/" + tableId + "/cart",
-                Map.of(
-                        "type", "CART_UPDATED",
-                        "tableId", tableId
-                )
-        );
+        messagingTemplate.convertAndSend("/topic/tables/" + tableId + "/cart", payload);
     }
 }
