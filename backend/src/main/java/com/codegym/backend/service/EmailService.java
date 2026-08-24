@@ -3,12 +3,9 @@ package com.codegym.backend.service;
 import java.nio.charset.StandardCharsets;
 
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.HttpStatus;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-
-import com.codegym.backend.exception.AppException;
 
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -41,8 +38,7 @@ public class EmailService {
             log.info("Đã gửi email OTP HTML thành công đến: {}", to);
         } catch (Exception e) {
             log.error("Lỗi khi gửi email HTML OTP: ", e);
-            throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Không thể gửi email OTP, vui lòng thử lại sau!");
+            throw new RuntimeException("Không thể gửi email OTP, vui lòng thử lại sau!");
         }
     }
 }

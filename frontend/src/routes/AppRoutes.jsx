@@ -19,61 +19,36 @@ import AdminNewsForm from "../pages/news/AdminNewsForm";
 import AdminNewsDetail from "../pages/news/AdminNewsDetail";
 import AdminItemList from "../pages/admin-items/AdminItemList";
 import AdminItemForm from "../pages/admin-items/AdminItemForm";
+import InvoiceManagement from "../pages/InvoiceManagement/InvoiceManagement";
+import RevenueDashboard from "../pages/RevenueDashboard/RevenueDashboard";
 import RequireRole from "../components/RequireRole";
+import SaleManager from "../pages/sale-manager/saleManager";
+import FeedbackManager from "../pages/feedback-manager/feedbackManager";
+import StaffNewsManager from "../pages/staff-news/staffNews";
 
 export default function AppRoutes() {
     return (
         <BrowserRouter>
             <Routes>
-
                 <Route path="/" element={<Login />} />
-
                 <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/otp" element={<Otp />} />
+                <Route path="/new-password" element={<NewPassword />} />
 
-                <Route
-                    path="/forgot-password"
-                    element={<ForgotPassword />}
-                />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/edit-profile" element={<EditProfile />} />
+                <Route path="/change-password" element={<ChangePassword />} />
 
-                <Route
-                    path="/otp"
-                    element={<Otp />}
-                />
-
-                <Route
-                    path="/new-password"
-                    element={<NewPassword />}
-                />
-
-                <Route
-                    path="/profile"
-                    element={<Profile />}
-                />
-
-                <Route
-                    path="/edit-profile"
-                    element={<EditProfile />}
-                />
-
-                <Route
-                    path="/change-password"
-                    element={<ChangePassword />}
-                />
-                
                 <Route
                     path="/home"
                     element={
                         <>
-                            <Header/>
-                            <Body/>
-                            <Footer/>
+                            <Header />
+                            <Body />
+                            <Footer />
                         </>
                     }
-                />
-
-                <Route
-                    path="/menu/table/:tableId"
-                    element={<ClientMenu />}
                 />
 
                 <Route path="/news" element={<NewsList />} />
@@ -136,8 +111,52 @@ export default function AppRoutes() {
                         </RequireRole>
                     }
                 />
-                
+
+                <Route
+                    path="/admin/invoices"
+                    element={
+                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                            <InvoiceManagement />
+                        </RequireRole>
+                    }
+                />
+                <Route
+                    path="/admin/revenue"
+                    element={
+                        <RequireRole roles={["ADMIN"]}>
+                            <RevenueDashboard />
+                        </RequireRole>
+                    }
+                />
+
+                <Route path="/menu" element={<ClientMenu />} />
+                <Route path="/menu/table/:tableId" element={<ClientMenu />} />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
+
+                <Route
+                    path="/sale-manager"
+                    element={
+                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                            <SaleManager />
+                        </RequireRole>
+                    }
+                />
+                <Route
+                    path="/feedback-manager"
+                    element={
+                        <RequireRole roles={["ADMIN", "STAFF"]}>
+                            <FeedbackManager />
+                        </RequireRole>
+                    }
+                />
+                <Route
+                    path="/staff-news"
+                    element={
+                        <RequireRole roles={["STAFF", "ADMIN"]}>
+                            <StaffNewsManager />
+                        </RequireRole>
+                    }
+                />
             </Routes>
         </BrowserRouter>
     );

@@ -38,3 +38,6 @@ build/
 
 ### Folder tạm để nhặt code ###
 X/
+
+## Node modules ##
+node_modules/

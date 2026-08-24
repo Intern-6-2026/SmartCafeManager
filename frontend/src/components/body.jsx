@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import coffeeBeans from "../assets/coffee-beans.jpg";
 import {
   getLatestItems,
@@ -11,6 +11,7 @@ import { canManageNews, formatNewsDate } from "../utils/newsHelpers";
 import "../styles/news.css";
 
 function Body() {
+  const { tableId: urlTableId } = useParams();
   const navigate = useNavigate();
   const newsTrackRef = useRef(null);
   const [latestItems, setLatestItems] = useState([]);
@@ -19,6 +20,10 @@ function Body() {
   const [newsTotal, setNewsTotal] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const roleName = (localStorage.getItem("roleName") || "").toUpperCase();
+  const isAdmin = roleName === "ADMIN";
+  const isStaff = roleName === "STAFF";
   const manageNews = canManageNews();
 
   const updateNewsScrollState = () => {
@@ -40,19 +45,33 @@ function Body() {
     el.scrollBy({ left: dir * step, behavior: "smooth" });
   };
 
+  // --- BƯỚC 1: Bắt số bàn từ URL (nếu khách quét QR vào trang chủ) và lưu vào localStorage ---
+  useEffect(() => {
+    if (urlTableId) {
+      localStorage.setItem("tableId", urlTableId);
+    } else {
+      localStorage.setItem("tableId", 1);
+      console.log("Table: "+localStorage.getItem("tableId"));
+    }
+  }, [urlTableId]);
+
+  // Lấy ra tableId đang lưu trong máy (mặc định là "1" nếu chưa quét QR)
+  const currentTableId = localStorage.getItem("tableId") || "1";
+
   useEffect(() => {
     getLatestItems().then((res) => {
-      console.log("Dữ liệu món mới:", res.data);
       setLatestItems(res.data || []);
     });
     getBestSellerItems().then((res) => {
-      console.log("Dữ liệu bán chạy:", res.data);
       setBestSellerItems(res.data || []);
     });
+
+    // Gọi API lấy tin tức công khai an toàn cho mọi role
     getNewsList(0, 50)
       .then((res) => {
-        setLatestNews(res.data?.content || []);
-        setNewsTotal(res.data?.totalElements ?? (res.data?.content || []).length);
+        const list = res.data?.content || res.data || [];
+        setLatestNews(list);
+        setNewsTotal(res.data?.totalElements ?? list.length);
       })
       .catch(() => {
         setLatestNews([]);
@@ -72,21 +91,17 @@ function Body() {
     };
   }, [latestNews]);
 
-  // --- CẬP NHẬT HÀM XỬ LÝ KHI BẤM VÀO MÓN ĂN ---
   const handleItemClick = async (item) => {
     const itemId = item.itemId || item.id;
-    const tableId = 1; // Mặc định bàn số 1 theo quy ước của team backend
+    const tableId = 1;
 
     try {
-      // 1. Gọi API thêm vào giỏ hàng thật trên server
       await addItemToCart(tableId, itemId, 1, "");
-      console.log("Đã thêm món vào giỏ hàng thành công!");
     } catch (error) {
       console.error("Lỗi khi thêm vào giỏ hàng:", error);
     }
-    window.scrollTo(0, 0); // Cuộn lên đầu trang
-    // 2. Chuyển hướng sang trang menu của bàn số 1
-    navigate(`/menu/table/${tableId}`);
+    window.scrollTo(0, 0);
+    navigate(`/menu`);
   };
 
   return (
@@ -100,13 +115,15 @@ function Body() {
         />
         <div className="absolute inset-0 bg-black/40"></div>
         <div className="relative z-10 px-6 text-white font-['Inter']">
-          <p className="text-[16px] font-normal">Chào mừng bạn,</p>
+          <p className="text-[16px] font-normal">
+            Chào mừng bạn đến bàn {currentTableId},
+          </p>
           <h1 className="text-[24px] font-bold my-2">
             Trải nghiệm cà phê thông minh
           </h1>
           <div className="flex flex-wrap gap-3 mt-2">
             <button
-              onClick={() => navigate("/menu/table/1")}
+              onClick={() => navigate("/menu")}
               className="bg-white text-black px-6 py-2 rounded-full font-medium cursor-pointer hover:bg-gray-100"
             >
               Đặt món
@@ -121,7 +138,7 @@ function Body() {
         </div>
       </section>
 
-      {/* Tin tức trên dashboard — hàng ngang lướt được */}
+      {/* Tin tức trên dashboard */}
       <section className="home-news my-8">
         <div className="home-news-inner">
           <div className="home-news-head">
@@ -188,8 +205,8 @@ function Body() {
                 >
                   {latestNews.map((item) => (
                     <Link
-                      key={item.newsId}
-                      to={`/news/${item.newsId}`}
+                      key={item.newsId || item.id}
+                      to={`/news/${item.newsId || item.id}`}
                       className="news-card home-news-card"
                     >
                       <div className="news-card-media">
@@ -210,18 +227,15 @@ function Body() {
                     </Link>
                   ))}
                   <Link to="/news" className="home-news-see-all-card">
-                    <span className="home-news-see-all-title">Xem tất cả tin tức</span>
+                    <span className="home-news-see-all-title">
+                      Xem tất cả tin tức
+                    </span>
                     <span className="home-news-see-all-sub">
                       Mở trang danh sách đầy đủ
                     </span>
                     <span className="home-news-see-all-arrow">→</span>
                   </Link>
                 </div>
-              </div>
-              <div className="home-news-footer">
-                <Link to="/news" className="news-card-more">
-                  Xem tất cả tin tức →
-                </Link>
               </div>
             </>
           )}
@@ -233,7 +247,7 @@ function Body() {
         <div className="bg-[#EBE2CB] p-6 flex flex-col items-center">
           <h2 className="text-2xl font-bold mb-4">Top 4 món mới nhất</h2>
           <button
-            onClick={() => navigate("/menu/table/1")}
+            onClick={() => navigate("/menu")}
             className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium cursor-pointer"
           >
             Khám phá
@@ -280,7 +294,7 @@ function Body() {
             Top những món bán chạy nhất
           </h2>
           <button
-            onClick={() => navigate("/menu/table/1")}
+            onClick={() => navigate("/menu")}
             className="bg-[#5C4D3F] text-white px-6 py-2 rounded-full font-medium cursor-pointer"
           >
             Khám phá
@@ -337,8 +351,17 @@ function Body() {
               className="flex-grow bg-transparent outline-none text-gray-700 placeholder-gray-500 px-2"
             />
           </div>
-          <button className="w-full bg-[#3E2723] text-white py-3 rounded-lg font-bold text-lg hover:bg-[#5D4037] transition-all duration-300 shadow-md">
+          <button className="w-full bg-[#3E2723] text-white py-3 rounded-lg font-bold text-lg hover:bg-[#5D4037] transition-all duration-300 shadow-md cursor-pointer">
             Đăng kí
+          </button>
+          {/* NÚT ĐẶT MÓN NỔI (FLOATING BUTTON) LUÔN HIỆN KHI CUỘN TRANG */}
+          <button
+            onClick={() => navigate("/menu")}
+            className="fixed bottom-6 right-6 z-50 bg-[#33261A] text-[#E7C9A1] px-5 py-3.5 rounded-full shadow-2xl flex items-center gap-2.5 font-bold text-sm hover:bg-[#4E3928] hover:scale-105 transition-all duration-300 border-2 border-[#E7C9A1] cursor-pointer"
+            title="Đặt món ngay"
+          >
+            <span className="text-lg">☕</span>
+            <span>Đặt món ngay</span>
           </button>
         </div>
       </section>

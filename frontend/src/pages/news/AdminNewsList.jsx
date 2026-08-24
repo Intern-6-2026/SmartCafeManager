@@ -119,12 +119,6 @@ export default function AdminNewsList() {
               <span className="page-count">
                 {loading ? "Đang tải…" : `${totalElements} bài viết`}
               </span>
-              <Link to="/news" className="news-btn news-btn-ghost">
-                Xem trang khách
-              </Link>
-              <Link to="/home" className="news-btn news-btn-ghost">
-                Trang chủ
-              </Link>
               <Link to="/admin/news/new" className="news-btn news-btn-primary">
                 + Tạo tin mới
               </Link>

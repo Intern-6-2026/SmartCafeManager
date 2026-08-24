@@ -192,6 +192,14 @@ export const getAdminNewsById = async (id) => {
   return await axios.get(`${API_BASE_URL}/news/${id}`);
 };
 
+export const getStaffNews = async (page = 0, size = 10) => {
+  return await axios.get(`${API_BASE_URL}/news/my-news`, { params: { page, size } });
+};
+
+export const getStaffFeed = async (page = 0, size = 10) => {
+  return await axios.get(`${API_BASE_URL}/news/staff/feed`, { params: { page, size } });
+};
+
 export const createNews = async ({ title, summary, content, image }) => {
   const formData = new FormData();
   formData.append("title", title);
@@ -227,7 +235,7 @@ const CUSTOMER_URL = `${API_BASE_URL}/customer`;
 export const addItemToCart = async (tableId, itemId, quantity, note) => {
   const params = { tableId, itemId, quantity };
   if (note) params.note = note;
-  return await axios.post(`${CUSTOMER_URL}/cart/add`, null, { params });
+  return await axios.post(`${CUSTOMER_URL}/cart/add`, params, { headers: { "Content-Type": "application/json", }, });
 };
  
 // API 2: Xem tất cả món trong giỏ hàng tạm thời (PENDING)
@@ -277,7 +285,7 @@ export const updateItemQuantity = async (tableId, itemId, note, newQuantity) => 
 
 // API 9: Xóa món khỏi giỏ hàng
 export const removeItem = async (tableId, itemId) => {
-  return await axios.delete(`${CUSTOMER_URL}/cart/remove`, {
+  return await axios.delete(`${CUSTOMER_URL}/cart/items/${itemId}`, {
     params: { tableId, itemId },
   });
 };
@@ -294,6 +302,74 @@ export const payWithCash = async (tableId) => {
   return await axios.post(`${CUSTOMER_URL}/payment/cash`, null, {
     params: { tableId },
   });
+};
+
+// API: gửi feedback của khách hàng
+export const sentFeedback = async (content, rating, orderId, senderName, email, imageFile, itemId) => {
+  const formData = new FormData();
+  formData.append("content", content);
+  formData.append("rating", rating);
+  formData.append("orderId", orderId);
+  formData.append("senderName", senderName);
+  formData.append("email", email);
+  formData.append("itemId", itemId);
+  if (imageFile) {
+    formData.append("imageFile", imageFile);
+  }
+  return await axios.post(`${CUSTOMER_URL}/feedbacks`, formData);
+};
+// API cho nhân viên
+
+// API 12: lấy thông tin tất cả các bàn 
+export const getAllTableInfo = async () => {
+  return await axios.get(`${API_BASE_URL}/staff/tables`);
+};
+
+// API 13: xác nhận thanh toán
+export const approvePayment = async (tableId) => {
+  return await axios.post(`${API_BASE_URL}/staff/tables/${tableId}/approve-payment`);
+};
+
+// API 14: lấy thông tin chi tiết hóa đơn của bàn
+export const getTablesInvoice = async (tableId) => {
+  return await axios.get(`${API_BASE_URL}/staff/tables/${tableId}/order-details`);
+};
+
+// API 15: lấy thông tin chi tiết các đơn còn active
+export const getActiveOrder = async (tableId) => {
+  return await axios.get(`${API_BASE_URL}/staff/tables/${tableId}/active-order`);
+};
+
+// API 16: lấy toan bộ feedbacks của khách hàng
+export const getAllFeedbacks = async () => {
+  return await axios.get(`${API_BASE_URL}/staff/feedbacks`);
+};
+
+// API 17: lấy feedbacks của một món cụ thể
+export const getItemFeedbacks = async (itemId) => {
+  return await axios.get(`${API_BASE_URL}/feedbacks/item/${itemId}`);
+};
+
+// API 18: xác nhận đơn hàng của khách (chuyển trạng thái từ PENDING -> CONFIRMED)
+export const staffConfirmOrder = async (tableOrderId) => {
+  return await axios.put(`${API_BASE_URL}/staff/tables/${tableOrderId}/confirm-all`);
+};
+
+// API 19: xác nhận phục vụ món ăn (chuyển trạng thái từ CONFIRMED -> SERVED)
+export const staffServeTable = async (tableId) => {
+  return await axios.put(`${API_BASE_URL}/staff/tables/${tableId}/serve-all`);
+};
+
+// API 20: chỉnh sửa đơn hàng của bàn
+export const staffEditOrderedItem = async (tableId, orderDetailId, quantity, note) => {
+  return await axios.put(`${API_BASE_URL}/staff/tables/${tableId}/order-details/${orderDetailId}`, null, {
+    params : {quantity, note}
+  });
+};
+
+// API 21: xóa đơn hàng của bàn
+export const staffDeleteOrderedItem = async (tableId, orderDetailId) => {
+  return await axios.delete(`${API_BASE_URL}/staff/tables/${tableId}/order-details/${orderDetailId}`);
 };
 /* Helper: rút thông báo lỗi từ axios error để hiển thị lên UI */
 const ERROR_MESSAGE_MAP = {

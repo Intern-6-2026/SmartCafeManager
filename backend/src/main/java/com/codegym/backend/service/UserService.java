@@ -3,7 +3,6 @@ package com.codegym.backend.service;
 import java.util.Date;
 import java.util.Optional;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,7 +15,6 @@ import com.codegym.backend.dto.UserProfileResponse;
 import com.codegym.backend.entity.Account;
 import com.codegym.backend.entity.Customer;
 import com.codegym.backend.entity.Employee;
-import com.codegym.backend.exception.AppException;
 import com.codegym.backend.repository.AccountRepository;
 import com.codegym.backend.repository.CustomerRepository;
 import com.codegym.backend.repository.EmployeeRepository;
@@ -37,8 +35,7 @@ public class UserService {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
 
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy tài khoản hoặc tài khoản đã bị xóa!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản hoặc tài khoản đã bị xóa!"));
 
         String roleName = account.getRole() != null ? account.getRole().getRoleName() : "USER";
 
@@ -76,7 +73,7 @@ public class UserService {
                     .build();
         }
 
-        throw new AppException(HttpStatus.NOT_FOUND, "Tài khoản chưa được thiết lập thông tin cá nhân!");
+        throw new RuntimeException("Tài khoản chưa được thiết lập thông tin cá nhân!");
     }
 
     @SuppressWarnings("null")
@@ -84,7 +81,7 @@ public class UserService {
     public UserProfileResponse updateProfile(UpdateProfileRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy tài khoản!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản!"));
 
         if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
             String newEmail = request.getEmail().trim();
@@ -92,8 +89,7 @@ public class UserService {
             if (!newEmail.equalsIgnoreCase(account.getEmail())) {
                 Optional<Account> existingAccount = accountRepository.findByEmailAndDeletedAtIsNull(newEmail);
                 if (existingAccount.isPresent()) {
-                    throw new AppException(HttpStatus.CONFLICT,
-                            "Email này đã được một tài khoản khác đăng ký trong hệ thống!");
+                    throw new RuntimeException("Email này đã được một tài khoản khác đăng ký trong hệ thống!");
                 }
                 account.setEmail(newEmail);
                 accountRepository.save(account);
@@ -114,7 +110,7 @@ public class UserService {
                 String newPhone = request.getPhoneNumber().trim();
 
                 if (employeeRepository.existsByPhoneNumberAndAccountNot(newPhone, account)) {
-                    throw new AppException(HttpStatus.CONFLICT, "Số điện thoại đã tồn tại");
+                    throw new RuntimeException("Số điện thoại đã tồn tại");
                 }
 
                 emp.setPhoneNumber(newPhone);
@@ -140,7 +136,7 @@ public class UserService {
                 String newPhone = request.getPhoneNumber().trim();
 
                 if (customerRepository.existsByPhoneNumberAndAccountNot(newPhone, account)) {
-                    throw new AppException(HttpStatus.CONFLICT, "Số điện thoại đã tồn tại");
+                    throw new RuntimeException("Số điện thoại đã tồn tại");
                 }
 
                 cus.setPhoneNumber(newPhone);
@@ -152,20 +148,19 @@ public class UserService {
             return getCurrentUserProfile();
         }
 
-        throw new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ cá nhân để cập nhật!");
+        throw new RuntimeException("Không tìm thấy hồ sơ cá nhân để cập nhật!");
     }
 
     @Transactional
     public String changePassword(ChangePasswordRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Tài khoản không tồn tại!"));
+                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại!"));
         if (!passwordEncoder.matches(request.getOldPassword(), account.getPassword())) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Mật khẩu cũ không chính xác!");
+            throw new RuntimeException("Mật khẩu cũ không chính xác!");
         }
         if (request.getNewPassword().equals(request.getOldPassword())) {
-            throw new AppException(HttpStatus.BAD_REQUEST,
-                    "Mật khẩu mới không được trùng với mật khẩu cũ!");
+            throw new RuntimeException("Mật khẩu mới không được trùng với mật khẩu cũ!");
         }
 
         account.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -180,11 +175,11 @@ public class UserService {
 
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Account account = accountRepository.findByUsernameAndDeletedAtIsNull(username)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy tài khoản!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản!"));
 
         String newImageUrl = cloudinaryService.uploadImage(file);
         if (newImageUrl == null) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Upload ảnh thất bại hoặc file trống!");
+            throw new RuntimeException("Upload ảnh thất bại hoặc file trống!");
         }
 
         Optional<Employee> empOpt = employeeRepository.findByAccount(account);
@@ -207,6 +202,6 @@ public class UserService {
             return getCurrentUserProfile();
         }
 
-        throw new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ cá nhân để cập nhật!");
+        throw new RuntimeException("Không tìm thấy hồ sơ cá nhân để cập nhật!");
     }
 }
