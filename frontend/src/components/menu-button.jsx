@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "../styles/menu-button.css"
 /* Danh sách mục điều hướng + điều kiện hiển thị theo quyền */
 const MENU_ITEMS = [
+  { name: "Thực đơn", path: "/menu"},
   { name: "Tin tức", path: "/news" },
   { name: "Thống kê thu nhập", path: "/admin/revenue", requireAuth: true, requireAdmin: true },
   { name: "Quản lý tin tức", path: "/admin/news", requireAuth: true, requireAdmin: true },
