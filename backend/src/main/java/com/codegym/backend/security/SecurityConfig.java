@@ -54,6 +54,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/reset-password",
                                 "/api/v1/auth/verify-otp",
                                 "/v3/api-docs",
+                                "/api/v1/chatbot/chat",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
