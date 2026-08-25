@@ -81,7 +81,7 @@ public class PaymentController {
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("🔴 Lỗi tạo thanh toán PayPal cho Bàn {}: {}", tableId, e.getMessage(), e);
+            log.error(" Lỗi tạo thanh toán PayPal cho Bàn {}: {}", tableId, e.getMessage(), e);
             return ResponseEntity.badRequest().body("Lỗi tạo thanh toán PayPal: " + e.getMessage());
         }
     }
@@ -108,7 +108,7 @@ public class PaymentController {
                 return new RedirectView(frontendUrl + "/payment-success?tableId=" + tableId);
             }
         } catch (Exception e) {
-            log.error("🔴 Lỗi xác thực PayPal Success cho Bàn {}: {}", tableId, e.getMessage(), e);
+            log.error(" Lỗi xác thực PayPal Success cho Bàn {}: {}", tableId, e.getMessage(), e);
         }
 
         // Chuyển hướng về trang Failed của Frontend nếu thất bại
