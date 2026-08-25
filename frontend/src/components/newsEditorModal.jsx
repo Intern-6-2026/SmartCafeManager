@@ -28,14 +28,12 @@ const newsSchema = Yup.object({
   content: Yup.string()
     .test("not-empty", "Vui lòng nhập nội dung", (val) => !isEmptyHtml(val))
     .max(1000000, "Nội dung quá dài"),
+  imageUrl: Yup.string(),
   imageFile: Yup.mixed()
-    .test("required-image", "Vui lòng chọn ảnh thumbnail", function (file) {
-      // Có ảnh cũ (imageUrl) thì không bắt buộc chọn lại
-      if (this.parent.imageUrl) return true;
-      return Boolean(file);
-    })
+    .nullable()
+    .notRequired()
     .test("file-type", "Ảnh phải là JPG, PNG, WEBP hoặc GIF", (file) => {
-      if (!file) return true; // để test required lo phần thiếu ảnh
+      if (!file) return true; // không chọn file mới -> bỏ qua (dùng ảnh cũ imageUrl)
       return IMAGE_TYPES.includes(file.type);
     })
     .test("file-size", `Ảnh không được vượt quá ${MAX_IMAGE_MB}MB`, (file) => {
@@ -63,6 +61,7 @@ function NewsEditorModal({ open, initial, onSave, onDelete, onClose }) {
         imageUrl: initial.imageUrl ?? "",
         imageFile: null,
       });
+      console.log('Form: ',form);
     } else {
       setForm(EMPTY);
     }

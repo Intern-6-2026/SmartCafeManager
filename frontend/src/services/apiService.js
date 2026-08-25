@@ -205,11 +205,12 @@ export const createNews = async ({ title, summary, content, image }) => {
   return await axios.post(`${API_BASE_URL}/news`, formData);
 };
 
-export const updateNews = async (id, { title, summary, content, image }) => {
+export const updateNews = async (id, { title, summary, content, imageUrl, image }) => {
   const formData = new FormData();
   formData.append("title", title);
   formData.append("summary", summary || "");
   formData.append("content", content);
+  formData.append("imageUrl", imageUrl)
   if (image) formData.append("image", image);
   return await axios.put(`${API_BASE_URL}/news/${id}`, formData);
 };

@@ -74,7 +74,7 @@ const normalizeDetail = (d) => ({
 
 function SaleManager() {
   const [tables, setTables] = useState([]); // danh sách bàn từ server
-  const [selectedId, setSelectedId] = useState(1); // bàn đang chọn
+  const [selectedId, setSelectedId] = useState(null); // bàn đang chọn
   // THÊM ĐOẠN NÀY
   const selectedIdRef = useRef(selectedId);
   useEffect(() => {

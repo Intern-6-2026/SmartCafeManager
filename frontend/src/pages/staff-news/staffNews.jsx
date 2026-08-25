@@ -133,16 +133,25 @@ function StaffNewsManager() {
 
   const saveNews = async (data) => {
     try {
-      const payload = {
+      const createNewPayload = {
         title: data.title,
         summary: data.summary || "",
         content: data.content,
         image: data.imageFile || null, // file ảnh mới (nếu có)
       };
+
+      const updateNewPayload = {
+        title: data.title,
+        summary: data.summary || "",
+        content: data.content,
+        imageUrl: data.imageUrl,
+        image: data.imageFile || null, // file ảnh mới (nếu có)
+      };
+
       if (data.newsId) {
-        await updateNews(data.newsId, payload);
+        await updateNews(data.newsId, updateNewPayload);
       } else {
-        await createNews(payload);
+        await createNews(createNewPayload);
       }
       setEditorOpen(false);
       await load();
