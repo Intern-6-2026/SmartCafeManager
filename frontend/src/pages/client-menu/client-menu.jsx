@@ -25,6 +25,7 @@ import {
   payWithCash,
   sentFeedback,
 } from "../../services/apiService";
+import AiBubble from "../../components/ai-buble";
 
 /* Menu dự phòng khi không kết nối được server (giữ đúng shape đã chuẩn hoá) */
 const FALLBACK_MENU = [
@@ -598,6 +599,7 @@ function ClientMenu() {
               </button>
             </div>
           </section>
+          <AiBubble></AiBubble>
         </div>
 
         <footer>
