@@ -369,6 +369,10 @@ export const staffDeleteOrderedItem = async (tableId, orderDetailId) => {
   return await axios.delete(`${API_BASE_URL}/staff/tables/${tableId}/order-details/${orderDetailId}`);
 };
 
+export const sendAIPrompt = async (message) => {
+  return await axios.post(`${API_BASE_URL}/chatbot/chat`,{message: message});
+}
+
 /* Helper: rút thông báo lỗi từ axios error để hiển thị lên UI */
 const ERROR_MESSAGE_MAP = {
   "Old password is incorrect!": "Mật khẩu hiện tại không đúng.",

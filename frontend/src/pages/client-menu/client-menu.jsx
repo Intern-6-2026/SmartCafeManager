@@ -24,8 +24,10 @@ import {
   removeItem,
   payWithCash,
   sentFeedback,
+  sendAIPrompt
 } from "../../services/apiService";
 import AiBubble from "../../components/ai-buble";
+import aiContext from "../../constants/context.txt?raw";
 
 /* Menu dự phòng khi không kết nối được server (giữ đúng shape đã chuẩn hoá) */
 const FALLBACK_MENU = [
@@ -398,6 +400,22 @@ function ClientMenu() {
     };
   }, [tableId]);
 
+  const handelSendAIPrompt = async (prompt, history) => {  
+    try {
+      const message =
+      `Bối cảnh hệ thống:\n${aiContext}\n\n` +          
+      `Lịch sử hội thoại:\n${history}\n` +
+      `--------- Câu hỏi của người dùng: ${prompt}`;
+      const res = await sendAIPrompt(message);
+      const reply = res?.data.reply;
+      console.log(reply);
+      return reply;
+    } catch (error) {
+      notify("gửi tin nhắn thất bại", "error");
+      return "Có lỗi khi gửi tin nhắn"
+    }
+  } 
+
   /* Chọn danh mục món (nút nằm ngang) */
   const pickCategory = (c) => {
     setCategory(c);
@@ -599,7 +617,7 @@ function ClientMenu() {
               </button>
             </div>
           </section>
-          <AiBubble></AiBubble>
+          <AiBubble onSendMessage={handelSendAIPrompt}></AiBubble>
         </div>
 
         <footer>
